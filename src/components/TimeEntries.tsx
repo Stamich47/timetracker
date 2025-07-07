@@ -14,6 +14,7 @@ import { formatDate, formatTime, secondsToHMS } from "../utils/timeUtils";
 import { timeEntriesApi, type TimeEntry } from "../lib/timeEntriesApi";
 import { type Project } from "../lib/projectsApi";
 import { useTimeEntries } from "../hooks/useTimeEntries";
+import CustomDropdown from "./CustomDropdown";
 
 const TimeEntries: React.FC = () => {
   const {
@@ -366,23 +367,25 @@ const TimeEntries: React.FC = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                   Project
                                 </label>
-                                <select
+                                <CustomDropdown
                                   value={editForm.projectId}
-                                  onChange={(e) =>
+                                  onChange={(value) =>
                                     setEditForm((prev) => ({
                                       ...prev,
-                                      projectId: e.target.value,
+                                      projectId: value,
                                     }))
                                   }
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                  <option value="">No Project</option>
-                                  {projects.map((project) => (
-                                    <option key={project.id} value={project.id}>
-                                      {project.name}
-                                    </option>
-                                  ))}
-                                </select>
+                                  options={[
+                                    { value: "", label: "No Project" },
+                                    ...projects
+                                      .filter((project) => project.id)
+                                      .map((project) => ({
+                                        value: project.id!,
+                                        label: project.name,
+                                      })),
+                                  ]}
+                                  placeholder="Select project"
+                                />
                               </div>
 
                               <div className="grid grid-cols-3 gap-4">

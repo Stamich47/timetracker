@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { secondsToHMS, formatDate } from "../utils/timeUtils";
 import { useTimeEntries } from "../hooks/useTimeEntries";
+import CustomDropdown from "./CustomDropdown";
 import type { TimeEntry } from "../lib/timeEntriesApi";
 
 interface ReportData {
@@ -398,80 +399,87 @@ const Reports: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-green-600 to-blue-600 rounded-lg">
-            <BarChart3 className="w-5 h-5 text-white" />
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 bg-gradient-to-r from-green-600 to-blue-600 rounded-lg">
+            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Reports & Analytics</h1>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
+            Reports & Analytics
+          </h1>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <select
+          <CustomDropdown
             value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="input-field text-sm w-full sm:w-auto"
-          >
-            <option value="today">Today</option>
-            <option value="thisWeek">This Week</option>
-            <option value="thisMonth">
-              This Month ({monthYearLabels.thisMonth})
-            </option>
-            <option value="lastMonth">
-              Last Month ({monthYearLabels.lastMonth})
-            </option>
-            <option value="custom">Custom Range</option>
-          </select>
+            onChange={setDateRange}
+            options={[
+              { value: "today", label: "Today" },
+              { value: "thisWeek", label: "This Week" },
+              {
+                value: "thisMonth",
+                label: `This Month (${monthYearLabels.thisMonth})`,
+              },
+              {
+                value: "lastMonth",
+                label: `Last Month (${monthYearLabels.lastMonth})`,
+              },
+              { value: "custom", label: "Custom Range" },
+            ]}
+            size="sm"
+            className="w-full sm:w-auto min-w-[180px]"
+          />
 
           {/* Client Filter */}
-          <select
+          <CustomDropdown
             value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-            className="input-field text-sm w-full sm:w-auto"
-          >
-            <option value="">All Clients</option>
-            <option value="NO_CLIENT">Unassigned Projects</option>
-            {uniqueClients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedClientId}
+            options={[
+              { value: "", label: "All Clients" },
+              { value: "NO_CLIENT", label: "Unassigned Projects" },
+              ...uniqueClients.map((client) => ({
+                value: client.id,
+                label: client.name,
+              })),
+            ]}
+            size="sm"
+            className="w-full sm:w-auto min-w-[140px]"
+          />
 
           <button
             onClick={handleExport}
-            className="btn-secondary w-full sm:w-auto"
+            className="btn-secondary flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5"
           >
-            <Download className="w-4 h-4" />
-            <span className="sm:hidden ml-2">Export</span>
+            <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span>Export CSV</span>
           </button>
         </div>
       </div>
 
       {/* Custom Date Range */}
       {dateRange === "custom" && (
-        <div className="card p-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="w-full sm:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="card p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Start Date
               </label>
               <input
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="input-field text-sm w-full"
+                className="input-field text-xs sm:text-sm w-full"
               />
             </div>
-            <div className="w-full sm:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="flex-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 End Date
               </label>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="input-field text-sm w-full"
+                className="input-field text-xs sm:text-sm w-full"
                 max={new Date().toISOString().split("T")[0]}
               />
             </div>
@@ -480,85 +488,87 @@ const Reports: React.FC = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Clock className="w-5 h-5 text-blue-600" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-6">
+        <div className="card p-3 sm:p-4 lg:p-6">
+          <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-blue-600" />
             </div>
-            <TrendingUp className="w-4 h-4 text-green-500" />
+            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
           </div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
+          <div className="text-sm sm:text-lg lg:text-2xl font-bold text-gray-900 mb-1">
             {secondsToHMS(reportData.totalTime)}
           </div>
-          <div className="text-sm text-gray-600">Total Time</div>
+          <div className="text-xs sm:text-sm text-gray-600">Total Time</div>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="w-5 h-5 text-green-600" />
+        <div className="card p-3 sm:p-4 lg:p-6">
+          <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg">
+              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-green-600" />
             </div>
-            <TrendingUp className="w-4 h-4 text-green-500" />
+            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
           </div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
+          <div className="text-sm sm:text-lg lg:text-2xl font-bold text-gray-900 mb-1">
             {secondsToHMS(reportData.billableTime)}
           </div>
-          <div className="text-sm text-gray-600">Billable Time</div>
+          <div className="text-xs sm:text-sm text-gray-600">Billable Time</div>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Target className="w-5 h-5 text-purple-600" />
+        <div className="card p-3 sm:p-4 lg:p-6">
+          <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg">
+              <Target className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-purple-600" />
             </div>
-            <TrendingUp className="w-4 h-4 text-green-500" />
+            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
           </div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
+          <div className="text-sm sm:text-lg lg:text-2xl font-bold text-gray-900 mb-1">
             {reportData.totalProjects}
           </div>
-          <div className="text-sm text-gray-600">Active Projects</div>
+          <div className="text-xs sm:text-sm text-gray-600">
+            Active Projects
+          </div>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-orange-600" />
+        <div className="card p-3 sm:p-4 lg:p-6">
+          <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg">
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-orange-600" />
             </div>
-            <TrendingUp className="w-4 h-4 text-green-500" />
+            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
           </div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
+          <div className="text-sm sm:text-lg lg:text-2xl font-bold text-gray-900 mb-1">
             {reportData.productivity}%
           </div>
-          <div className="text-sm text-gray-600">Productivity</div>
+          <div className="text-xs sm:text-sm text-gray-600">Productivity</div>
         </div>
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-4 sm:space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6">
         {/* Daily Hours Chart */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="card p-3 sm:p-4 lg:p-6">
+          <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">
             Daily Hours
           </h3>
           {reportData.dailyHours.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">
               No data for selected period
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {reportData.dailyHours.map((day, index) => (
                 <div key={index} className="flex items-center justify-between">
-                  <div className="text-sm font-medium text-gray-600 w-20 flex-shrink-0">
-                    <div>{day.day}</div>
+                  <div className="text-sm font-medium text-gray-600 w-14 sm:w-16 lg:w-20 flex-shrink-0">
+                    <div className="text-xs sm:text-sm">{day.day}</div>
                     <div className="text-xs text-gray-500">
                       {day.formattedDate}
                     </div>
                   </div>
-                  <div className="flex-1 mx-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="flex-1 mx-2 sm:mx-3 lg:mx-4">
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
                       <div
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
+                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 sm:h-2 rounded-full"
                         style={{
                           width: `${Math.min(
                             (day.totalSeconds / (12 * 3600)) * 100,
@@ -568,7 +578,7 @@ const Reports: React.FC = () => {
                       ></div>
                     </div>
                   </div>
-                  <span className="text-sm font-medium text-gray-900 w-16 text-right font-mono">
+                  <span className="text-xs sm:text-sm font-medium text-gray-900 w-10 sm:w-12 lg:w-16 text-right font-mono">
                     {secondsToHMS(day.totalSeconds).substring(0, 5)}
                   </span>
                 </div>
@@ -578,35 +588,35 @@ const Reports: React.FC = () => {
         </div>
 
         {/* Project Breakdown */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="card p-3 sm:p-4 lg:p-6">
+          <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">
             Project Breakdown
           </h3>
           {reportData.projectBreakdown.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">
               No project data for selected period
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2 sm:space-y-3 lg:space-y-4">
               {reportData.projectBreakdown.map((project, index) => (
-                <div key={index} className="space-y-2">
+                <div key={index} className="space-y-1.5 sm:space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                       <div
-                        className="w-3 h-3 rounded-full"
+                        className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: project.color }}
                       ></div>
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-xs sm:text-sm font-medium text-gray-700 truncate">
                         {project.name}
                       </span>
                     </div>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-xs sm:text-sm font-medium text-gray-900 font-mono ml-2 flex-shrink-0">
                       {secondsToHMS(project.time)}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
                     <div
-                      className="h-2 rounded-full"
+                      className="h-1.5 sm:h-2 rounded-full"
                       style={{
                         backgroundColor: project.color,
                         width: `${project.percentage}%`,
@@ -621,34 +631,36 @@ const Reports: React.FC = () => {
       </div>
 
       {/* Time Entries Table */}
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Time Entries</h3>
-          <span className="text-sm text-gray-500">
+      <div className="card p-3 sm:p-4 lg:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+          <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-800">
+            Time Entries
+          </h3>
+          <span className="text-xs sm:text-sm text-gray-500">
             {reportData.filteredEntries.length} entries
           </span>
         </div>
 
         {reportData.filteredEntries.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">
             No time entries for selected period
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-              <table className="w-full text-sm">
+            <div className="max-h-80 sm:max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+              <table className="w-full text-xs sm:text-sm">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-gray-600 text-xs sm:text-sm">
                       Date
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-gray-600 text-xs sm:text-sm">
                       Project
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-gray-600 text-xs sm:text-sm hidden sm:table-cell">
                       Description
                     </th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-600">
+                    <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-medium text-gray-600 text-xs sm:text-sm">
                       Duration
                     </th>
                   </tr>
@@ -663,26 +675,42 @@ const Reports: React.FC = () => {
                         key={entry.id}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
-                        <td className="py-3 px-4 text-gray-700">
-                          {formatDate(new Date(entry.start_time))}
+                        <td className="py-2 sm:py-3 px-2 sm:px-4 text-gray-700 text-xs sm:text-sm">
+                          <div className="flex flex-col">
+                            <span>
+                              {formatDate(new Date(entry.start_time))}
+                            </span>
+                            {/* Show description on mobile */}
+                            {entry.description && (
+                              <span className="text-xs text-gray-500 sm:hidden mt-0.5 truncate max-w-[120px]">
+                                {entry.description}
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
                           {project ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
                               <div
-                                className="w-3 h-3 rounded-full"
+                                className="w-2 h-2 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: project.color }}
                               ></div>
-                              {project.name}
+                              <span className="truncate text-xs sm:text-sm">
+                                {project.name}
+                              </span>
                             </div>
                           ) : (
-                            <span className="text-gray-500">No Project</span>
+                            <span className="text-gray-500 text-xs sm:text-sm">
+                              No Project
+                            </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-gray-700">
-                          {entry.description || "No description"}
+                        <td className="py-2 sm:py-3 px-2 sm:px-4 text-gray-700 text-xs sm:text-sm hidden sm:table-cell">
+                          <span className="truncate block max-w-xs">
+                            {entry.description || "No description"}
+                          </span>
                         </td>
-                        <td className="py-3 px-4 text-right font-mono">
+                        <td className="py-2 sm:py-3 px-2 sm:px-4 text-right font-mono text-xs sm:text-sm">
                           {secondsToHMS(entry.duration || 0)}
                         </td>
                       </tr>

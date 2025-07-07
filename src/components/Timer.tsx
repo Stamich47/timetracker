@@ -256,51 +256,53 @@ const Timer: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="card p-6 sticky top-24">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <span className="ml-3 text-gray-600">Loading timer...</span>
+      <div className="card p-3 sm:p-6 sticky top-24 isolate">
+        <div className="flex items-center justify-center py-8 sm:py-12">
+          <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-blue-600" />
+          <span className="ml-2 sm:ml-3 text-gray-600 text-sm sm:text-base">
+            Loading timer...
+          </span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card p-6 sticky top-24">
+    <div className="card p-3 sm:p-6 sticky top-24 isolate">
       {/* Timer Header with Mode Toggle */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
-            <Clock className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-800">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
             {isManualMode ? "Manual Entry" : "Timer"}
           </h2>
         </div>
 
         {/* Mode Toggle */}
-        <div className="flex bg-gray-100 rounded-lg p-1">
+        <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
           <button
             onClick={() => setIsManualMode(false)}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
               !isManualMode
                 ? "bg-white text-blue-600 shadow-sm"
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            <TimerIcon className="w-4 h-4 inline mr-1" />
+            <TimerIcon className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
             Timer
           </button>
           <button
             onClick={() => setIsManualMode(true)}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
               isManualMode
                 ? "bg-white text-blue-600 shadow-sm"
                 : "text-gray-600 hover:text-gray-900"
             }`}
             disabled={activeTimer !== null}
           >
-            <Edit3 className="w-4 h-4 inline mr-1" />
+            <Edit3 className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
             Manual
           </button>
         </div>
@@ -418,11 +420,15 @@ const Timer: React.FC = () => {
                     <span className="text-gray-500">No Project</span>
                   )}
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <ChevronDown
+                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                    showProjectDropdown ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {showProjectDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-[999] w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                   <button
                     type="button"
                     onClick={() => {
@@ -459,6 +465,11 @@ const Timer: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Spacer element to push content down when dropdown is open - Mobile only */}
+            {showProjectDropdown && (
+              <div className="h-60 transition-all duration-300 ease-in-out md:hidden" />
+            )}
           </div>
 
           {/* Submit Button */}
@@ -542,11 +553,15 @@ const Timer: React.FC = () => {
                     <span className="text-gray-500">No Project</span>
                   )}
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <ChevronDown
+                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                    showProjectDropdown ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {showProjectDropdown && !(activeTimer !== null || isSaving) && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-[999] w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                   <button
                     type="button"
                     onClick={() => {
@@ -583,6 +598,11 @@ const Timer: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Spacer element to push content down when dropdown is open - Mobile only */}
+            {showProjectDropdown && !(activeTimer !== null || isSaving) && (
+              <div className="h-60 transition-all duration-300 ease-in-out md:hidden" />
+            )}
           </div>
 
           {/* Timer Controls */}

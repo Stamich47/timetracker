@@ -218,6 +218,26 @@ body {
   transform: translateY(-1px);
 }
 
+/* Custom dropdown styling */
+.custom-dropdown {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+}
+
+.custom-dropdown-option {
+  transition: all 0.15s ease;
+}
+
+.custom-dropdown-option:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1),
+    rgba(99, 102, 241, 0.05)
+  );
+}
+
 @keyframes cardFadeIn {
   from {
     opacity: 0;

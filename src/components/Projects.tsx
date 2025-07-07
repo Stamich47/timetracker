@@ -17,6 +17,7 @@ import {
 } from "../lib/projectsApi";
 import { useTimeEntries } from "../hooks/useTimeEntries";
 import { getRandomProjectColor } from "../utils/colorUtils";
+import CustomDropdown from "./CustomDropdown";
 
 const Projects: React.FC = () => {
   const { projects, refreshTimeEntries } = useTimeEntries();
@@ -239,20 +240,23 @@ const Projects: React.FC = () => {
                 Client
               </label>
               <div className="flex items-center">
-                <select
+                <CustomDropdown
                   value={formData.client_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, client_id: e.target.value })
+                  onChange={(value) =>
+                    setFormData({ ...formData, client_id: value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">No client</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "No client" },
+                    ...clients
+                      .filter((client) => client.id)
+                      .map((client) => ({
+                        value: client.id!,
+                        label: client.name,
+                      })),
+                  ]}
+                  placeholder="Select client"
+                  className="flex-1"
+                />
                 <button
                   onClick={() => setShowQuickClientForm(!showQuickClientForm)}
                   className="ml-2 p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"

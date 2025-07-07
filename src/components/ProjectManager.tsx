@@ -12,6 +12,7 @@ import { useTimer } from "../hooks/useTimer";
 import { useTimeEntries } from "../hooks/useTimeEntries";
 import { projectsApi, type Project, type Client } from "../lib/projectsApi";
 import { getRandomProjectColor } from "../utils/colorUtils";
+import CustomDropdown from "./CustomDropdown";
 
 const ProjectManager: React.FC = () => {
   const { setProject } = useTimer();
@@ -167,20 +168,22 @@ const ProjectManager: React.FC = () => {
             </div>
 
             <div>
-              <select
+              <CustomDropdown
                 value={formData.client_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, client_id: e.target.value })
+                onChange={(value) =>
+                  setFormData({ ...formData, client_id: value })
                 }
-                className="input-field"
-              >
-                <option value="">No client</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: "No client" },
+                  ...clients
+                    .filter((client) => client.id)
+                    .map((client) => ({
+                      value: client.id!,
+                      label: client.name,
+                    })),
+                ]}
+                placeholder="Select client"
+              />
             </div>
 
             <div>

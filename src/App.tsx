@@ -107,19 +107,19 @@ function AppContent() {
           </div>
 
           <div className="relative z-10">
-            <header className="bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 px-6 py-4 sticky top-0 z-50">
+            <header className="bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 px-3 sm:px-6 py-4 sticky top-0 z-50">
               <div className="max-w-6xl mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
                     <svg
-                      className="w-6 h-6 text-white"
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-white"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                     </svg>
                   </div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                     TimeTracker Pro
                   </h1>
                 </div>
@@ -167,7 +167,7 @@ function AppContent() {
               </div>
             </header>
 
-            <main className="max-w-6xl mx-auto py-8">
+            <main className="max-w-6xl mx-auto py-4 sm:py-6 lg:py-8 px-3 sm:px-6">
               <div
                 className={`transition-all duration-300 ease-in-out transform ${
                   isTransitioning
