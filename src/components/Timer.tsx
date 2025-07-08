@@ -313,24 +313,34 @@ const Timer: React.FC = () => {
         </div>
 
         {/* Mode Toggle */}
-        <div className="flex bg-surface rounded-lg p-1 border border-theme">
+        <div className="relative flex bg-surface rounded-lg p-1 border border-theme">
+          {/* Sliding Background Indicator */}
+          <div
+            className={`absolute top-1 bottom-1 bg-blue-600 rounded-md shadow-sm transition-all duration-300 ease-in-out ${
+              !isManualMode ? "left-1 right-1/2 mr-0.5" : "right-1 left-1/2 ml-0.5"
+            }`}
+          />
+          
+          {/* Timer Button */}
           <button
             onClick={() => setIsManualMode(false)}
-            className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+            className={`relative z-10 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 flex-1 justify-center ${
               !isManualMode
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-secondary hover:bg-surface-hover hover:text-primary"
+                ? "text-white"
+                : "text-secondary hover:text-primary"
             }`}
           >
             <TimerIcon className="w-4 h-4" />
             Timer
           </button>
+          
+          {/* Manual Button */}
           <button
             onClick={() => setIsManualMode(true)}
-            className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+            className={`relative z-10 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 flex-1 justify-center ${
               isManualMode
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-secondary hover:bg-surface-hover hover:text-primary"
+                ? "text-white"
+                : "text-secondary hover:text-primary"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
             disabled={activeTimer !== null}
           >
@@ -467,7 +477,7 @@ const Timer: React.FC = () => {
               </button>
 
               {showProjectDropdown && (
-                <div className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto">
+                <div className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto scrollbar-thin">
                   <button
                     type="button"
                     onClick={() => {
@@ -612,7 +622,7 @@ const Timer: React.FC = () => {
               </button>
 
               {showProjectDropdown && !(activeTimer !== null || isSaving) && (
-                <div className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto">
+                <div className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto scrollbar-thin">
                   <button
                     type="button"
                     onClick={() => {

@@ -13,6 +13,7 @@ import {
   CheckCircle,
   FileText,
   Check,
+  ChevronDown,
 } from "lucide-react";
 import { settingsApi, type UserSettings } from "../lib/settingsApi";
 import {
@@ -94,6 +95,7 @@ const Settings: React.FC = () => {
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(
     null
   );
+  const [dataManagementCollapsed, setDataManagementCollapsed] = useState(true); // Collapsed by default
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load settings on component mount
@@ -521,142 +523,206 @@ const Settings: React.FC = () => {
           </div>
 
           {/* Data Management */}
-          <div className="card p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-5 h-5 text-red-600" />
-              <h2 className="text-lg font-semibold text-primary">
-                Data Management
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button
-                onClick={handleExport}
-                className="btn-secondary justify-center"
-              >
-                <Download className="w-4 h-4" />
-                Export Data
-              </button>
-
-              <button
-                onClick={handleImport}
-                disabled={importing}
-                className="btn-secondary justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {importing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4" />
-                    Import Clockify Data
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-
-            {/* Import Instructions */}
-            <div className="mt-4 p-4 bg-info/10 border border-info/30 rounded-lg">
-              <div className="flex items-start gap-3">
-                <FileText className="w-5 h-5 text-info mt-0.5" />
-                <div className="text-sm text-info">
-                  <strong>Import Instructions:</strong>
-                  <ol className="mt-2 ml-4 list-decimal space-y-1">
-                    <li>Export your data from Clockify as a CSV file</li>
-                    <li>
-                      Make sure the CSV includes columns: Project, Client, Start
-                      Date, Start Time, Duration
-                    </li>
-                    <li>
-                      Click "Import Clockify Data" and select your CSV file
-                    </li>
-                    <li>
-                      The import will create missing clients and projects
-                      automatically
-                    </li>
-                  </ol>
+          <div className="card overflow-hidden">
+            <div
+              className="p-6 cursor-pointer hover:bg-surface-hover transition-colors"
+              onClick={() =>
+                setDataManagementCollapsed(!dataManagementCollapsed)
+              }
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-red-600" />
+                  <h2 className="text-lg font-semibold text-primary">
+                    Data Management
+                  </h2>
+                </div>
+                <div
+                  className={`transition-transform duration-300 ease-in-out ${
+                    dataManagementCollapsed ? "rotate-0" : "rotate-180"
+                  }`}
+                >
+                  <ChevronDown className="h-5 w-5 text-muted" />
                 </div>
               </div>
             </div>
 
-            {/* Import Result */}
-            {importResult && (
-              <div
-                className={`mt-4 p-4 rounded-lg border ${
-                  importResult.success
-                    ? "bg-success/10 border-success/30"
-                    : "bg-error/10 border-error/30"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {importResult.success ? (
-                    <CheckCircle className="w-5 h-5 text-success mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-error mt-0.5" />
-                  )}
-                  <div
-                    className={`text-sm ${
-                      importResult.success ? "text-success" : "text-error"
-                    }`}
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                dataManagementCollapsed
+                  ? "max-h-0 opacity-0"
+                  : "max-h-[2000px] opacity-100"
+              }`}
+            >
+              <div className="px-6 pb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={handleExport}
+                    className="btn-secondary justify-center"
                   >
-                    <p className="font-medium">{importResult.message}</p>
-                    {importResult.success && (
-                      <div className="mt-2 grid grid-cols-3 gap-4 text-xs">
+                    <Download className="w-4 h-4" />
+                    Export Data
+                  </button>
+
+                  <button
+                    onClick={handleImport}
+                    disabled={importing}
+                    className="btn-secondary justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {importing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Import Data
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+
+                {/* Import Instructions */}
+                <div className="mt-4 p-4 bg-info/10 border border-info/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-5 h-5 text-info mt-0.5" />
+                    <div className="text-sm text-info">
+                      <strong>CSV Import Instructions:</strong>
+                      <div className="mt-2 space-y-3">
                         <div>
-                          <span className="font-medium">Clients:</span>{" "}
-                          {importResult.imported.clients}
+                          <p className="font-medium mb-1">
+                            Required CSV Columns (exact names):
+                          </p>
+                          <ul className="ml-4 list-disc space-y-1 text-xs font-mono bg-white/20 p-2 rounded">
+                            <li>
+                              <span className="font-semibold">Project</span> -
+                              Project name
+                            </li>
+                            <li>
+                              <span className="font-semibold">Client</span> -
+                              Client name (optional)
+                            </li>
+                            <li>
+                              <span className="font-semibold">Description</span>{" "}
+                              - Task description (optional)
+                            </li>
+                            <li>
+                              <span className="font-semibold">Start Date</span>{" "}
+                              - Date in YYYY-MM-DD format
+                            </li>
+                            <li>
+                              <span className="font-semibold">Start Time</span>{" "}
+                              - Time in HH:MM format
+                            </li>
+                            <li>
+                              <span className="font-semibold">Duration</span> -
+                              Duration in HH:MM:SS format
+                            </li>
+                          </ul>
                         </div>
                         <div>
-                          <span className="font-medium">Projects:</span>{" "}
-                          {importResult.imported.projects}
-                        </div>
-                        <div>
-                          <span className="font-medium">Time Entries:</span>{" "}
-                          {importResult.imported.timeEntries}
+                          <p className="font-medium">Steps:</p>
+                          <ol className="mt-1 ml-4 list-decimal space-y-1">
+                            <li>
+                              Export your time tracking data as a CSV file
+                            </li>
+                            <li>
+                              Ensure your CSV has the exact column names listed
+                              above
+                            </li>
+                            <li>
+                              Click "Import Data" and select your CSV file
+                            </li>
+                            <li>
+                              Missing clients and projects will be created
+                              automatically
+                            </li>
+                          </ol>
                         </div>
                       </div>
-                    )}
-                    {importResult.errors.length > 0 && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer font-medium">
-                          View Errors ({importResult.errors.length})
-                        </summary>
-                        <ul className="mt-1 ml-4 list-disc space-y-1">
-                          {importResult.errors
-                            .slice(0, 10)
-                            .map((error, index) => (
-                              <li key={index}>{error}</li>
-                            ))}
-                          {importResult.errors.length > 10 && (
-                            <li>
-                              ... and {importResult.errors.length - 10} more
-                              errors
-                            </li>
-                          )}
-                        </ul>
-                      </details>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            <div className="mt-4 p-4 bg-warning/10 border border-warning/30 rounded-lg">
-              <div className="text-sm text-warning">
-                <strong>Note:</strong> Export includes all your time entries,
-                projects, and settings. Import will merge with existing data and
-                won't create duplicates.
+                {/* Import Result */}
+                {importResult && (
+                  <div
+                    className={`mt-4 p-4 rounded-lg border ${
+                      importResult.success
+                        ? "bg-success/10 border-success/30"
+                        : "bg-error/10 border-error/30"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {importResult.success ? (
+                        <CheckCircle className="w-5 h-5 text-success mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-error mt-0.5" />
+                      )}
+                      <div
+                        className={`text-sm ${
+                          importResult.success ? "text-success" : "text-error"
+                        }`}
+                      >
+                        <p className="font-medium">{importResult.message}</p>
+                        {importResult.success && (
+                          <div className="mt-2 grid grid-cols-3 gap-4 text-xs">
+                            <div>
+                              <span className="font-medium">Clients:</span>{" "}
+                              {importResult.imported.clients}
+                            </div>
+                            <div>
+                              <span className="font-medium">Projects:</span>{" "}
+                              {importResult.imported.projects}
+                            </div>
+                            <div>
+                              <span className="font-medium">Time Entries:</span>{" "}
+                              {importResult.imported.timeEntries}
+                            </div>
+                          </div>
+                        )}
+                        {importResult.errors.length > 0 && (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer font-medium">
+                              View Errors ({importResult.errors.length})
+                            </summary>
+                            <ul className="mt-1 ml-4 list-disc space-y-1">
+                              {importResult.errors
+                                .slice(0, 10)
+                                .map((error, index) => (
+                                  <li key={index}>{error}</li>
+                                ))}
+                              {importResult.errors.length > 10 && (
+                                <li>
+                                  ... and {importResult.errors.length - 10} more
+                                  errors
+                                </li>
+                              )}
+                            </ul>
+                          </details>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 p-4 bg-warning/10 border border-warning/30 rounded-lg">
+                  <div className="text-sm text-warning">
+                    <strong>Note:</strong> Export includes all your time
+                    entries, projects, and settings. Import will merge with
+                    existing data and won't create duplicates.
+                  </div>
+                </div>
               </div>
             </div>
           </div>

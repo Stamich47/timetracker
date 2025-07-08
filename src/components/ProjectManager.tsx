@@ -20,6 +20,7 @@ const ProjectManager: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "client" | "recent">("name");
   const [formData, setFormData] = useState({
     name: "",
     client_id: "",
@@ -94,6 +95,29 @@ const ProjectManager: React.FC = () => {
     }
   };
 
+  // Sort projects based on selected criteria
+  const sortedProjects = [...projects].sort((a, b) => {
+    switch (sortBy) {
+      case "name":
+        return a.name.localeCompare(b.name);
+      case "client": {
+        const aClient = a.client?.name || "";
+        const bClient = b.client?.name || "";
+        if (aClient === bClient) {
+          return a.name.localeCompare(b.name);
+        }
+        return aClient.localeCompare(bClient);
+      }
+      case "recent": {
+        const aDate = new Date(a.created_at || 0).getTime();
+        const bDate = new Date(b.created_at || 0).getTime();
+        return bDate - aDate; // Most recent first
+      }
+      default:
+        return 0;
+    }
+  });
+
   if (loading) {
     return (
       <div className="card p-6">
@@ -117,10 +141,35 @@ const ProjectManager: React.FC = () => {
             <p className="text-sm text-gray-600">{projects.length} projects</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-secondary">Sort:</span>
+            <div className="h-10">
+              <CustomDropdown
+                value={sortBy}
+                onChange={(value) =>
+                  setSortBy(value as "name" | "client" | "recent")
+                }
+                options={[
+                  { value: "name", label: "Project Name" },
+                  { value: "client", label: "Client Name" },
+                  { value: "recent", label: "Recently Added" },
+                ]}
+                placeholder="Sort by"
+                className="h-10"
+              />
+            </div>
+          </div>
+          <button
+            className="btn-secondary h-10 px-4 py-2 flex items-center gap-2"
+            onClick={() => setShowAddForm(!showAddForm)}
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </button>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-md transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-md transition-colors h-10 w-10 flex items-center justify-center"
             title={isCollapsed ? "Expand projects" : "Collapse projects"}
           >
             {isCollapsed ? (
@@ -128,13 +177,6 @@ const ProjectManager: React.FC = () => {
             ) : (
               <ChevronUp className="w-4 h-4" />
             )}
-          </button>
-          <button
-            className="btn-secondary"
-            onClick={() => setShowAddForm(!showAddForm)}
-          >
-            <Plus className="w-4 h-4" />
-            Add
           </button>
         </div>
       </div>
@@ -293,12 +335,12 @@ const ProjectManager: React.FC = () => {
             <div>
               <div
                 className={`space-y-2 ${
-                  projects.length > MAX_VISIBLE_PROJECTS
-                    ? "max-h-80 overflow-y-auto"
+                  sortedProjects.length > MAX_VISIBLE_PROJECTS
+                    ? "max-h-80 overflow-y-auto scrollbar-thin"
                     : ""
                 }`}
               >
-                {projects.map((project) => (
+                {sortedProjects.map((project) => (
                   <div
                     key={project.id}
                     className="project-item group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all"

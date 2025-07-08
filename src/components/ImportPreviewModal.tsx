@@ -266,7 +266,7 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 max-h-96 overflow-y-auto">
+        <div className="p-6 max-h-96 overflow-y-auto scrollbar-thin">
           {/* Clients Tab */}
           {activeTab === "clients" && (
             <div className="space-y-4">

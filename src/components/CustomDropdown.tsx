@@ -109,7 +109,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
       {isOpen && (
         <div
-          className="absolute z-50 w-full mt-1 bg-surface border border-theme rounded-lg shadow-xl backdrop-blur-sm max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-1 bg-surface border border-theme rounded-lg shadow-xl backdrop-blur-sm max-h-60 overflow-auto scrollbar-thin"
           style={{
             backgroundColor: "var(--color-surface)",
             borderColor: "var(--color-border)",

@@ -12,12 +12,26 @@ import { secondsToHMS, formatDate } from "../utils/timeUtils";
 import { useTimeEntries } from "../hooks/useTimeEntries";
 import CustomDropdown from "./CustomDropdown";
 import type { TimeEntry } from "../lib/timeEntriesApi";
+import { settingsApi, type UserSettings } from "../lib/settingsApi";
+import {
+  calculateTotalRevenue,
+  calculateProjectRevenueBreakdown,
+  formatCurrency,
+} from "../utils/revenueUtils";
 
 interface ReportData {
   totalTime: number;
   billableTime: number;
   totalProjects: number;
   productivity: number;
+  // Add revenue fields
+  totalGrossRevenue: number;
+  totalNetRevenue: number;
+  totalTaxAmount: number;
+  totalBillableHours: number;
+  totalNonBillableHours: number;
+  billableEntries: number;
+  nonBillableEntries: number;
   dailyHours: {
     day: string;
     hours: number;
@@ -31,13 +45,33 @@ interface ReportData {
     color: string;
     percentage: number;
   }[];
+  // Add revenue breakdown
+  revenueBreakdown: Array<{
+    projectId: string;
+    projectName: string;
+    projectColor: string;
+    clientName?: string;
+    totalHours: number;
+    billableHours: number;
+    nonBillableHours: number;
+    grossRevenue: number;
+    netRevenue: number;
+    hourlyRate: number;
+    entriesCount: number;
+  }>;
   filteredEntries: TimeEntry[];
 }
 
 const Reports: React.FC = () => {
   const { timeEntries, projects, loading } = useTimeEntries();
   const [dateRange, setDateRange] = useState("thisWeek");
-  const [selectedClientId, setSelectedClientId] = useState<string>(""); // New client filter state
+  const [selectedClientId, setSelectedClientId] = useState<string>(""); // Client filter state
+  // Add user settings state
+  const [userSettings, setUserSettings] = useState<UserSettings>({
+    currency: "USD",
+    hourly_rate: 0,
+    tax_rate: 0,
+  });
 
   // Helper function to get month/year labels
   const getMonthYearLabels = () => {
@@ -76,10 +110,35 @@ const Reports: React.FC = () => {
     billableTime: 0,
     totalProjects: 0,
     productivity: 0,
+    // Initialize revenue fields
+    totalGrossRevenue: 0,
+    totalNetRevenue: 0,
+    totalTaxAmount: 0,
+    totalBillableHours: 0,
+    totalNonBillableHours: 0,
+    billableEntries: 0,
+    nonBillableEntries: 0,
     dailyHours: [],
     projectBreakdown: [],
+    // Initialize revenue breakdown
+    revenueBreakdown: [],
     filteredEntries: [],
   });
+
+  // Load user settings on component mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await settingsApi.getSettings();
+        if (settings) {
+          setUserSettings(settings);
+        }
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      }
+    };
+    loadSettings();
+  }, []);
 
   // Handle export functionality
   const handleExport = () => {
@@ -355,13 +414,35 @@ const Reports: React.FC = () => {
         new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
     );
 
+    // Calculate revenue data
+    const revenueData = calculateTotalRevenue(
+      filteredEntries,
+      projects,
+      userSettings
+    );
+
+    const revenueBreakdown = calculateProjectRevenueBreakdown(
+      filteredEntries,
+      projects,
+      userSettings
+    );
+
     setReportData({
       totalTime,
       billableTime,
       totalProjects,
       productivity,
+      // Set revenue data
+      totalGrossRevenue: revenueData.totalGrossRevenue,
+      totalNetRevenue: revenueData.totalNetRevenue,
+      totalTaxAmount: revenueData.totalTaxAmount,
+      totalBillableHours: revenueData.totalBillableHours,
+      totalNonBillableHours: revenueData.totalNonBillableHours,
+      billableEntries: revenueData.billableEntries,
+      nonBillableEntries: revenueData.nonBillableEntries,
       dailyHours,
       projectBreakdown,
+      revenueBreakdown,
       filteredEntries: allFilteredEntries,
     });
   }, [
@@ -372,6 +453,7 @@ const Reports: React.FC = () => {
     customEndDate,
     selectedClientId,
     loading,
+    userSettings,
   ]);
 
   // Get unique clients from projects
@@ -488,18 +570,15 @@ const Reports: React.FC = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 lg:gap-6">
         <div className="card p-3 sm:p-4 lg:p-6">
-          <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="text-xs sm:text-sm font-medium text-secondary">
-                Total Time
-              </div>
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-success" />
+            <div className="text-xs sm:text-sm font-medium text-secondary">
+              Total Time
+            </div>
           </div>
           <div className="text-sm sm:text-lg lg:text-2xl font-bold text-primary">
             {secondsToHMS(reportData.totalTime)}
@@ -507,16 +586,13 @@ const Reports: React.FC = () => {
         </div>
 
         <div className="card p-3 sm:p-4 lg:p-6">
-          <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="text-xs sm:text-sm font-medium text-secondary">
-                Billable Time
-              </div>
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-green-600 dark:text-green-400" />
             </div>
-            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-success" />
+            <div className="text-xs sm:text-sm font-medium text-secondary">
+              Billable Time
+            </div>
           </div>
           <div className="text-sm sm:text-lg lg:text-2xl font-bold text-primary">
             {secondsToHMS(reportData.billableTime)}
@@ -524,16 +600,13 @@ const Reports: React.FC = () => {
         </div>
 
         <div className="card p-3 sm:p-4 lg:p-6">
-          <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <Target className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="text-xs sm:text-sm font-medium text-secondary">
-                Active Projects
-              </div>
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <Target className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400" />
             </div>
-            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-success" />
+            <div className="text-xs sm:text-sm font-medium text-secondary">
+              Active Projects
+            </div>
           </div>
           <div className="text-sm sm:text-lg lg:text-2xl font-bold text-primary">
             {reportData.totalProjects}
@@ -541,19 +614,48 @@ const Reports: React.FC = () => {
         </div>
 
         <div className="card p-3 sm:p-4 lg:p-6">
-          <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div className="text-xs sm:text-sm font-medium text-secondary">
-                Productivity
-              </div>
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-orange-600 dark:text-orange-400" />
             </div>
-            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-success" />
+            <div className="text-xs sm:text-sm font-medium text-secondary">
+              Productivity
+            </div>
           </div>
           <div className="text-sm sm:text-lg lg:text-2xl font-bold text-primary">
             {reportData.productivity}%
+          </div>
+        </div>
+
+        {/* New Revenue Cards */}
+        <div className="card p-3 sm:p-4 lg:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="text-xs sm:text-sm font-medium text-secondary">
+              Gross Revenue
+            </div>
+          </div>
+          <div className="text-sm sm:text-lg lg:text-2xl font-bold text-primary">
+            {formatCurrency(
+              reportData.totalGrossRevenue,
+              userSettings.currency
+            )}
+          </div>
+        </div>
+
+        <div className="card p-3 sm:p-4 lg:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 lg:mb-4">
+            <div className="p-1.5 sm:p-2 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-teal-600 dark:text-teal-400" />
+            </div>
+            <div className="text-xs sm:text-sm font-medium text-secondary">
+              Net Revenue
+            </div>
+          </div>
+          <div className="text-sm sm:text-lg lg:text-2xl font-bold text-primary">
+            {formatCurrency(reportData.totalNetRevenue, userSettings.currency)}
           </div>
         </div>
       </div>
@@ -570,7 +672,13 @@ const Reports: React.FC = () => {
               No data for selected period
             </div>
           ) : (
-            <div className="space-y-2 sm:space-y-3">
+            <div
+              className={`space-y-2 sm:space-y-3 ${
+                reportData.dailyHours.length > 7
+                  ? "max-h-64 sm:max-h-72 lg:max-h-80 overflow-y-auto scrollbar-thin"
+                  : ""
+              }`}
+            >
               {reportData.dailyHours.map((day, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="text-sm font-medium text-secondary w-14 sm:w-16 lg:w-20 flex-shrink-0">
@@ -644,6 +752,141 @@ const Reports: React.FC = () => {
         </div>
       </div>
 
+      {/* Revenue Breakdown - New Section */}
+      <div className="card p-3 sm:p-4 lg:p-6">
+        <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-primary mb-3 sm:mb-4">
+          Revenue Breakdown by Project
+        </h3>
+        {reportData.revenueBreakdown.length === 0 ||
+        reportData.totalGrossRevenue === 0 ? (
+          <div className="text-center py-6 sm:py-8 text-muted text-sm">
+            No billable projects or revenue data for selected period
+          </div>
+        ) : (
+          <div className="space-y-3 sm:space-y-4">
+            {reportData.revenueBreakdown
+              .filter((project) => project.grossRevenue > 0)
+              .map((project, index) => (
+                <div
+                  key={index}
+                  className="border border-theme rounded-lg p-3 sm:p-4 hover:bg-surface-hover transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: project.projectColor }}
+                      ></div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-medium text-primary truncate">
+                          {project.projectName}
+                        </h4>
+                        {project.clientName && (
+                          <p className="text-xs text-secondary">
+                            {project.clientName}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <div className="text-lg font-bold text-primary">
+                        {formatCurrency(
+                          project.grossRevenue,
+                          userSettings.currency
+                        )}
+                      </div>
+                      <div className="text-xs text-secondary">
+                        {formatCurrency(
+                          project.hourlyRate,
+                          userSettings.currency
+                        )}
+                        /hr
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs">
+                    <div>
+                      <div className="text-muted">Hours</div>
+                      <div className="font-medium text-primary">
+                        {project.billableHours.toFixed(1)}h
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Entries</div>
+                      <div className="font-medium text-primary">
+                        {project.entriesCount}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Net Revenue</div>
+                      <div className="font-medium text-primary">
+                        {formatCurrency(
+                          project.netRevenue,
+                          userSettings.currency
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted">Tax</div>
+                      <div className="font-medium text-primary">
+                        {formatCurrency(
+                          project.grossRevenue - project.netRevenue,
+                          userSettings.currency
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+            {/* Revenue Summary */}
+            <div className="border-t border-theme pt-3 sm:pt-4 mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <h5 className="text-sm font-semibold text-primary">
+                  Total Revenue Summary
+                </h5>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs">
+                <div>
+                  <div className="text-muted">Billable Hours</div>
+                  <div className="font-medium text-primary">
+                    {reportData.totalBillableHours.toFixed(1)}h
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted">Gross Revenue</div>
+                  <div className="font-medium text-primary">
+                    {formatCurrency(
+                      reportData.totalGrossRevenue,
+                      userSettings.currency
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted">Tax Amount</div>
+                  <div className="font-medium text-primary">
+                    {formatCurrency(
+                      reportData.totalTaxAmount,
+                      userSettings.currency
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted">Net Revenue</div>
+                  <div className="font-medium text-primary">
+                    {formatCurrency(
+                      reportData.totalNetRevenue,
+                      userSettings.currency
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Time Entries Table */}
       <div className="card p-3 sm:p-4 lg:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
@@ -661,20 +904,20 @@ const Reports: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="max-h-80 sm:max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+            <div className="max-h-80 sm:max-h-96 overflow-y-auto scrollbar-thin border border-theme rounded-lg">
               <table className="w-full text-xs sm:text-sm">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-secondary text-xs sm:text-sm">
+                <thead className="bg-surface border-b border-theme sticky top-0">
+                  <tr>
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-primary text-xs sm:text-sm">
                       Date
                     </th>
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-secondary text-xs sm:text-sm">
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-primary text-xs sm:text-sm">
                       Project
                     </th>
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-secondary text-xs sm:text-sm hidden sm:table-cell">
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-medium text-primary text-xs sm:text-sm hidden sm:table-cell">
                       Description
                     </th>
-                    <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-medium text-secondary text-xs sm:text-sm">
+                    <th className="text-right py-2 sm:py-3 px-2 sm:px-4 font-medium text-primary text-xs sm:text-sm">
                       Duration
                     </th>
                   </tr>
@@ -685,10 +928,7 @@ const Reports: React.FC = () => {
                       (p) => p.id === entry.project_id
                     );
                     return (
-                      <tr
-                        key={entry.id}
-                        className="border-b border-gray-100 hover:bg-gray-50"
-                      >
+                      <tr key={entry.id} className="border-b border-theme">
                         <td className="py-2 sm:py-3 px-2 sm:px-4 text-primary text-xs sm:text-sm">
                           <div className="flex flex-col">
                             <span>
