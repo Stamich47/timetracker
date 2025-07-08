@@ -74,20 +74,24 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
   const sizeClasses = getSizeClasses();
 
+  // Check if height is specified in className prop
+  const hasHeightClass = className.includes("h-");
+  const buttonHeightClass = hasHeightClass ? "h-full" : "";
+
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          w-full ${sizeClasses.button} 
-          bg-white bg-opacity-90 backdrop-blur-sm
-          border border-gray-300 rounded-lg
-          hover:bg-opacity-100 hover:border-gray-400
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+          w-full ${sizeClasses.button} ${buttonHeightClass}
+          bg-surface backdrop-blur-sm
+          border border-theme rounded-lg
+          hover:bg-surface-hover hover:border-theme
+          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-200
           flex items-center justify-between gap-2
-          text-left font-medium text-gray-700
+          text-left font-medium text-primary
           shadow-sm hover:shadow-md
         `}
       >
@@ -97,14 +101,22 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
         <ChevronDown
           className={`${
             sizeClasses.icon
-          } text-gray-400 transition-transform duration-200 ${
+          } text-muted transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white bg-opacity-95 backdrop-blur-sm border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+        <div
+          className="absolute z-50 w-full mt-1 bg-surface border border-theme rounded-lg shadow-xl backdrop-blur-sm max-h-60 overflow-auto"
+          style={{
+            backgroundColor: "var(--color-surface)",
+            borderColor: "var(--color-border)",
+            boxShadow:
+              "0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)",
+          }}
+        >
           <div className={sizeClasses.dropdown}>
             {options.map((option) => (
               <button
@@ -116,15 +128,21 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 }}
                 className={`
                   w-full ${sizeClasses.option} text-left
-                  hover:bg-blue-50 hover:bg-opacity-80
-                  focus:outline-none focus:bg-blue-50 focus:bg-opacity-80
+                  hover:bg-surface-hover
+                  focus:outline-none focus:bg-surface-hover
                   transition-colors duration-150
-                  ${
-                    value === option.value
-                      ? "bg-blue-100 bg-opacity-60 text-blue-700 font-medium"
-                      : "text-gray-700"
-                  }
+                  ${value === option.value ? "font-medium" : ""}
                 `}
+                style={{
+                  backgroundColor:
+                    value === option.value
+                      ? "var(--color-blueSelection)"
+                      : undefined,
+                  color:
+                    value === option.value
+                      ? "var(--color-blueText)"
+                      : "var(--color-textPrimary)",
+                }}
               >
                 {option.element || option.label}
               </button>

@@ -8,15 +8,20 @@ import {
   Timer as TimerIcon,
   Calendar,
   ChevronDown,
+  FolderOpen,
 } from "lucide-react";
-import { timeEntriesApi, type ActiveTimer } from "../lib/timeEntriesApi";
+import {
+  timeEntriesApi,
+  type ActiveTimer,
+  type TimeEntry,
+} from "../lib/timeEntriesApi";
 import { useTimeEntries } from "../hooks/useTimeEntries";
 import { useAuth } from "../hooks/useAuth";
 import { useTimer } from "../hooks/useTimer";
 import { secondsToHMS } from "../utils/timeUtils";
 
 const Timer: React.FC = () => {
-  const { projects } = useTimeEntries();
+  const { projects, timeEntries } = useTimeEntries();
   const { loading: authLoading } = useAuth();
   const { timer } = useTimer();
   const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
@@ -43,6 +48,33 @@ const Timer: React.FC = () => {
       loadInitialData();
     }
   }, [authLoading]);
+
+  // Listen for changes in timeEntries to detect when a timer is started from elsewhere
+  useEffect(() => {
+    const runningEntry = timeEntries.find(
+      (entry: TimeEntry) =>
+        entry.is_running || (!entry.end_time && entry.start_time)
+    );
+
+    if (runningEntry && !activeTimer) {
+      // A timer was started from elsewhere (like TimeEntries component)
+      setActiveTimer({
+        id: runningEntry.id!,
+        start_time: runningEntry.start_time,
+        description: runningEntry.description || "",
+        project_id: runningEntry.project_id,
+        project: runningEntry.project,
+      });
+      setDescription(runningEntry.description || "");
+      setSelectedProjectId(runningEntry.project_id || "");
+    } else if (!runningEntry && activeTimer) {
+      // Timer was stopped from elsewhere
+      setActiveTimer(null);
+      setElapsedTime(0);
+      setDescription("");
+      setSelectedProjectId("");
+    }
+  }, [timeEntries, activeTimer]);
 
   // Sync selected project from TimerContext
   useEffect(() => {
@@ -258,8 +290,8 @@ const Timer: React.FC = () => {
     return (
       <div className="card p-3 sm:p-6 sticky top-24 isolate">
         <div className="flex items-center justify-center py-8 sm:py-12">
-          <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-blue-600" />
-          <span className="ml-2 sm:ml-3 text-gray-600 text-sm sm:text-base">
+          <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-primary" />
+          <span className="ml-2 sm:ml-3 text-secondary text-sm sm:text-base">
             Loading timer...
           </span>
         </div>
@@ -275,34 +307,34 @@ const Timer: React.FC = () => {
           <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
             <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
+          <h2 className="text-lg sm:text-xl font-semibold text-primary">
             {isManualMode ? "Manual Entry" : "Timer"}
           </h2>
         </div>
 
         {/* Mode Toggle */}
-        <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
+        <div className="flex bg-surface rounded-lg p-1 border border-theme">
           <button
             onClick={() => setIsManualMode(false)}
-            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
               !isManualMode
-                ? "bg-white text-blue-600 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-secondary hover:bg-surface-hover hover:text-primary"
             }`}
           >
-            <TimerIcon className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
+            <TimerIcon className="w-4 h-4" />
             Timer
           </button>
           <button
             onClick={() => setIsManualMode(true)}
-            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
               isManualMode
-                ? "bg-white text-blue-600 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-secondary hover:bg-surface-hover hover:text-primary"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
             disabled={activeTimer !== null}
           >
-            <Edit3 className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
+            <Edit3 className="w-4 h-4" />
             Manual
           </button>
         </div>
@@ -313,7 +345,7 @@ const Timer: React.FC = () => {
         <form onSubmit={handleManualSubmit} className="space-y-6">
           {/* Date Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-primary mb-2">
               Date
             </label>
             <input
@@ -331,7 +363,7 @@ const Timer: React.FC = () => {
           {/* Time Range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 Start Time
               </label>
               <input
@@ -345,7 +377,7 @@ const Timer: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 End Time
               </label>
               <input
@@ -362,12 +394,15 @@ const Timer: React.FC = () => {
 
           {/* Duration Display */}
           {manualEntry.duration > 0 && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-blue-900">
-                  Duration:
-                </span>
-                <span className="text-lg font-bold text-blue-600 font-mono">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">
+                    Duration:
+                  </span>
+                </div>
+                <span className="text-xl font-bold text-blue-700 font-mono">
                   {secondsToHMS(manualEntry.duration)}
                 </span>
               </div>
@@ -376,7 +411,7 @@ const Timer: React.FC = () => {
 
           {/* Description Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-primary mb-2">
               Description
             </label>
             <input
@@ -391,54 +426,58 @@ const Timer: React.FC = () => {
 
           {/* Project Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
+              <FolderOpen className="w-4 h-4" />
               Project
             </label>
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                className="input-field w-full text-left flex items-center justify-between"
+                className="input-field w-full text-left flex items-center justify-between hover:bg-surface-hover transition-colors"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {selectedProjectId ? (
                     <>
                       <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm"
                         style={{
                           backgroundColor:
                             projects.find((p) => p.id === selectedProjectId)
                               ?.color || "#3B82F6",
                         }}
                       />
-                      <span>
+                      <span className="font-medium">
                         {projects.find((p) => p.id === selectedProjectId)
                           ?.name || "Select Project"}
                       </span>
                     </>
                   ) : (
-                    <span className="text-gray-500">No Project</span>
+                    <>
+                      <div className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0" />
+                      <span className="text-muted">No Project</span>
+                    </>
                   )}
                 </div>
                 <ChevronDown
-                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                  className={`w-5 h-5 text-muted transition-transform duration-200 ${
                     showProjectDropdown ? "rotate-180" : ""
                   }`}
                 />
               </button>
 
               {showProjectDropdown && (
-                <div className="absolute z-[999] w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedProjectId("");
                       setShowProjectDropdown(false);
                     }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                    className="w-full px-4 py-3 text-left hover:bg-surface-hover flex items-center gap-3 border-b border-theme/10 last:border-b-0"
                   >
-                    <div className="w-3 h-3 rounded-full bg-gray-300 flex-shrink-0" />
-                    <span className="text-gray-500">No Project</span>
+                    <div className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0" />
+                    <span className="text-muted font-medium">No Project</span>
                   </button>
                   {projects.map((project) => (
                     <button
@@ -448,27 +487,31 @@ const Timer: React.FC = () => {
                         setSelectedProjectId(project.id!);
                         setShowProjectDropdown(false);
                       }}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                      className="w-full px-4 py-3 text-left hover:bg-surface-hover flex items-center gap-3 border-b border-theme/10 last:border-b-0"
                     >
                       <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm"
                         style={{ backgroundColor: project.color || "#3B82F6" }}
                       />
-                      <span className="truncate">{project.name}</span>
-                      {project.client?.name && (
-                        <span className="text-xs text-gray-500 ml-auto">
-                          {project.client.name}
+                      <div className="flex-1 min-w-0">
+                        <span className="truncate text-primary font-medium block">
+                          {project.name}
                         </span>
-                      )}
+                        {project.client?.name && (
+                          <span className="text-xs text-muted truncate block">
+                            {project.client.name}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Spacer element to push content down when dropdown is open - Mobile only */}
+            {/* Spacer element to push content down when dropdown is open */}
             {showProjectDropdown && (
-              <div className="h-60 transition-all duration-300 ease-in-out md:hidden" />
+              <div className="h-60 transition-all duration-300 ease-in-out" />
             )}
           </div>
 
@@ -511,6 +554,10 @@ const Timer: React.FC = () => {
 
           {/* Description Input */}
           <div className="mb-6">
+            <label className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
+              <Edit3 className="w-4 h-4" />
+              Description
+            </label>
             <input
               type="text"
               placeholder="What are you working on?"
@@ -523,55 +570,59 @@ const Timer: React.FC = () => {
 
           {/* Project Selection */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
+              <FolderOpen className="w-4 h-4" />
               Project
             </label>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                className="input-field w-full text-left flex items-center justify-between"
+                className="input-field w-full text-left flex items-center justify-between hover:bg-surface-hover transition-colors"
                 disabled={activeTimer !== null || isSaving}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {selectedProjectId ? (
                     <>
                       <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm"
                         style={{
                           backgroundColor:
                             projects.find((p) => p.id === selectedProjectId)
                               ?.color || "#3B82F6",
                         }}
                       />
-                      <span>
+                      <span className="font-medium">
                         {projects.find((p) => p.id === selectedProjectId)
                           ?.name || "Select Project"}
                       </span>
                     </>
                   ) : (
-                    <span className="text-gray-500">No Project</span>
+                    <>
+                      <div className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0" />
+                      <span className="text-muted">No Project</span>
+                    </>
                   )}
                 </div>
                 <ChevronDown
-                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                  className={`w-5 h-5 text-muted transition-transform duration-200 ${
                     showProjectDropdown ? "rotate-180" : ""
                   }`}
                 />
               </button>
 
               {showProjectDropdown && !(activeTimer !== null || isSaving) && (
-                <div className="absolute z-[999] w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedProjectId("");
                       setShowProjectDropdown(false);
                     }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                    className="w-full px-4 py-3 text-left hover:bg-surface-hover flex items-center gap-3 border-b border-theme/10 last:border-b-0"
                   >
-                    <div className="w-3 h-3 rounded-full bg-gray-300 flex-shrink-0" />
-                    <span className="text-gray-500">No Project</span>
+                    <div className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0" />
+                    <span className="text-muted font-medium">No Project</span>
                   </button>
                   {projects.map((project) => (
                     <button
@@ -581,27 +632,31 @@ const Timer: React.FC = () => {
                         setSelectedProjectId(project.id!);
                         setShowProjectDropdown(false);
                       }}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                      className="w-full px-4 py-3 text-left hover:bg-surface-hover flex items-center gap-3 border-b border-theme/10 last:border-b-0"
                     >
                       <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm"
                         style={{ backgroundColor: project.color || "#3B82F6" }}
                       />
-                      <span className="truncate">{project.name}</span>
-                      {project.client?.name && (
-                        <span className="text-xs text-gray-500 ml-auto">
-                          {project.client.name}
+                      <div className="flex-1 min-w-0">
+                        <span className="truncate text-primary font-medium block">
+                          {project.name}
                         </span>
-                      )}
+                        {project.client?.name && (
+                          <span className="text-xs text-muted truncate block">
+                            {project.client.name}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Spacer element to push content down when dropdown is open - Mobile only */}
+            {/* Spacer element to push content down when dropdown is open */}
             {showProjectDropdown && !(activeTimer !== null || isSaving) && (
-              <div className="h-60 transition-all duration-300 ease-in-out md:hidden" />
+              <div className="h-60 transition-all duration-300 ease-in-out" />
             )}
           </div>
 
@@ -634,15 +689,18 @@ const Timer: React.FC = () => {
 
           {/* Current Project Display */}
           {activeTimer?.project && (
-            <div className="p-3 bg-gray-50 rounded-lg border">
-              <div className="flex items-center gap-2">
+            <div className="p-4 bg-surface rounded-lg border border-theme">
+              <div className="flex items-center gap-3">
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-4 h-4 rounded-full ring-2 ring-white shadow-sm"
                   style={{ backgroundColor: activeTimer.project.color }}
                 ></div>
-                <span className="text-sm font-medium text-gray-700">
-                  {activeTimer.project.name}
-                </span>
+                <div>
+                  <span className="text-sm font-medium text-primary block">
+                    {activeTimer.project.name}
+                  </span>
+                  <span className="text-xs text-muted">Currently tracking</span>
+                </div>
               </div>
             </div>
           )}

@@ -119,7 +119,7 @@ const Clients: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-gray-600">Loading clients...</span>
+        <span className="ml-2 text-secondary">Loading clients...</span>
       </div>
     );
   }
@@ -164,13 +164,13 @@ const Clients: React.FC = () => {
 
       {/* Add/Edit Client Form */}
       {showAddForm && (
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold text-primary mb-4">
             {editingClient ? "Edit Client" : "Add New Client"}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary mb-1">
                 Client Name *
               </label>
               <input
@@ -184,7 +184,7 @@ const Clients: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary mb-1">
                 Email
               </label>
               <input
@@ -198,7 +198,7 @@ const Clients: React.FC = () => {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary mb-1">
                 Phone
               </label>
               <input
@@ -215,7 +215,7 @@ const Clients: React.FC = () => {
           <div className="flex justify-end mt-4 space-x-2">
             <button
               onClick={handleCancel}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              className="btn-secondary border-theme"
             >
               Cancel
             </button>
@@ -232,11 +232,11 @@ const Clients: React.FC = () => {
       {/* Clients Grid */}
       {clients.length === 0 ? (
         <div className="text-center py-12">
-          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <Users className="h-12 w-12 text-muted mx-auto mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">
             No clients yet
           </h3>
-          <p className="text-gray-300 mb-4">
+          <p className="text-secondary mb-4">
             Get started by adding your first client.
           </p>
           <button
@@ -252,7 +252,7 @@ const Clients: React.FC = () => {
           {clients.map((client) => (
             <div
               key={client.id}
-              className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+              className="card hover:shadow-md transition-shadow"
             >
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -261,7 +261,7 @@ const Clients: React.FC = () => {
                       <Users className="h-5 w-5 text-blue-600" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      <h3 className="text-lg font-semibold text-primary truncate">
                         {client.name}
                       </h3>
                     </div>
@@ -269,13 +269,13 @@ const Clients: React.FC = () => {
                   <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleEdit(client)}
-                      className="p-1 text-gray-400 hover:text-gray-600"
+                      className="p-1 text-muted hover:text-secondary"
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(client.id!)}
-                      className="p-1 text-gray-400 hover:text-red-600"
+                      className="p-1 text-muted hover:text-red-600"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -284,19 +284,19 @@ const Clients: React.FC = () => {
 
                 <div className="space-y-2">
                   {client.email && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                    <div className="flex items-center text-sm text-secondary">
+                      <Mail className="h-4 w-4 mr-2 text-muted" />
                       <span className="truncate">{client.email}</span>
                     </div>
                   )}
                   {client.phone && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                    <div className="flex items-center text-sm text-secondary">
+                      <Phone className="h-4 w-4 mr-2 text-muted" />
                       <span>{client.phone}</span>
                     </div>
                   )}
                   {!client.email && !client.phone && (
-                    <p className="text-sm text-gray-400 italic">
+                    <p className="text-sm text-muted italic">
                       No contact information
                     </p>
                   )}

@@ -113,7 +113,7 @@ const ProjectManager: React.FC = () => {
             <FolderOpen className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-gray-800">Projects</h2>
+            <h2 className="text-xl font-semibold text-primary">Projects</h2>
             <p className="text-sm text-gray-600">{projects.length} projects</p>
           </div>
         </div>
@@ -301,7 +301,7 @@ const ProjectManager: React.FC = () => {
                 {projects.map((project) => (
                   <div
                     key={project.id}
-                    className="project-item group flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all"
+                    className="project-item group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all"
                     onClick={() => handleSelectProject(project)}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -310,18 +310,18 @@ const ProjectManager: React.FC = () => {
                         style={{ backgroundColor: project.color }}
                       ></div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate text-sm">
+                        <h3 className="font-medium text-primary truncate text-sm">
                           {project.name}
                         </h3>
                         {project.client?.name && (
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs text-muted truncate">
                             {project.client.name}
                           </p>
                         )}
                       </div>
                     </div>
                     <button
-                      className="opacity-0 group-hover:opacity-100 text-blue-600 hover:bg-blue-50 text-xs px-2 py-1 rounded transition-all duration-200 flex items-center gap-1"
+                      className="opacity-0 group-hover:opacity-100 text-primary hover:bg-surface-hover text-xs px-2 py-1 rounded transition-all duration-200 flex items-center gap-1"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectProject(project);

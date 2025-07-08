@@ -170,8 +170,8 @@ const Projects: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-gray-600">Loading projects...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-secondary">Loading projects...</span>
       </div>
     );
   }
@@ -179,12 +179,9 @@ const Projects: React.FC = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <AlertCircle className="h-8 w-8 text-red-500" />
-        <span className="ml-2 text-red-600">{error}</span>
-        <button
-          onClick={loadData}
-          className="ml-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-        >
+        <AlertCircle className="h-8 w-8 text-primary" />
+        <span className="ml-2 text-primary">{error}</span>
+        <button onClick={loadData} className="btn-primary ml-4">
           Retry
         </button>
       </div>
@@ -199,16 +196,13 @@ const Projects: React.FC = () => {
             <FolderOpen className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Projects</h1>
-            <p className="text-blue-100 mt-1">
+            <h1 className="text-2xl font-bold text-primary">Projects</h1>
+            <p className="text-secondary mt-1">
               Manage your projects and track time efficiently
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-        >
+        <button onClick={() => setShowAddForm(true)} className="btn-primary">
           <Plus className="h-4 w-4 mr-2" />
           New Project
         </button>
@@ -216,13 +210,13 @@ const Projects: React.FC = () => {
 
       {/* Add/Edit Project Form */}
       {showAddForm && (
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold text-primary mb-4">
             {editingProject ? "Edit Project" : "Add New Project"}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary mb-1">
                 Project Name *
               </label>
               <input
@@ -231,12 +225,12 @@ const Projects: React.FC = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field"
                 placeholder="Enter project name"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary mb-1">
                 Client
               </label>
               <div className="flex items-center">
@@ -259,7 +253,7 @@ const Projects: React.FC = () => {
                 />
                 <button
                   onClick={() => setShowQuickClientForm(!showQuickClientForm)}
-                  className="ml-2 p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                  className="btn-primary ml-2 p-2"
                   title="Add new client"
                 >
                   <Plus className="h-4 w-4" />
@@ -272,7 +266,7 @@ const Projects: React.FC = () => {
                     value={quickClientName}
                     onChange={(e) => setQuickClientName(e.target.value)}
                     placeholder="Client name"
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input-field flex-1 text-sm"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -286,7 +280,7 @@ const Projects: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleQuickAddClient}
-                    className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    className="btn-primary px-3 py-2 text-sm"
                   >
                     Add
                   </button>
@@ -296,7 +290,7 @@ const Projects: React.FC = () => {
                       setShowQuickClientForm(false);
                       setQuickClientName("");
                     }}
-                    className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                    className="btn-secondary text-sm border-theme"
                   >
                     Cancel
                   </button>
@@ -304,7 +298,7 @@ const Projects: React.FC = () => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary mb-1">
                 Color
               </label>
               <input
@@ -313,11 +307,11 @@ const Projects: React.FC = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, color: e.target.value })
                 }
-                className="w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field h-10"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary mb-1">
                 Hourly Rate ($)
               </label>
               <input
@@ -329,14 +323,14 @@ const Projects: React.FC = () => {
                     hourly_rate: Number(e.target.value),
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field"
                 placeholder="50"
                 min="0"
                 step="0.01"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary mb-1">
                 Description
               </label>
               <textarea
@@ -344,7 +338,7 @@ const Projects: React.FC = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field"
                 rows={3}
                 placeholder="Project description..."
               />
@@ -359,7 +353,7 @@ const Projects: React.FC = () => {
                   }
                   className="mr-2"
                 />
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-primary">
                   Billable project
                 </span>
               </label>
@@ -368,22 +362,19 @@ const Projects: React.FC = () => {
           <div className="flex justify-end mt-4 space-x-2">
             <button
               onClick={handleCancel}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              className="btn-secondary border-theme"
             >
               Cancel
             </button>
-            <button
-              onClick={handleSubmit}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-            >
+            <button onClick={handleSubmit} className="btn-primary">
               {editingProject ? "Update Project" : "Create Project"}
             </button>
           </div>
 
           {/* Quick Client Form */}
           {showQuickClientForm && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+            <div className="card mt-4 p-4">
+              <h4 className="text-sm font-semibold text-primary mb-2">
                 Add New Client
               </h4>
               <div className="flex space-x-2">
@@ -391,12 +382,12 @@ const Projects: React.FC = () => {
                   type="text"
                   value={quickClientName}
                   onChange={(e) => setQuickClientName(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-field flex-1"
                   placeholder="Enter client name"
                 />
                 <button
                   onClick={handleQuickAddClient}
-                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+                  className="btn-primary bg-green-500 hover:bg-green-600"
                 >
                   Save
                 </button>
@@ -409,17 +400,14 @@ const Projects: React.FC = () => {
       {/* Projects Grid */}
       {projects.length === 0 ? (
         <div className="text-center py-12">
-          <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">
+          <FolderOpen className="h-12 w-12 text-muted mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-primary mb-2">
             No projects yet
           </h3>
-          <p className="text-gray-300 mb-4">
+          <p className="text-secondary mb-4">
             Get started by creating your first project.
           </p>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
+          <button onClick={() => setShowAddForm(true)} className="btn-primary">
             <Plus className="h-4 w-4 mr-2" />
             Create Project
           </button>
@@ -429,7 +417,7 @@ const Projects: React.FC = () => {
           {projects.map((project) => (
             <div
               key={project.id}
-              className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+              className="card hover:shadow-md transition-shadow"
             >
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -439,11 +427,11 @@ const Projects: React.FC = () => {
                       style={{ backgroundColor: project.color || "#3B82F6" }}
                     />
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      <h3 className="text-lg font-semibold text-primary truncate">
                         {project.name}
                       </h3>
                       {project.client && (
-                        <div className="flex items-center text-sm text-gray-500 mt-1">
+                        <div className="flex items-center text-sm text-muted mt-1">
                           <Users className="h-3 w-3 mr-1" />
                           {project.client.name}
                         </div>
@@ -453,13 +441,13 @@ const Projects: React.FC = () => {
                   <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleEdit(project)}
-                      className="p-1 text-gray-400 hover:text-gray-600"
+                      className="p-1 text-muted hover:text-secondary"
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(project.id!)}
-                      className="p-1 text-gray-400 hover:text-red-600"
+                      className="p-1 text-muted hover:text-red-600"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -467,18 +455,18 @@ const Projects: React.FC = () => {
                 </div>
 
                 {project.description && (
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p className="text-secondary text-sm mb-4 line-clamp-2">
                     {project.description}
                   </p>
                 )}
 
                 <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center text-gray-500">
+                  <div className="flex items-center text-muted">
                     <Clock className="h-4 w-4 mr-1" />
                     <span>0h tracked</span>
                   </div>
                   {project.billable && project.hourly_rate && (
-                    <div className="flex items-center text-green-600">
+                    <div className="flex items-center text-primary">
                       <DollarSign className="h-4 w-4 mr-1" />
                       <span>${project.hourly_rate}/hr</span>
                     </div>

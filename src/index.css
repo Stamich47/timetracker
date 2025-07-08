@@ -6,10 +6,14 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(
+    --color-background,
+    linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+  );
   background-attachment: fixed;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, sans-serif;
+  color: var(--color-textPrimary, #333);
 }
 
 #root {
@@ -105,12 +109,13 @@ body {
 
 /* Custom component styles */
 .card {
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: var(--color-cardBg, rgba(255, 255, 255, 0.95));
   backdrop-filter: blur(8px);
   border-radius: 0.75rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--color-shadow, 0 25px 50px -12px rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.2));
   animation: cardFadeIn 0.5s ease-out;
+  color: var(--color-textPrimary, #333);
 }
 
 .card-hover {
@@ -123,13 +128,13 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(to right, #2563eb, #1d4ed8);
-  color: white;
+  background: var(--color-primary, linear-gradient(to right, #2563eb, #1d4ed8));
+  color: var(--color-primaryText, white);
   font-weight: 600;
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   transition: all 0.2s ease;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--color-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
   transform: translateY(0);
   border: none;
   cursor: pointer;
@@ -139,20 +144,23 @@ body {
 }
 
 .btn-primary:hover {
-  background: linear-gradient(to right, #1d4ed8, #1e40af);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  background: var(
+    --color-primaryHover,
+    linear-gradient(to right, #1d4ed8, #1e40af)
+  );
+  box-shadow: var(--color-shadow, 0 20px 25px -5px rgba(0, 0, 0, 0.15));
   transform: translateY(-2px);
 }
 
 .btn-secondary {
-  background-color: rgba(255, 255, 255, 0.9);
-  color: #374151;
+  background-color: var(--color-surface, rgba(255, 255, 255, 0.9));
+  color: var(--color-textPrimary, #374151);
   font-weight: 600;
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #d1d5db;
+  box-shadow: var(--color-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--color-border, #d1d5db);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -160,82 +168,127 @@ body {
 }
 
 .btn-secondary:hover {
-  background-color: white;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  background-color: var(--color-surfaceHover, white);
+  box-shadow: var(--color-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+}
+
+/* Enhanced button styles for better dark mode support */
+.btn-secondary.border-theme {
+  border-color: var(--color-border, #e5e7eb);
+  background-color: var(--color-surface, #ffffff);
+}
+
+.btn-secondary.border-theme:hover {
+  background-color: var(--color-surfaceHover, #f9fafb);
 }
 
 .input-field {
   width: 100%;
   padding: 0.75rem 1rem;
-  background-color: rgba(255, 255, 255, 0.9);
-  border: 1px solid #d1d5db;
+  background-color: var(--color-inputBg, rgba(255, 255, 255, 0.9));
+  border: 1px solid var(--color-inputBorder, #d1d5db);
   border-radius: 0.5rem;
   transition: all 0.2s ease;
   outline: none;
   font-size: 1rem;
+  color: var(--color-textPrimary, #333);
 }
 
 .input-field:focus {
-  box-shadow: 0 0 0 2px #3b82f6;
+  box-shadow: 0 0 0 2px var(--color-inputFocus, #3b82f6);
   border-color: transparent;
 }
 
 .input-field::placeholder {
-  color: #6b7280;
+  color: var(--color-textMuted, #6b7280);
 }
 
 /* Additional utility classes for cleaner design */
 .project-item {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.8),
-    rgba(255, 255, 255, 0.95)
-  );
+  background: var(--color-surface, #ffffff);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.2s ease;
+  color: var(--color-textPrimary, #333);
 }
 
 .project-item:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.95),
-    rgba(255, 255, 255, 1)
-  );
+  background: var(--color-surfaceHover, #f9fafb);
   transform: translateY(-1px);
-  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--color-shadow, 0 8px 25px -5px rgba(0, 0, 0, 0.1));
 }
 
 .time-entry {
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
   transition: all 0.2s ease;
+  color: var(--color-textPrimary, #333);
 }
 
 .time-entry:hover {
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 8px 30px -5px rgba(0, 0, 0, 0.12);
+  background: var(--color-surfaceHover, #f9fafb);
+  box-shadow: var(--color-shadow, 0 8px 30px -5px rgba(0, 0, 0, 0.12));
   transform: translateY(-1px);
 }
 
 /* Custom dropdown styling */
 .custom-dropdown {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-surface, #ffffff);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border, #e5e7eb);
+  box-shadow: var(--color-shadow, 0 10px 25px -5px rgba(0, 0, 0, 0.15));
+  color: var(--color-textPrimary, #333);
 }
 
 .custom-dropdown-option {
   transition: all 0.15s ease;
+  color: var(--color-textPrimary, #333);
 }
 
 .custom-dropdown-option:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(59, 130, 246, 0.1),
-    rgba(99, 102, 241, 0.05)
-  );
+  background: var(--color-surfaceHover, #f3f4f6);
+}
+
+/* Theme-aware text color classes */
+.text-primary {
+  color: var(--color-textPrimary, #333) !important;
+}
+
+.text-secondary {
+  color: var(--color-textSecondary, #666) !important;
+}
+
+.text-muted {
+  color: var(--color-textMuted, #999) !important;
+}
+
+/* Theme-aware border classes */
+.border-theme {
+  border-color: var(--color-border, #e5e7eb) !important;
+}
+
+.border-theme-light {
+  border-color: var(--color-borderLight, #f3f4f6) !important;
+}
+
+/* Theme-aware background classes for buttons and interactive elements */
+.bg-surface {
+  background-color: var(--color-surface, #ffffff) !important;
+}
+
+.bg-surface-hover:hover {
+  background-color: var(--color-surfaceHover, #f9fafb) !important;
+}
+
+.bg-surface-secondary {
+  background-color: var(--color-textMuted, #999) !important;
+}
+
+.bg-surface-hover {
+  background-color: var(--color-surfaceHover, #f9fafb) !important;
+}
+
+.hover-bg-surface-hover:hover {
+  background-color: var(--color-surfaceHover, #f9fafb) !important;
 }
 
 @keyframes cardFadeIn {
@@ -247,4 +300,14 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* Additional theme-aware utility classes */
+.hover-surface:hover {
+  background-color: var(--color-surfaceHover, #f9fafb) !important;
+}
+
+.border-theme-focus:focus {
+  border-color: var(--color-inputFocus, #3b82f6) !important;
+  box-shadow: 0 0 0 2px var(--color-inputFocus, #3b82f6) !important;
 }

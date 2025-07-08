@@ -190,7 +190,7 @@ const TimeEntries: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-gray-600">Loading time entries...</span>
+        <span className="ml-2 text-secondary">Loading time entries...</span>
       </div>
     );
   }
@@ -217,12 +217,12 @@ const TimeEntries: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-white">Time Entries</h1>
-          <p className="text-gray-300 mt-1">
+          <p className="text-secondary mt-1">
             Track and manage your logged time entries
           </p>
         </div>
         <div className="flex items-center space-x-4">
-          <div className="text-sm text-gray-300">
+          <div className="text-sm text-secondary">
             Total:{" "}
             {secondsToHMS(
               filteredTimeEntries.reduce(
@@ -235,11 +235,11 @@ const TimeEntries: React.FC = () => {
       </div>
 
       {/* Date Range Filter */}
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
+      <div className="card p-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Filter className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">
+            <Filter className="h-5 w-5 text-muted" />
+            <span className="text-sm font-medium text-primary">
               Date Range:
             </span>
           </div>
@@ -250,55 +250,57 @@ const TimeEntries: React.FC = () => {
               onChange={(e) =>
                 setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
               }
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm w-full sm:w-auto"
+              className="input-field text-sm w-full sm:w-auto h-10"
             />
-            <span className="text-gray-500 hidden sm:block">to</span>
+            <span className="text-muted hidden sm:block">to</span>
             <input
               type="date"
               value={dateRange.endDate}
               onChange={(e) =>
                 setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
               }
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm w-full sm:w-auto"
+              className="input-field text-sm w-full sm:w-auto h-10"
               max={new Date().toISOString().split("T")[0]}
             />
           </div>
-          <button
-            onClick={() =>
-              setDateRange({
-                startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                  .toISOString()
-                  .split("T")[0],
-                endDate: new Date().toISOString().split("T")[0],
-              })
-            }
-            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md w-full sm:w-auto"
-          >
-            Last Week
-          </button>
-          <button
-            onClick={() =>
-              setDateRange({
-                startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                  .toISOString()
-                  .split("T")[0],
-                endDate: new Date().toISOString().split("T")[0],
-              })
-            }
-            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md"
-          >
-            Last Month
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={() =>
+                setDateRange({
+                  startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                    .toISOString()
+                    .split("T")[0],
+                  endDate: new Date().toISOString().split("T")[0],
+                })
+              }
+              className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium w-full sm:w-auto h-10"
+            >
+              Last Week
+            </button>
+            <button
+              onClick={() =>
+                setDateRange({
+                  startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                    .toISOString()
+                    .split("T")[0],
+                  endDate: new Date().toISOString().split("T")[0],
+                })
+              }
+              className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium w-full sm:w-auto h-10"
+            >
+              Last Month
+            </button>
+          </div>
         </div>
       </div>
 
       {filteredTimeEntries.length === 0 ? (
         <div className="text-center py-12">
-          <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <Clock className="h-12 w-12 text-muted mx-auto mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">
             No time entries found
           </h3>
-          <p className="text-gray-300">
+          <p className="text-secondary">
             {timeEntries.length === 0
               ? "Start tracking time to see your entries here."
               : "Try adjusting your date range to see more entries."}
@@ -309,26 +311,23 @@ const TimeEntries: React.FC = () => {
           {groupedEntries.map(([date, entries]) => {
             const isCollapsed = collapsedDates.has(date);
             return (
-              <div
-                key={date}
-                className="bg-white rounded-lg border border-gray-200 overflow-hidden"
-              >
+              <div key={date} className="card overflow-hidden">
                 <div
-                  className="bg-gray-50 px-6 py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="bg-surface px-6 py-3 border-b border-theme cursor-pointer hover:bg-surface-hover transition-colors"
                   onClick={() => toggleDateCollapse(date)}
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       {isCollapsed ? (
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                        <ChevronDown className="h-4 w-4 text-muted" />
                       ) : (
-                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                        <ChevronUp className="h-4 w-4 text-muted" />
                       )}
-                      <h3 className="text-lg font-medium text-gray-900">
+                      <h3 className="text-lg font-medium text-primary">
                         {date}
                       </h3>
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-secondary">
                       Total: {secondsToHMS(calculateDayTotal(entries))} •{" "}
                       {entries.length}{" "}
                       {entries.length === 1 ? "entry" : "entries"}
@@ -346,7 +345,7 @@ const TimeEntries: React.FC = () => {
                           <div key={entry.id} className="p-6 bg-blue-50">
                             <div className="space-y-4">
                               <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-primary mb-1">
                                   Description
                                 </label>
                                 <input
@@ -358,13 +357,13 @@ const TimeEntries: React.FC = () => {
                                       description: e.target.value,
                                     }))
                                   }
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full px-3 py-2 border border-theme rounded-md focus:ring-blue-500 focus:border-blue-500"
                                   placeholder="What did you work on?"
                                 />
                               </div>
 
                               <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-primary mb-1">
                                   Project
                                 </label>
                                 <CustomDropdown
@@ -390,7 +389,7 @@ const TimeEntries: React.FC = () => {
 
                               <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  <label className="block text-sm font-medium text-primary mb-1">
                                     Date
                                   </label>
                                   <input
@@ -402,12 +401,12 @@ const TimeEntries: React.FC = () => {
                                         date: e.target.value,
                                       }))
                                     }
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-theme rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     max={new Date().toISOString().split("T")[0]}
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  <label className="block text-sm font-medium text-primary mb-1">
                                     Start Time
                                   </label>
                                   <input
@@ -419,11 +418,11 @@ const TimeEntries: React.FC = () => {
                                         startTime: e.target.value,
                                       }))
                                     }
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-theme rounded-md focus:ring-blue-500 focus:border-blue-500"
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  <label className="block text-sm font-medium text-primary mb-1">
                                     End Time
                                   </label>
                                   <input
@@ -435,7 +434,7 @@ const TimeEntries: React.FC = () => {
                                         endTime: e.target.value,
                                       }))
                                     }
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-theme rounded-md focus:ring-blue-500 focus:border-blue-500"
                                   />
                                 </div>
                               </div>
@@ -443,7 +442,7 @@ const TimeEntries: React.FC = () => {
                               <div className="flex justify-end gap-2">
                                 <button
                                   onClick={cancelEditing}
-                                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                                  className="px-4 py-2 text-sm font-medium text-primary bg-white border border-theme rounded-md hover:bg-surface"
                                 >
                                   Cancel
                                 </button>
@@ -460,7 +459,7 @@ const TimeEntries: React.FC = () => {
                       }
 
                       return (
-                        <div key={entry.id} className="p-6 hover:bg-gray-50">
+                        <div key={entry.id} className="p-6 hover:bg-surface">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-start space-x-3">
@@ -474,11 +473,11 @@ const TimeEntries: React.FC = () => {
                                   />
                                 )}
                                 <div className="flex-1">
-                                  <p className="text-gray-900 font-medium">
+                                  <p className="text-primary font-medium">
                                     {entry.description || "No description"}
                                   </p>
                                   {project && (
-                                    <p className="text-sm text-gray-600 mt-1">
+                                    <p className="text-sm text-secondary mt-1">
                                       {project.name}
                                       {project.client &&
                                         ` • ${project.client.name}`}
@@ -490,7 +489,7 @@ const TimeEntries: React.FC = () => {
 
                             <div className="flex items-center space-x-4 ml-4">
                               <div className="text-right">
-                                <div className="flex items-center text-sm text-gray-600">
+                                <div className="flex items-center text-sm text-secondary">
                                   <Clock className="h-4 w-4 mr-1" />
                                   {formatTime(
                                     new Date(entry.start_time)
@@ -499,7 +498,7 @@ const TimeEntries: React.FC = () => {
                                     ? formatTime(new Date(entry.end_time))
                                     : "Running"}
                                 </div>
-                                <div className="text-lg font-semibold text-gray-900 mt-1">
+                                <div className="text-lg font-semibold text-primary mt-1">
                                   {entry.duration
                                     ? secondsToHMS(entry.duration)
                                     : "0:00:00"}
@@ -509,21 +508,21 @@ const TimeEntries: React.FC = () => {
                               <div className="flex items-center space-x-2">
                                 <button
                                   onClick={() => handleRestartEntry(entry)}
-                                  className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                                  className="p-2 text-muted hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
                                   title="Restart timer with same details"
                                 >
                                   <Play className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => startEditing(entry)}
-                                  className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                  className="p-2 text-muted hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                                   title="Edit entry"
                                 >
                                   <Edit2 className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteEntry(entry.id!)}
-                                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                  className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                                   title="Delete entry"
                                 >
                                   <Trash2 className="h-4 w-4" />

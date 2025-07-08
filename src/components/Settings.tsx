@@ -12,6 +12,8 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
+  Palette,
+  Check,
 } from "lucide-react";
 import { settingsApi, type UserSettings } from "../lib/settingsApi";
 import {
@@ -20,6 +22,77 @@ import {
   type ImportPreview,
 } from "../lib/importApi";
 import ImportPreviewModal from "./ImportPreviewModal";
+import { useTheme } from "../hooks/useTheme";
+
+// Theme Selector Component
+const ThemeSelector: React.FC = () => {
+  const { themeType, setTheme, availableThemes } = useTheme();
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600">
+        Choose your preferred color theme for the app
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {availableThemes.map((theme) => (
+          <button
+            key={theme.id}
+            onClick={() => setTheme(theme.id)}
+            className={`group relative p-4 rounded-lg border-2 transition-all ${
+              themeType === theme.id
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            {/* Theme Preview */}
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
+                style={{ backgroundColor: theme.colors.primary }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {theme.name}
+                </div>
+              </div>
+            </div>
+
+            {/* Color palette preview */}
+            <div className="flex gap-1 mb-3">
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: theme.colors.background }}
+              />
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: theme.colors.surface }}
+              />
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: theme.colors.primary }}
+              />
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: theme.colors.secondary }}
+              />
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: theme.colors.success }}
+              />
+            </div>
+
+            {/* Selected indicator */}
+            {themeType === theme.id && (
+              <div className="absolute top-2 right-2">
+                <Check className="w-4 h-4 text-blue-600" />
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const Settings: React.FC = () => {
   const [settings, setSettings] = useState<UserSettings>({
@@ -196,7 +269,7 @@ const Settings: React.FC = () => {
             <div className="card p-6">
               <div className="flex items-center gap-3 mb-4">
                 <User className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Profile</h2>
+                <h2 className="text-lg font-semibold text-primary">Profile</h2>
               </div>
 
               <div className="space-y-4">
@@ -253,7 +326,7 @@ const Settings: React.FC = () => {
             <div className="card p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Bell className="w-5 h-5 text-yellow-600" />
-                <h2 className="text-lg font-semibold text-gray-800">
+                <h2 className="text-lg font-semibold text-primary">
                   Notifications
                 </h2>
               </div>
@@ -328,7 +401,7 @@ const Settings: React.FC = () => {
             <div className="card p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Clock className="w-5 h-5 text-green-600" />
-                <h2 className="text-lg font-semibold text-gray-800">
+                <h2 className="text-lg font-semibold text-primary">
                   Time Tracking
                 </h2>
               </div>
@@ -396,7 +469,7 @@ const Settings: React.FC = () => {
             <div className="card p-6">
               <div className="flex items-center gap-3 mb-4">
                 <DollarSign className="w-5 h-5 text-purple-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Billing</h2>
+                <h2 className="text-lg font-semibold text-primary">Billing</h2>
               </div>
 
               <div className="space-y-4">
@@ -460,13 +533,23 @@ const Settings: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Theme Settings */}
+            <div className="card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Palette className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-lg font-semibold text-primary">Theme</h2>
+              </div>
+
+              <ThemeSelector />
+            </div>
           </div>
 
           {/* Data Management */}
           <div className="card p-6">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-5 h-5 text-red-600" />
-              <h2 className="text-lg font-semibold text-gray-800">
+              <h2 className="text-lg font-semibold text-primary">
                 Data Management
               </h2>
             </div>

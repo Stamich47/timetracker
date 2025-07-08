@@ -13,6 +13,11 @@ import Clients from "./components/Clients";
 import Settings from "./components/Settings";
 import Auth from "./components/Auth";
 import { Loader2, LogOut, User } from "lucide-react";
+// Import theme manager to ensure it's initialized
+import { themeManager } from "./lib/themeManager";
+
+// Initialize theme system
+themeManager.getCurrentTheme();
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
