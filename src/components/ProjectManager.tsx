@@ -141,35 +141,40 @@ const ProjectManager: React.FC = () => {
             <p className="text-sm text-gray-600">{projects.length} projects</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-secondary">Sort:</span>
-            <div className="h-10">
+            <span className="text-sm font-medium text-secondary hidden sm:inline">
+              Sort:
+            </span>
+            <div className="h-10 w-24 sm:w-32">
               <CustomDropdown
                 value={sortBy}
                 onChange={(value) =>
                   setSortBy(value as "name" | "client" | "recent")
                 }
                 options={[
-                  { value: "name", label: "Project Name" },
-                  { value: "client", label: "Client Name" },
-                  { value: "recent", label: "Recently Added" },
+                  { value: "name", label: "Name" },
+                  { value: "client", label: "Client" },
+                  { value: "recent", label: "Recent" },
                 ]}
-                placeholder="Sort by"
-                className="h-10"
+                placeholder="Sort"
+                className="h-10 text-sm"
               />
             </div>
           </div>
           <button
-            className="btn-secondary h-10 px-4 py-2 flex items-center gap-2"
+            className="btn-secondary h-10 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl sm:px-3 sm:w-auto w-10 p-0 min-w-0"
             onClick={() => setShowAddForm(!showAddForm)}
+            title="Add new project"
           >
-            <Plus className="w-4 h-4" />
-            Add
+            <Plus className="w-5 h-5 text-current flex-shrink-0" />
+            <span className="hidden sm:inline text-current font-medium">
+              Add
+            </span>
           </button>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-md transition-colors h-10 w-10 flex items-center justify-center"
+            className="hidden sm:flex p-2 text-gray-400 hover:text-gray-600 rounded-md transition-colors h-10 w-10 items-center justify-center flex-shrink-0"
             title={isCollapsed ? "Expand projects" : "Collapse projects"}
           >
             {isCollapsed ? (
@@ -197,8 +202,16 @@ const ProjectManager: React.FC = () => {
             </div>
 
             <div>
+              <label
+                htmlFor="project-name"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Project Name
+              </label>
               <input
                 type="text"
+                id="project-name"
+                name="projectName"
                 placeholder="Project name"
                 value={formData.name}
                 onChange={(e) =>
@@ -210,6 +223,12 @@ const ProjectManager: React.FC = () => {
             </div>
 
             <div>
+              <label
+                htmlFor="project-client"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Client
+              </label>
               <CustomDropdown
                 value={formData.client_id}
                 onChange={(value) =>
@@ -225,12 +244,21 @@ const ProjectManager: React.FC = () => {
                     })),
                 ]}
                 placeholder="Select client"
+                className="input-field"
               />
             </div>
 
             <div>
+              <label
+                htmlFor="project-description"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Description
+              </label>
               <input
                 type="text"
+                id="project-description"
+                name="projectDescription"
                 placeholder="Description (optional)"
                 value={formData.description}
                 onChange={(e) =>
@@ -242,11 +270,16 @@ const ProjectManager: React.FC = () => {
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="project-color"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Color
                 </label>
                 <input
                   type="color"
+                  id="project-color"
+                  name="projectColor"
                   value={formData.color}
                   onChange={(e) =>
                     setFormData({ ...formData, color: e.target.value })
@@ -256,11 +289,16 @@ const ProjectManager: React.FC = () => {
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="project-hourly-rate"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Hourly Rate
                 </label>
                 <input
                   type="number"
+                  id="project-hourly-rate"
+                  name="projectHourlyRate"
                   placeholder="50"
                   value={formData.hourly_rate}
                   onChange={(e) =>
@@ -279,14 +317,18 @@ const ProjectManager: React.FC = () => {
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="billable"
+                id="project-billable"
+                name="projectBillable"
                 checked={formData.billable}
                 onChange={(e) =>
                   setFormData({ ...formData, billable: e.target.checked })
                 }
                 className="rounded border-gray-300"
               />
-              <label htmlFor="billable" className="text-sm text-gray-700">
+              <label
+                htmlFor="project-billable"
+                className="text-sm text-gray-700"
+              >
                 Billable project
               </label>
             </div>

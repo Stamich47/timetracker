@@ -247,8 +247,13 @@ const TimeEntries: React.FC = () => {
             </span>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+            <label htmlFor="start-date" className="sr-only">
+              Start Date
+            </label>
             <input
               type="date"
+              id="start-date"
+              name="startDate"
               value={dateRange.startDate}
               onChange={(e) =>
                 setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
@@ -256,8 +261,13 @@ const TimeEntries: React.FC = () => {
               className="input-field text-sm w-full sm:w-auto h-10"
             />
             <span className="text-muted hidden sm:block">to</span>
+            <label htmlFor="end-date" className="sr-only">
+              End Date
+            </label>
             <input
               type="date"
+              id="end-date"
+              name="endDate"
               value={dateRange.endDate}
               onChange={(e) =>
                 setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
@@ -356,11 +366,16 @@ const TimeEntries: React.FC = () => {
                           <div key={entry.id} className="p-6 bg-blue-50">
                             <div className="space-y-4">
                               <div>
-                                <label className="block text-sm font-medium text-primary mb-1">
+                                <label
+                                  htmlFor={`edit-description-${entry.id}`}
+                                  className="block text-sm font-medium text-primary mb-1"
+                                >
                                   Description
                                 </label>
                                 <input
                                   type="text"
+                                  id={`edit-description-${entry.id}`}
+                                  name={`editDescription-${entry.id}`}
                                   value={editForm.description}
                                   onChange={(e) =>
                                     setEditForm((prev) => ({
@@ -374,7 +389,10 @@ const TimeEntries: React.FC = () => {
                               </div>
 
                               <div>
-                                <label className="block text-sm font-medium text-primary mb-1">
+                                <label
+                                  htmlFor={`edit-project-${entry.id}`}
+                                  className="block text-sm font-medium text-primary mb-1"
+                                >
                                   Project
                                 </label>
                                 <CustomDropdown
@@ -400,11 +418,16 @@ const TimeEntries: React.FC = () => {
 
                               <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                  <label className="block text-sm font-medium text-primary mb-1">
+                                  <label
+                                    htmlFor={`edit-date-${entry.id}`}
+                                    className="block text-sm font-medium text-primary mb-1"
+                                  >
                                     Date
                                   </label>
                                   <input
                                     type="date"
+                                    id={`edit-date-${entry.id}`}
+                                    name={`editDate-${entry.id}`}
                                     value={editForm.date}
                                     onChange={(e) =>
                                       setEditForm((prev) => ({
@@ -417,11 +440,16 @@ const TimeEntries: React.FC = () => {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium text-primary mb-1">
+                                  <label
+                                    htmlFor={`edit-start-time-${entry.id}`}
+                                    className="block text-sm font-medium text-primary mb-1"
+                                  >
                                     Start Time
                                   </label>
                                   <input
                                     type="time"
+                                    id={`edit-start-time-${entry.id}`}
+                                    name={`editStartTime-${entry.id}`}
                                     value={editForm.startTime}
                                     onChange={(e) =>
                                       setEditForm((prev) => ({
@@ -433,11 +461,16 @@ const TimeEntries: React.FC = () => {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium text-primary mb-1">
+                                  <label
+                                    htmlFor={`edit-end-time-${entry.id}`}
+                                    className="block text-sm font-medium text-primary mb-1"
+                                  >
                                     End Time
                                   </label>
                                   <input
                                     type="time"
+                                    id={`edit-end-time-${entry.id}`}
+                                    name={`editEndTime-${entry.id}`}
                                     value={editForm.endTime}
                                     onChange={(e) =>
                                       setEditForm((prev) => ({

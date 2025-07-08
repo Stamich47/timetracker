@@ -543,22 +543,32 @@ const Reports: React.FC = () => {
         <div className="card p-3 sm:p-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
-              <label className="block text-xs sm:text-sm font-medium text-primary mb-1">
+              <label
+                htmlFor="reports-start-date"
+                className="block text-xs sm:text-sm font-medium text-primary mb-1"
+              >
                 Start Date
               </label>
               <input
                 type="date"
+                id="reports-start-date"
+                name="reportsStartDate"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
                 className="input-field text-xs sm:text-sm w-full h-10"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs sm:text-sm font-medium text-primary mb-1">
+              <label
+                htmlFor="reports-end-date"
+                className="block text-xs sm:text-sm font-medium text-primary mb-1"
+              >
                 End Date
               </label>
               <input
                 type="date"
+                id="reports-end-date"
+                name="reportsEndDate"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
                 className="input-field text-xs sm:text-sm w-full h-10"

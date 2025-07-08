@@ -317,30 +317,28 @@ const Timer: React.FC = () => {
           {/* Sliding Background Indicator */}
           <div
             className={`absolute top-1 bottom-1 bg-blue-600 rounded-md shadow-sm transition-all duration-300 ease-in-out ${
-              !isManualMode ? "left-1 right-1/2 mr-0.5" : "right-1 left-1/2 ml-0.5"
+              !isManualMode
+                ? "left-1 right-1/2 mr-0.5"
+                : "right-1 left-1/2 ml-0.5"
             }`}
           />
-          
+
           {/* Timer Button */}
           <button
             onClick={() => setIsManualMode(false)}
             className={`relative z-10 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 flex-1 justify-center ${
-              !isManualMode
-                ? "text-white"
-                : "text-secondary hover:text-primary"
+              !isManualMode ? "text-white" : "text-secondary hover:text-primary"
             }`}
           >
             <TimerIcon className="w-4 h-4" />
             Timer
           </button>
-          
+
           {/* Manual Button */}
           <button
             onClick={() => setIsManualMode(true)}
             className={`relative z-10 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 flex-1 justify-center ${
-              isManualMode
-                ? "text-white"
-                : "text-secondary hover:text-primary"
+              isManualMode ? "text-white" : "text-secondary hover:text-primary"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
             disabled={activeTimer !== null}
           >
@@ -355,11 +353,16 @@ const Timer: React.FC = () => {
         <form onSubmit={handleManualSubmit} className="space-y-6">
           {/* Date Selection */}
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label
+              htmlFor="manual-entry-date"
+              className="block text-sm font-medium text-primary mb-2"
+            >
               Date
             </label>
             <input
               type="date"
+              id="manual-entry-date"
+              name="manualEntryDate"
               value={manualEntry.date}
               onChange={(e) =>
                 setManualEntry({ ...manualEntry, date: e.target.value })
@@ -373,11 +376,16 @@ const Timer: React.FC = () => {
           {/* Time Range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label
+                htmlFor="manual-entry-start-time"
+                className="block text-sm font-medium text-primary mb-2"
+              >
                 Start Time
               </label>
               <input
                 type="time"
+                id="manual-entry-start-time"
+                name="manualEntryStartTime"
                 value={manualEntry.startTime}
                 onChange={(e) =>
                   handleManualTimeChange("startTime", e.target.value)
@@ -387,11 +395,16 @@ const Timer: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label
+                htmlFor="manual-entry-end-time"
+                className="block text-sm font-medium text-primary mb-2"
+              >
                 End Time
               </label>
               <input
                 type="time"
+                id="manual-entry-end-time"
+                name="manualEntryEndTime"
                 value={manualEntry.endTime}
                 onChange={(e) =>
                   handleManualTimeChange("endTime", e.target.value)
@@ -421,11 +434,16 @@ const Timer: React.FC = () => {
 
           {/* Description Input */}
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label
+              htmlFor="manual-entry-description"
+              className="block text-sm font-medium text-primary mb-2"
+            >
               Description
             </label>
             <input
               type="text"
+              id="manual-entry-description"
+              name="manualEntryDescription"
               placeholder="What did you work on?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -564,12 +582,17 @@ const Timer: React.FC = () => {
 
           {/* Description Input */}
           <div className="mb-6">
-            <label className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
+            <label
+              htmlFor="timer-description"
+              className="flex items-center gap-2 text-sm font-medium text-primary mb-3"
+            >
               <Edit3 className="w-4 h-4" />
               Description
             </label>
             <input
               type="text"
+              id="timer-description"
+              name="timerDescription"
               placeholder="What are you working on?"
               value={description}
               onChange={(e) => updateDescription(e.target.value)}

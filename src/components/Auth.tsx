@@ -149,13 +149,18 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {isSignUp && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="auth-full-name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Full Name
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
+                    id="auth-full-name"
+                    name="authFullName"
                     value={formData.fullName}
                     onChange={(e) =>
                       setFormData({ ...formData, fullName: e.target.value })
@@ -169,13 +174,18 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="auth-email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email Address
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="email"
+                  id="auth-email"
+                  name="authEmail"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -188,13 +198,18 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="auth-password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="password"
+                  id="auth-password"
+                  name="authPassword"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
