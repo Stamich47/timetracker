@@ -88,8 +88,8 @@ function AppContent() {
   // Show loading spinner while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="flex items-center space-x-2 text-white">
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center space-x-2 text-primary">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span>Loading...</span>
         </div>
@@ -112,8 +112,8 @@ function AppContent() {
           </div>
 
           <div className="relative z-10">
-            <header className="bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 px-3 sm:px-6 py-4 sticky top-0 z-50">
-              <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <header className="fixed top-0 left-0 right-0 bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 py-4 z-50">
+              <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
                     <svg
@@ -172,25 +172,27 @@ function AppContent() {
               </div>
             </header>
 
-            <main className="max-w-6xl mx-auto py-4 sm:py-6 lg:py-8 px-3 sm:px-6">
-              <div
-                className={`transition-all duration-300 ease-in-out transform ${
-                  isTransitioning
-                    ? "opacity-0 translate-y-4 scale-[0.98]"
-                    : "opacity-100 translate-y-0 scale-100"
-                }`}
-              >
-                {isTransitioning && (
-                  <div className="absolute inset-0 flex items-center justify-center z-10">
-                    <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                )}
+            <main className="pt-24 pb-4 sm:pb-6 lg:pb-8">
+              <div className="max-w-7xl mx-auto px-3 sm:px-6">
                 <div
-                  className={`tab-content ${
-                    isTransitioning ? "loading-shimmer" : ""
+                  className={`transition-all duration-300 ease-in-out transform ${
+                    isTransitioning
+                      ? "opacity-0 translate-y-4 scale-[0.98]"
+                      : "opacity-100 translate-y-0 scale-100"
                   }`}
                 >
-                  {renderContent()}
+                  {isTransitioning && (
+                    <div className="absolute inset-0 flex items-center justify-center z-10">
+                      <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  <div
+                    className={`tab-content ${
+                      isTransitioning ? "loading-shimmer" : ""
+                    }`}
+                  >
+                    {renderContent()}
+                  </div>
                 </div>
               </div>
             </main>

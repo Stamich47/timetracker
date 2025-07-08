@@ -492,8 +492,8 @@ const Reports: React.FC = () => {
         <div className="card p-3 sm:p-4 lg:p-6">
           <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-surface-secondary rounded-lg">
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-primary" />
+              <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="text-xs sm:text-sm font-medium text-secondary">
                 Total Time
@@ -509,8 +509,8 @@ const Reports: React.FC = () => {
         <div className="card p-3 sm:p-4 lg:p-6">
           <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-surface-secondary rounded-lg">
-                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-success" />
+              <div className="p-1.5 sm:p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-green-600 dark:text-green-400" />
               </div>
               <div className="text-xs sm:text-sm font-medium text-secondary">
                 Billable Time
@@ -526,8 +526,8 @@ const Reports: React.FC = () => {
         <div className="card p-3 sm:p-4 lg:p-6">
           <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-surface-secondary rounded-lg">
-                <Target className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-secondary" />
+              <div className="p-1.5 sm:p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <Target className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div className="text-xs sm:text-sm font-medium text-secondary">
                 Active Projects
@@ -543,8 +543,8 @@ const Reports: React.FC = () => {
         <div className="card p-3 sm:p-4 lg:p-6">
           <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-surface-secondary rounded-lg">
-                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-warning" />
+              <div className="p-1.5 sm:p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-orange-600 dark:text-orange-400" />
               </div>
               <div className="text-xs sm:text-sm font-medium text-secondary">
                 Productivity

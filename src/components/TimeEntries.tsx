@@ -7,13 +7,13 @@ import {
   AlertCircle,
   Loader2,
   ChevronDown,
-  ChevronUp,
   Filter,
 } from "lucide-react";
-import { formatDate, formatTime, secondsToHMS } from "../utils/timeUtils";
+import { formatDate, formatTimeShort, secondsToHMS } from "../utils/timeUtils";
 import { timeEntriesApi, type TimeEntry } from "../lib/timeEntriesApi";
 import { type Project } from "../lib/projectsApi";
 import { useTimeEntries } from "../hooks/useTimeEntries";
+import { useTimeFormat } from "../hooks/useTimeFormat";
 import CustomDropdown from "./CustomDropdown";
 
 const TimeEntries: React.FC = () => {
@@ -25,6 +25,9 @@ const TimeEntries: React.FC = () => {
     refreshTimeEntries,
     deleteTimeEntry,
   } = useTimeEntries();
+
+  // Time format hook
+  const { is24Hour } = useTimeFormat();
 
   // State for collapsible dates
   const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
@@ -318,11 +321,13 @@ const TimeEntries: React.FC = () => {
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      {isCollapsed ? (
+                      <div
+                        className={`transition-transform duration-300 ease-in-out ${
+                          isCollapsed ? "rotate-0" : "rotate-180"
+                        }`}
+                      >
                         <ChevronDown className="h-4 w-4 text-muted" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4 text-muted" />
-                      )}
+                      </div>
                       <h3 className="text-lg font-medium text-primary">
                         {date}
                       </h3>
@@ -334,7 +339,13 @@ const TimeEntries: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {!isCollapsed && (
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    isCollapsed
+                      ? "max-h-0 opacity-0"
+                      : "max-h-[2000px] opacity-100"
+                  }`}
+                >
                   <div className="divide-y divide-gray-200">
                     {entries.map((entry) => {
                       const project = getProjectById(entry.project_id);
@@ -459,7 +470,15 @@ const TimeEntries: React.FC = () => {
                       }
 
                       return (
-                        <div key={entry.id} className="p-6 hover:bg-surface">
+                        <div
+                          key={entry.id}
+                          className="p-6 hover:bg-surface relative"
+                          style={{
+                            borderLeft: project
+                              ? `4px solid ${project.color || "#3B82F6"}`
+                              : "4px solid transparent",
+                          }}
+                        >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-start space-x-3">
@@ -487,24 +506,46 @@ const TimeEntries: React.FC = () => {
                               </div>
                             </div>
 
-                            <div className="flex items-center space-x-4 ml-4">
-                              <div className="text-right">
-                                <div className="flex items-center text-sm text-secondary">
-                                  <Clock className="h-4 w-4 mr-1" />
-                                  {formatTime(
-                                    new Date(entry.start_time)
-                                  )} -{" "}
-                                  {entry.end_time
-                                    ? formatTime(new Date(entry.end_time))
-                                    : "Running"}
+                            <div className="flex items-center space-x-6 ml-4">
+                              {" "}
+                              {/* Time Range & Duration - Clean Layout with Divider */}
+                              <div className="flex items-start space-x-4">
+                                <div className="text-right min-w-0">
+                                  <div className="text-xs text-muted uppercase tracking-wide font-medium mb-1 h-4">
+                                    Time Range
+                                  </div>
+                                  <div className="flex items-center text-sm text-primary font-medium whitespace-nowrap h-6">
+                                    <Clock className="h-3 w-3 mr-1.5 text-muted flex-shrink-0" />
+                                    <span>
+                                      {formatTimeShort(
+                                        new Date(entry.start_time),
+                                        is24Hour
+                                      )}{" "}
+                                      -{" "}
+                                      {entry.end_time
+                                        ? formatTimeShort(
+                                            new Date(entry.end_time),
+                                            is24Hour
+                                          )
+                                        : "Running"}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="text-lg font-semibold text-primary mt-1">
-                                  {entry.duration
-                                    ? secondsToHMS(entry.duration)
-                                    : "0:00:00"}
+
+                                {/* Vertical Divider */}
+                                <div className="w-px h-10 bg-gray-300 dark:bg-gray-600 self-center"></div>
+
+                                <div className="text-right min-w-0">
+                                  <div className="text-xs text-muted uppercase tracking-wide font-medium mb-1 h-4">
+                                    Duration
+                                  </div>
+                                  <div className="text-lg font-semibold text-primary whitespace-nowrap h-6 flex items-center justify-end">
+                                    {entry.duration
+                                      ? secondsToHMS(entry.duration)
+                                      : "0:00:00"}
+                                  </div>
                                 </div>
                               </div>
-
                               <div className="flex items-center space-x-2">
                                 <button
                                   onClick={() => handleRestartEntry(entry)}
@@ -534,7 +575,7 @@ const TimeEntries: React.FC = () => {
                       );
                     })}
                   </div>
-                )}
+                </div>
               </div>
             );
           })}

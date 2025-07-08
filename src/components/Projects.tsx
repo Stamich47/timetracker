@@ -196,8 +196,8 @@ const Projects: React.FC = () => {
             <FolderOpen className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-primary">Projects</h1>
-            <p className="text-secondary mt-1">
+            <h1 className="text-2xl font-bold text-white">Projects</h1>
+            <p className="text-white/70 mt-1">
               Manage your projects and track time efficiently
             </p>
           </div>

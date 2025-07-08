@@ -1,15 +1,25 @@
 import { format } from "date-fns";
 
-export const formatTime = (date: Date): string => {
-  return format(date, "HH:mm:ss");
+export const formatTime = (date: Date, is24Hour: boolean = false): string => {
+  return format(date, is24Hour ? "HH:mm:ss" : "h:mm:ss a");
+};
+
+export const formatTimeShort = (
+  date: Date,
+  is24Hour: boolean = false
+): string => {
+  return format(date, is24Hour ? "HH:mm" : "h:mm a");
 };
 
 export const formatDate = (date: Date): string => {
   return format(date, "MMM dd, yyyy");
 };
 
-export const formatDateTime = (date: Date): string => {
-  return format(date, "MMM dd, yyyy HH:mm");
+export const formatDateTime = (
+  date: Date,
+  is24Hour: boolean = false
+): string => {
+  return format(date, is24Hour ? "MMM dd, yyyy HH:mm" : "MMM dd, yyyy h:mm a");
 };
 
 export const secondsToHMS = (seconds: number): string => {

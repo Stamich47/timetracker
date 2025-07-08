@@ -12,7 +12,6 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
-  Palette,
   Check,
 } from "lucide-react";
 import { settingsApi, type UserSettings } from "../lib/settingsApi";
@@ -24,68 +23,42 @@ import {
 import ImportPreviewModal from "./ImportPreviewModal";
 import { useTheme } from "../hooks/useTheme";
 
-// Theme Selector Component
-const ThemeSelector: React.FC = () => {
+// Minimalist Theme Selector Component
+const MinimalThemeSelector: React.FC = () => {
   const { themeType, setTheme, availableThemes } = useTheme();
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-gray-600">
-        Choose your preferred color theme for the app
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-medium text-primary">App Theme</div>
+          <div className="text-sm text-secondary">
+            Choose your preferred color scheme
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
         {availableThemes.map((theme) => (
           <button
             key={theme.id}
             onClick={() => setTheme(theme.id)}
-            className={`group relative p-4 rounded-lg border-2 transition-all ${
+            className={`group relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm ${
               themeType === theme.id
-                ? "border-blue-500 bg-blue-50"
-                : "border-gray-200 hover:border-gray-300"
+                ? "border-success bg-success/10 text-success"
+                : "border-theme hover:border-theme hover:bg-surface-hover text-secondary hover:text-primary"
             }`}
+            title={theme.name}
           >
-            {/* Theme Preview */}
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-                style={{ backgroundColor: theme.colors.primary }}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">
-                  {theme.name}
-                </div>
-              </div>
-            </div>
-
-            {/* Color palette preview */}
-            <div className="flex gap-1 mb-3">
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: theme.colors.background }}
-              />
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: theme.colors.surface }}
-              />
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: theme.colors.primary }}
-              />
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: theme.colors.secondary }}
-              />
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: theme.colors.success }}
-              />
-            </div>
+            {/* Simple color indicator */}
+            <div
+              className="w-3 h-3 rounded-full border border-white/20"
+              style={{ backgroundColor: theme.colors.primary }}
+            />
+            <span className="font-medium">{theme.name}</span>
 
             {/* Selected indicator */}
             {themeType === theme.id && (
-              <div className="absolute top-2 right-2">
-                <Check className="w-4 h-4 text-blue-600" />
-              </div>
+              <Check className="w-3 h-3 text-success ml-1" />
             )}
           </button>
         ))}
@@ -154,6 +127,10 @@ const Settings: React.FC = () => {
     try {
       setSaving(true);
       await settingsApi.updateSettings(settings);
+
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent("settingsUpdated"));
+
       alert("Settings saved successfully!");
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -251,15 +228,15 @@ const Settings: React.FC = () => {
     <div className="space-y-6">
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-white" />
-          <span className="ml-3 text-white">Loading settings...</span>
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="ml-3 text-primary">Loading settings...</span>
         </div>
       ) : (
         <>
           {/* Header */}
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg">
-              <SettingsIcon className="w-5 h-5 text-white" />
+            <div className="p-2 bg-surface rounded-lg border border-theme">
+              <SettingsIcon className="w-5 h-5 text-primary" />
             </div>
             <h1 className="text-2xl font-bold text-white">Settings</h1>
           </div>
@@ -268,13 +245,13 @@ const Settings: React.FC = () => {
             {/* Profile Settings */}
             <div className="card p-6">
               <div className="flex items-center gap-3 mb-4">
-                <User className="w-5 h-5 text-blue-600" />
+                <User className="w-5 h-5 text-warning" />
                 <h2 className="text-lg font-semibold text-primary">Profile</h2>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary mb-2">
                     Full Name
                   </label>
                   <input
@@ -288,7 +265,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary mb-2">
                     Email
                   </label>
                   <input
@@ -302,7 +279,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary mb-2">
                     Timezone
                   </label>
                   <select
@@ -327,73 +304,81 @@ const Settings: React.FC = () => {
               <div className="flex items-center gap-3 mb-4">
                 <Bell className="w-5 h-5 text-yellow-600" />
                 <h2 className="text-lg font-semibold text-primary">
-                  Notifications
+                  Notifications & Theme
                 </h2>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      Email Notifications
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-primary">
+                        Email Notifications
+                      </div>
+                      <div className="text-sm text-secondary">
+                        Receive updates via email
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      Receive updates via email
-                    </div>
+                    <input
+                      type="checkbox"
+                      checked={settings.email_notifications || false}
+                      onChange={(e) =>
+                        handleSettingChange(
+                          "email_notifications",
+                          e.target.checked
+                        )
+                      }
+                      className="w-4 h-4 text-primary border-theme rounded focus:ring-primary focus:ring-2"
+                    />
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={settings.email_notifications || false}
-                    onChange={(e) =>
-                      handleSettingChange(
-                        "email_notifications",
-                        e.target.checked
-                      )
-                    }
-                    className="w-4 h-4 text-blue-600 rounded"
-                  />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-primary">
+                        Timer Reminders
+                      </div>
+                      <div className="text-sm text-secondary">
+                        Get reminded to start/stop timer
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={settings.reminder_notifications || false}
+                      onChange={(e) =>
+                        handleSettingChange(
+                          "reminder_notifications",
+                          e.target.checked
+                        )
+                      }
+                      className="w-4 h-4 text-primary border-theme rounded focus:ring-primary focus:ring-2"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-primary">
+                        Weekly Reports
+                      </div>
+                      <div className="text-sm text-secondary">
+                        Receive weekly time summaries
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={settings.weekly_reports || false}
+                      onChange={(e) =>
+                        handleSettingChange("weekly_reports", e.target.checked)
+                      }
+                      className="w-4 h-4 text-primary border-theme rounded focus:ring-primary focus:ring-2"
+                    />
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      Timer Reminders
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Get reminded to start/stop timer
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={settings.reminder_notifications || false}
-                    onChange={(e) =>
-                      handleSettingChange(
-                        "reminder_notifications",
-                        e.target.checked
-                      )
-                    }
-                    className="w-4 h-4 text-blue-600 rounded"
-                  />
-                </div>
+                {/* Divider */}
+                <div className="border-t border-theme"></div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      Weekly Reports
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Receive weekly time summaries
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={settings.weekly_reports || false}
-                    onChange={(e) =>
-                      handleSettingChange("weekly_reports", e.target.checked)
-                    }
-                    className="w-4 h-4 text-blue-600 rounded"
-                  />
-                </div>
+                {/* Theme Selector */}
+                <MinimalThemeSelector />
               </div>
             </div>
 
@@ -409,10 +394,10 @@ const Settings: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-medium text-gray-900">
+                    <div className="font-medium text-primary">
                       Auto-start Timer
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-secondary">
                       Start timer when opening app
                     </div>
                   </div>
@@ -422,12 +407,12 @@ const Settings: React.FC = () => {
                     onChange={(e) =>
                       handleSettingChange("auto_start", e.target.checked)
                     }
-                    className="w-4 h-4 text-blue-600 rounded"
+                    className="w-4 h-4 text-primary border-theme rounded focus:ring-primary focus:ring-2"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary mb-2">
                     Reminder Interval (minutes)
                   </label>
                   <select
@@ -448,7 +433,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary mb-2">
                     Time Format
                   </label>
                   <select
@@ -474,11 +459,11 @@ const Settings: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary mb-2">
                     Default Hourly Rate
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted">
                       $
                     </span>
                     <input
@@ -497,7 +482,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary mb-2">
                     Currency
                   </label>
                   <select
@@ -515,7 +500,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary mb-2">
                     Tax Rate (%)
                   </label>
                   <input
@@ -532,16 +517,6 @@ const Settings: React.FC = () => {
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Theme Settings */}
-            <div className="card p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Palette className="w-5 h-5 text-indigo-600" />
-                <h2 className="text-lg font-semibold text-primary">Theme</h2>
-              </div>
-
-              <ThemeSelector />
             </div>
           </div>
 
@@ -592,10 +567,10 @@ const Settings: React.FC = () => {
             />
 
             {/* Import Instructions */}
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-4 p-4 bg-info/10 border border-info/30 rounded-lg">
               <div className="flex items-start gap-3">
-                <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div className="text-sm text-blue-800">
+                <FileText className="w-5 h-5 text-info mt-0.5" />
+                <div className="text-sm text-info">
                   <strong>Import Instructions:</strong>
                   <ol className="mt-2 ml-4 list-decimal space-y-1">
                     <li>Export your data from Clockify as a CSV file</li>
@@ -620,19 +595,19 @@ const Settings: React.FC = () => {
               <div
                 className={`mt-4 p-4 rounded-lg border ${
                   importResult.success
-                    ? "bg-green-50 border-green-200"
-                    : "bg-red-50 border-red-200"
+                    ? "bg-success/10 border-success/30"
+                    : "bg-error/10 border-error/30"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   {importResult.success ? (
-                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                    <CheckCircle className="w-5 h-5 text-success mt-0.5" />
                   ) : (
-                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                    <AlertCircle className="w-5 h-5 text-error mt-0.5" />
                   )}
                   <div
                     className={`text-sm ${
-                      importResult.success ? "text-green-800" : "text-red-800"
+                      importResult.success ? "text-success" : "text-error"
                     }`}
                   >
                     <p className="font-medium">{importResult.message}</p>
@@ -677,8 +652,8 @@ const Settings: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="text-sm text-yellow-800">
+            <div className="mt-4 p-4 bg-warning/10 border border-warning/30 rounded-lg">
+              <div className="text-sm text-warning">
                 <strong>Note:</strong> Export includes all your time entries,
                 projects, and settings. Import will merge with existing data and
                 won't create duplicates.
