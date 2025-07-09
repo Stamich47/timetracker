@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Clock,
   Play,
@@ -16,6 +16,31 @@ import { useTimeEntries } from "../hooks/useTimeEntries";
 import { useTimeFormat } from "../hooks/useTimeFormat";
 import CustomDropdown from "./CustomDropdown";
 
+// Custom hook for persistent date range state
+const usePersistentDateRange = () => {
+  const [dateRange, setDateRange] = useState(() => {
+    const savedStartDate = localStorage.getItem("timeentries-start-date");
+    const savedEndDate = localStorage.getItem("timeentries-end-date");
+
+    return {
+      startDate:
+        savedStartDate ||
+        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0], // Last week
+      endDate: savedEndDate || new Date().toISOString().split("T")[0], // Today
+    };
+  });
+
+  // Save to localStorage whenever values change
+  useEffect(() => {
+    localStorage.setItem("timeentries-start-date", dateRange.startDate);
+    localStorage.setItem("timeentries-end-date", dateRange.endDate);
+  }, [dateRange]);
+
+  return { dateRange, setDateRange };
+};
+
 const TimeEntries: React.FC = () => {
   const {
     timeEntries,
@@ -29,16 +54,11 @@ const TimeEntries: React.FC = () => {
   // Time format hook
   const { is24Hour } = useTimeFormat();
 
+  // Persistent date range hook
+  const { dateRange, setDateRange } = usePersistentDateRange();
+
   // State for collapsible dates
   const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
-
-  // State for date range filtering
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0], // Last week
-    endDate: new Date().toISOString().split("T")[0], // Today
-  });
 
   // State for editing
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
