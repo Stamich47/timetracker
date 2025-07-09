@@ -281,7 +281,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           <p className="text-sm text-muted">
             Secure authentication powered by Supabase
           </p>
-          
+
           {/* Company branding */}
           <div className="flex items-center justify-center space-x-2 text-xs text-muted">
             <span className="flex items-center space-x-1">

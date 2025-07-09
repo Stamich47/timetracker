@@ -27,11 +27,11 @@ const Footer: React.FC = () => {
           <div className="flex items-center justify-center space-x-2 text-sm">
             <span className="flex items-center space-x-1">
               <span>Designed with</span>
-              <Heart className={`h-4 w-4 fill-current ${
-                themeType === "dark" 
-                  ? "text-rose-400/70" 
-                  : "text-rose-500/70"
-              }`} />
+              <Heart
+                className={`h-4 w-4 fill-current ${
+                  themeType === "dark" ? "text-rose-400/70" : "text-rose-500/70"
+                }`}
+              />
               <span>by</span>
             </span>
             <a
@@ -50,9 +50,11 @@ const Footer: React.FC = () => {
 
           {/* Right side - Version */}
           <div className="flex items-center justify-end space-x-4 text-sm">
-            <span className={`${
-              themeType === "dark" ? "text-gray-400" : "text-gray-500"
-            }`}>
+            <span
+              className={`${
+                themeType === "dark" ? "text-gray-400" : "text-gray-500"
+              }`}
+            >
               v1.0.0
             </span>
           </div>
@@ -69,11 +71,11 @@ const Footer: React.FC = () => {
           <div className="flex items-center space-x-2 text-sm">
             <span className="flex items-center space-x-1">
               <span>Designed with</span>
-              <Heart className={`h-4 w-4 fill-current ${
-                themeType === "dark" 
-                  ? "text-rose-400/70" 
-                  : "text-rose-500/70"
-              }`} />
+              <Heart
+                className={`h-4 w-4 fill-current ${
+                  themeType === "dark" ? "text-rose-400/70" : "text-rose-500/70"
+                }`}
+              />
               <span>by</span>
             </span>
             <a
@@ -92,9 +94,11 @@ const Footer: React.FC = () => {
 
           {/* Version */}
           <div className="text-sm">
-            <span className={`${
-              themeType === "dark" ? "text-gray-400" : "text-gray-500"
-            }`}>
+            <span
+              className={`${
+                themeType === "dark" ? "text-gray-400" : "text-gray-500"
+              }`}
+            >
               v1.0.0
             </span>
           </div>
