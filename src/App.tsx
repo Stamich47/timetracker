@@ -12,6 +12,7 @@ import Projects from "./components/Projects";
 import Clients from "./components/Clients";
 import Settings from "./components/Settings";
 import Auth from "./components/Auth";
+import Footer from "./components/Footer";
 import { Loader2, LogOut, User } from "lucide-react";
 // Import theme manager to ensure it's initialized
 import { themeManager } from "./lib/themeManager";
@@ -106,12 +107,12 @@ function AppContent() {
   return (
     <TimerProvider>
       <TimeEntriesProvider>
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
           <div className="absolute inset-0 opacity-20">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-10"></div>
           </div>
 
-          <div className="relative z-10">
+          <div className="relative z-10 flex flex-col min-h-screen">
             <header className="fixed top-0 left-0 right-0 bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 py-4 z-50">
               <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -172,7 +173,7 @@ function AppContent() {
               </div>
             </header>
 
-            <main className="pt-24 pb-4 sm:pb-6 lg:pb-8">
+            <main className="pt-24 pb-4 sm:pb-6 lg:pb-8 flex-1">
               <div className="max-w-7xl mx-auto px-3 sm:px-6">
                 <div
                   className={`transition-all duration-300 ease-in-out transform ${
@@ -196,6 +197,9 @@ function AppContent() {
                 </div>
               </div>
             </main>
+
+            {/* Footer */}
+            <Footer />
           </div>
         </div>
       </TimeEntriesProvider>

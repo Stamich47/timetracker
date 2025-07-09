@@ -8,6 +8,7 @@ import {
   Chrome,
   AlertCircle,
   Loader2,
+  Heart,
 } from "lucide-react";
 
 interface AuthProps {
@@ -276,10 +277,27 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8">
+        <div className="text-center mt-8 space-y-3">
           <p className="text-sm text-muted">
             Secure authentication powered by Supabase
           </p>
+          
+          {/* Company branding */}
+          <div className="flex items-center justify-center space-x-2 text-xs text-muted">
+            <span className="flex items-center space-x-1">
+              <span>Designed with</span>
+              <Heart className="h-3 w-3 text-red-500 fill-current" />
+              <span>by</span>
+            </span>
+            <a
+              href="https://mjswebdesign.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              <span>MJS Web Design</span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
