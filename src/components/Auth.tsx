@@ -120,10 +120,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               <Clock className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Time Tracker
-          </h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-primary mb-2">Time Tracker</h1>
+          <p className="text-secondary">
             {isSignUp
               ? "Create your account to get started"
               : "Welcome back! Please sign in to continue"}
@@ -131,7 +129,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         </div>
 
         {/* Auth Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div className="bg-surface rounded-2xl shadow-xl p-8 border border-border">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
               <AlertCircle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0" />
@@ -151,12 +149,12 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               <div>
                 <label
                   htmlFor="auth-full-name"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-primary mb-2"
                 >
                   Full Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted" />
                   <input
                     type="text"
                     id="auth-full-name"
@@ -176,12 +174,12 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             <div>
               <label
                 htmlFor="auth-email"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-primary mb-2"
               >
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted" />
                 <input
                   type="email"
                   id="auth-email"
@@ -200,12 +198,12 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             <div>
               <label
                 htmlFor="auth-password"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-primary mb-2"
               >
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted" />
                 <input
                   type="password"
                   id="auth-password"
@@ -221,7 +219,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                 />
               </div>
               {isSignUp && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted mt-1">
                   Password must be at least 6 characters long
                 </p>
               )}
@@ -247,16 +245,16 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
           {/* Divider */}
           <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-4 text-sm text-gray-500">or</span>
-            <div className="flex-1 border-t border-gray-300"></div>
+            <div className="flex-1 border-t border-border"></div>
+            <span className="px-4 text-sm text-muted">or</span>
+            <div className="flex-1 border-t border-border"></div>
           </div>
 
           {/* Google Sign In */}
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            className="w-full flex items-center justify-center px-4 py-3 border border-border rounded-lg text-secondary bg-surface hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
             <Chrome className="h-5 w-5 mr-2" />
             Continue with Google
@@ -264,7 +262,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
           {/* Toggle between Sign In/Sign Up */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-secondary">
               {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
               <button
                 type="button"
@@ -279,7 +277,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             Secure authentication powered by Supabase
           </p>
         </div>

@@ -19,6 +19,54 @@ import {
   formatCurrency,
 } from "../utils/revenueUtils";
 
+// Custom hook for persistent date range state
+const usePersistentDateRange = () => {
+  const [dateRange, setDateRange] = useState(() => {
+    const saved = localStorage.getItem("reports-date-range");
+    return saved || "thisWeek";
+  });
+
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const saved = localStorage.getItem("reports-custom-start-date");
+    if (saved) return saved;
+
+    // Default to start of current month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    return startOfMonth.toISOString().split("T")[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState(() => {
+    const saved = localStorage.getItem("reports-custom-end-date");
+    if (saved) return saved;
+
+    // Default to today
+    const now = new Date();
+    return now.toISOString().split("T")[0];
+  });
+
+  // Save to localStorage whenever values change
+  useEffect(() => {
+    localStorage.setItem("reports-date-range", dateRange);
+  }, [dateRange]);
+
+  useEffect(() => {
+    localStorage.setItem("reports-custom-start-date", customStartDate);
+  }, [customStartDate]);
+
+  useEffect(() => {
+    localStorage.setItem("reports-custom-end-date", customEndDate);
+  }, [customEndDate]);
+
+  return {
+    dateRange,
+    setDateRange,
+    customStartDate,
+    setCustomStartDate,
+    customEndDate,
+    setCustomEndDate,
+  };
+};
+
 interface ReportData {
   totalTime: number;
   billableTime: number;
@@ -64,8 +112,17 @@ interface ReportData {
 
 const Reports: React.FC = () => {
   const { timeEntries, projects, loading } = useTimeEntries();
-  const [dateRange, setDateRange] = useState("thisWeek");
-  const [selectedClientId, setSelectedClientId] = useState<string>(""); // Client filter state
+  const {
+    dateRange,
+    setDateRange,
+    customStartDate,
+    setCustomStartDate,
+    customEndDate,
+    setCustomEndDate,
+  } = usePersistentDateRange();
+  const [selectedClientId, setSelectedClientId] = useState<string>(() => {
+    return localStorage.getItem("reports-selected-client") || "";
+  }); // Client filter state with persistence
   // Add user settings state
   const [userSettings, setUserSettings] = useState<UserSettings>({
     currency: "USD",
@@ -94,17 +151,6 @@ const Reports: React.FC = () => {
   };
 
   const monthYearLabels = getMonthYearLabels();
-  const [customStartDate, setCustomStartDate] = useState(() => {
-    // Default to start of current month
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    return startOfMonth.toISOString().split("T")[0];
-  });
-  const [customEndDate, setCustomEndDate] = useState(() => {
-    // Default to today
-    const now = new Date();
-    return now.toISOString().split("T")[0];
-  });
   const [reportData, setReportData] = useState<ReportData>({
     totalTime: 0,
     billableTime: 0,
@@ -134,11 +180,17 @@ const Reports: React.FC = () => {
           setUserSettings(settings);
         }
       } catch (error) {
-        console.error("Error loading settings:", error);
+        console.error("Failed to load user settings:", error);
       }
     };
+
     loadSettings();
   }, []);
+
+  // Save client selection to localStorage
+  useEffect(() => {
+    localStorage.setItem("reports-selected-client", selectedClientId);
+  }, [selectedClientId]);
 
   // Handle export functionality
   const handleExport = () => {
@@ -512,6 +564,34 @@ const Reports: React.FC = () => {
             className="w-full sm:w-auto min-w-[180px] h-10"
           />
 
+          {/* Custom Date Range Inputs - Inline on Desktop */}
+          {dateRange === "custom" && (
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-1 w-full sm:w-auto items-center">
+              <input
+                type="date"
+                id="reports-start-date"
+                name="reportsStartDate"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="input-field text-sm w-full sm:w-[140px] h-10"
+                title="From Date"
+              />
+              <span className="hidden sm:block text-muted text-sm px-1">
+                to
+              </span>
+              <input
+                type="date"
+                id="reports-end-date"
+                name="reportsEndDate"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="input-field text-sm w-full sm:w-[140px] h-10"
+                max={new Date().toISOString().split("T")[0]}
+                title="To Date"
+              />
+            </div>
+          )}
+
           {/* Client Filter */}
           <CustomDropdown
             value={selectedClientId}
@@ -537,47 +617,6 @@ const Reports: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Custom Date Range */}
-      {dateRange === "custom" && (
-        <div className="card p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <div className="flex-1">
-              <label
-                htmlFor="reports-start-date"
-                className="block text-xs sm:text-sm font-medium text-primary mb-1"
-              >
-                Start Date
-              </label>
-              <input
-                type="date"
-                id="reports-start-date"
-                name="reportsStartDate"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="input-field text-xs sm:text-sm w-full h-10"
-              />
-            </div>
-            <div className="flex-1">
-              <label
-                htmlFor="reports-end-date"
-                className="block text-xs sm:text-sm font-medium text-primary mb-1"
-              >
-                End Date
-              </label>
-              <input
-                type="date"
-                id="reports-end-date"
-                name="reportsEndDate"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="input-field text-xs sm:text-sm w-full h-10"
-                max={new Date().toISOString().split("T")[0]}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 lg:gap-6">

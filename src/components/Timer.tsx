@@ -454,10 +454,10 @@ const Timer: React.FC = () => {
 
           {/* Project Selection */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
               <FolderOpen className="w-4 h-4" />
               Project
-            </label>
+            </div>
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
@@ -603,10 +603,10 @@ const Timer: React.FC = () => {
 
           {/* Project Selection */}
           <div className="mb-6">
-            <label className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
               <FolderOpen className="w-4 h-4" />
               Project
-            </label>
+            </div>
             <div className="relative">
               <button
                 type="button"
