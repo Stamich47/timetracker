@@ -188,14 +188,14 @@ const ProjectManager: React.FC = () => {
 
       {/* Add Project Form */}
       {showAddForm && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+        <div className="mb-6 p-4 bg-surface rounded-lg border border-gray-200 dark:border-gray-700">
           <form onSubmit={handleAddProject} className="space-y-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-gray-900">New Project</h3>
+              <h3 className="font-medium text-primary">New Project</h3>
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted hover:text-primary transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -204,7 +204,7 @@ const ProjectManager: React.FC = () => {
             <div>
               <label
                 htmlFor="project-name"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Project Name
               </label>
@@ -225,7 +225,7 @@ const ProjectManager: React.FC = () => {
             <div>
               <label
                 htmlFor="project-client"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Client
               </label>
@@ -244,14 +244,14 @@ const ProjectManager: React.FC = () => {
                     })),
                 ]}
                 placeholder="Select client"
-                className="input-field"
+                size="lg"
               />
             </div>
 
             <div>
               <label
                 htmlFor="project-description"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Description
               </label>
@@ -272,7 +272,7 @@ const ProjectManager: React.FC = () => {
               <div className="flex-1">
                 <label
                   htmlFor="project-color"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-secondary mb-1"
                 >
                   Color
                 </label>
@@ -284,33 +284,45 @@ const ProjectManager: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, color: e.target.value })
                   }
-                  className="w-full h-10 rounded border border-gray-300"
+                  className="w-full rounded border border-gray-300 cursor-pointer"
+                  style={{
+                    height: "3rem",
+                    padding: "4px",
+                    backgroundColor:
+                      "var(--color-inputBg, rgba(255, 255, 255, 0.9))",
+                    borderRadius: "0.5rem",
+                  }}
                 />
               </div>
 
               <div className="flex-1">
                 <label
                   htmlFor="project-hourly-rate"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-secondary mb-1"
                 >
                   Hourly Rate
                 </label>
-                <input
-                  type="number"
-                  id="project-hourly-rate"
-                  name="projectHourlyRate"
-                  placeholder="50"
-                  value={formData.hourly_rate}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      hourly_rate: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="input-field"
-                  min="0"
-                  step="0.01"
-                />
+                <div className="relative">
+                  <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    id="project-hourly-rate"
+                    name="projectHourlyRate"
+                    placeholder="50"
+                    value={formData.hourly_rate}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        hourly_rate: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="input-field pl-10"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
               </div>
             </div>
 
@@ -327,7 +339,7 @@ const ProjectManager: React.FC = () => {
               />
               <label
                 htmlFor="project-billable"
-                className="text-sm text-gray-700"
+                className="text-sm text-secondary"
               >
                 Billable project
               </label>

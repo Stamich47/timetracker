@@ -382,25 +382,34 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                                     e.target.value
                                   )
                                 }
-                                className="w-12 h-8 border border-gray-300 rounded"
+                                className="w-12 h-8 border border-gray-300 rounded cursor-pointer"
+                                style={{
+                                  padding: "2px",
+                                  borderRadius: "0.375rem",
+                                }}
                               />
-                              <input
-                                type="number"
-                                value={project.hourlyRate || ""}
-                                onChange={(e) =>
-                                  handleProjectEdit(
-                                    project.id,
-                                    "hourlyRate",
-                                    e.target.value
-                                      ? parseFloat(e.target.value)
-                                      : 0
-                                  )
-                                }
-                                className="flex-1 px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Hourly rate"
-                                min="0"
-                                step="0.01"
-                              />
+                              <div className="flex-1 relative">
+                                <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
+                                  $
+                                </span>
+                                <input
+                                  type="number"
+                                  value={project.hourlyRate || ""}
+                                  onChange={(e) =>
+                                    handleProjectEdit(
+                                      project.id,
+                                      "hourlyRate",
+                                      e.target.value
+                                        ? parseFloat(e.target.value)
+                                        : 0
+                                    )
+                                  }
+                                  className="w-full pl-10 pr-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Hourly rate"
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </div>
                               <label className="flex items-center gap-2">
                                 <input
                                   type="checkbox"

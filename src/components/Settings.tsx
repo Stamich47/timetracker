@@ -465,7 +465,7 @@ const Settings: React.FC = () => {
                     Default Hourly Rate
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted">
+                    <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-muted">
                       $
                     </span>
                     <input
@@ -477,7 +477,7 @@ const Settings: React.FC = () => {
                           Number(e.target.value)
                         )
                       }
-                      className="input-field pl-8"
+                      className="input-field pl-10"
                       placeholder="0.00"
                     />
                   </div>

@@ -250,6 +250,7 @@ const Projects: React.FC = () => {
                   ]}
                   placeholder="Select client"
                   className="flex-1"
+                  size="lg"
                 />
                 <button
                   onClick={() => setShowQuickClientForm(!showQuickClientForm)}
@@ -307,27 +308,39 @@ const Projects: React.FC = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, color: e.target.value })
                 }
-                className="input-field h-10"
+                className="w-full rounded border border-gray-300 cursor-pointer"
+                style={{
+                  height: "3rem",
+                  padding: "4px",
+                  backgroundColor:
+                    "var(--color-inputBg, rgba(255, 255, 255, 0.9))",
+                  borderRadius: "0.5rem",
+                }}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-primary mb-1">
-                Hourly Rate ($)
+                Hourly Rate
               </label>
-              <input
-                type="number"
-                value={formData.hourly_rate}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    hourly_rate: Number(e.target.value),
-                  })
-                }
-                className="input-field"
-                placeholder="50"
-                min="0"
-                step="0.01"
-              />
+              <div className="relative">
+                <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
+                  $
+                </span>
+                <input
+                  type="number"
+                  value={formData.hourly_rate}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      hourly_rate: Number(e.target.value),
+                    })
+                  }
+                  className="input-field pl-10"
+                  placeholder="50"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-primary mb-1">
