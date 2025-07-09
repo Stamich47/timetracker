@@ -270,7 +270,7 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
           </div>
 
           {/* Tab Content */}
-          <div className="p-6 max-h-96 overflow-y-auto scrollbar-thin">
+          <div className="p-3 sm:p-6 max-h-96 overflow-y-auto scrollbar-thin">
             {/* Clients Tab */}
             {activeTab === "clients" && (
               <div className="space-y-4">
@@ -487,45 +487,87 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
 
             {/* Time Entries Tab */}
             {activeTab === "entries" && (
-              <div className="space-y-2">
+              <div className="space-y-3 sm:space-y-2">
                 {editedPreview.timeEntries.map((entry) => {
                   const isExpanded = expandedEntries.has(entry.id);
                   const isEditing = editingEntryId === entry.id;
 
                   return (
-                    <div key={entry.id} className="border rounded-lg">
-                      <div className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1">
-                            <Clock className="w-4 h-4 text-muted" />
-                            <div className="flex-1">
-                              <div className="font-medium">
+                    <div
+                      key={entry.id}
+                      className="border border-theme rounded-lg bg-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <div className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <Clock className="w-4 h-4 text-muted mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              {/* Description - Full width on mobile */}
+                              <div className="font-medium text-primary mb-2 break-words">
                                 {entry.description || "No description"}
                               </div>
-                              <div className="text-sm text-muted flex items-center gap-4">
-                                <span>{formatDateTime(entry.startTime)}</span>
-                                <span>{formatDuration(entry.duration)}</span>
+
+                              {/* Mobile Layout - Stack time info */}
+                              <div className="block sm:hidden space-y-1">
+                                <div className="text-sm text-muted">
+                                  {formatDateTime(entry.startTime)}
+                                </div>
+                                <div className="text-sm font-medium text-secondary">
+                                  {formatDuration(entry.duration)}
+                                </div>
                                 {entry.projectName && (
-                                  <span className="flex items-center gap-1">
-                                    <FolderOpen className="w-3 h-3" />
-                                    {entry.projectName}
+                                  <div className="flex items-center gap-1 text-sm text-muted">
+                                    <FolderOpen className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {entry.projectName}
+                                    </span>
+                                    {entry.clientName && (
+                                      <span className="text-xs">
+                                        ({entry.clientName})
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Desktop Layout - Horizontal flow */}
+                              <div className="hidden sm:flex sm:items-center sm:gap-4 text-sm text-muted">
+                                <span className="flex-shrink-0">
+                                  {formatDateTime(entry.startTime)}
+                                </span>
+                                <span className="flex-shrink-0 font-medium text-secondary">
+                                  {formatDuration(entry.duration)}
+                                </span>
+                                {entry.projectName && (
+                                  <span className="flex items-center gap-1 min-w-0">
+                                    <FolderOpen className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {entry.projectName}
+                                    </span>
+                                    {entry.clientName && (
+                                      <span className="text-xs ml-1">
+                                        ({entry.clientName})
+                                      </span>
+                                    )}
                                   </span>
                                 )}
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-start gap-2 flex-shrink-0">
                             <button
                               onClick={() =>
                                 setEditingEntryId(isEditing ? null : entry.id)
                               }
-                              className="p-1 hover:bg-gray-100 rounded"
+                              className="p-1.5 hover:bg-surface-hover rounded transition-colors"
+                              title="Edit entry"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => toggleEntryExpansion(entry.id)}
-                              className="p-1 hover:bg-gray-100 rounded"
+                              className="p-1.5 hover:bg-surface-hover rounded transition-colors"
+                              title={isExpanded ? "Collapse" : "Expand"}
                             >
                               {isExpanded ? (
                                 <ChevronUp className="w-4 h-4" />
@@ -537,7 +579,7 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                         </div>
 
                         {(isExpanded || isEditing) && (
-                          <div className="mt-4 pt-4 border-t border-gray-100">
+                          <div className="mt-4 pt-4 border-t border-theme">
                             {isEditing ? (
                               <div className="space-y-3">
                                 <input
@@ -550,7 +592,7 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                                       e.target.value
                                     )
                                   }
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="input-field"
                                   placeholder="Description"
                                 />
 
@@ -563,7 +605,7 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                                       e.target.value
                                     )
                                   }
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="input-field"
                                 >
                                   <option value="">No project</option>
                                   {editedPreview.projects.map((project) => (
@@ -588,27 +630,28 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                                         .filter((tag) => tag)
                                     )
                                   }
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="input-field"
                                   placeholder="Tags (comma separated)"
                                 />
 
                                 <button
                                   onClick={() => setEditingEntryId(null)}
-                                  className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+                                  className="btn-primary text-sm flex items-center gap-2"
                                 >
                                   <Check className="w-4 h-4" />
+                                  Save Changes
                                 </button>
                               </div>
                             ) : (
-                              <div className="space-y-2 text-sm">
+                              <div className="space-y-3 text-sm">
                                 {entry.tags.length > 0 && (
-                                  <div className="flex items-center gap-2">
-                                    <Tag className="w-3 h-3 text-gray-400" />
-                                    <div className="flex gap-1">
+                                  <div className="flex items-start gap-2">
+                                    <Tag className="w-3 h-3 text-muted mt-0.5 flex-shrink-0" />
+                                    <div className="flex flex-wrap gap-1">
                                       {entry.tags.map((tag, index) => (
                                         <span
                                           key={index}
-                                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
+                                          className="px-2 py-1 bg-surface-hover text-secondary rounded-full text-xs"
                                         >
                                           {tag}
                                         </span>
@@ -617,13 +660,13 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                                   </div>
                                 )}
                                 {entry.clientName && (
-                                  <div className="flex items-center gap-2 text-gray-500">
-                                    <Users className="w-3 h-3" />
+                                  <div className="flex items-center gap-2 text-secondary">
+                                    <Users className="w-3 h-3 flex-shrink-0" />
                                     <span>Client: {entry.clientName}</span>
                                   </div>
                                 )}
                                 {entry.billable && (
-                                  <div className="text-green-600 text-xs font-medium">
+                                  <div className="inline-flex items-center px-2 py-1 bg-success/10 text-success text-xs font-medium rounded-full">
                                     Billable
                                   </div>
                                 )}

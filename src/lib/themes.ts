@@ -1,10 +1,4 @@
-export type ThemeType =
-  | "default"
-  | "light"
-  | "dark"
-  | "ocean"
-  | "forest"
-  | "sunset";
+export type ThemeType = "light" | "dark";
 
 export interface Theme {
   id: ThemeType;
@@ -58,52 +52,9 @@ export interface Theme {
 }
 
 export const themes: Record<ThemeType, Theme> = {
-  default: {
-    id: "default",
-    name: "Default Blue",
-    colors: {
-      background: "#f8fafc",
-      surface: "#ffffff",
-      surfaceHover: "#f1f5f9",
-
-      textPrimary: "#1f2937",
-      textSecondary: "#4b5563",
-      textMuted: "#6b7280",
-
-      primary: "#3b82f6",
-      primaryHover: "#2563eb",
-      primaryText: "#ffffff",
-
-      secondary: "#8b5cf6",
-      secondaryHover: "#7c3aed",
-      secondaryText: "#ffffff",
-
-      success: "#10b981",
-      successHover: "#059669",
-      error: "#ef4444",
-      errorHover: "#dc2626",
-      warning: "#f59e0b",
-      info: "#06b6d4",
-
-      border: "#d1d5db",
-      borderLight: "#e5e7eb",
-      divider: "#f3f4f6",
-
-      gradient: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-      shadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-      cardBg: "#ffffff",
-      inputBg: "#ffffff",
-      inputBorder: "#d1d5db",
-      inputFocus: "#3b82f6",
-
-      blueSelection: "#dbeafe",
-      blueText: "#1d4ed8",
-    },
-  },
-
   light: {
     id: "light",
-    name: "Clean Light",
+    name: "Light Mode",
     colors: {
       background: "#ffffff",
       surface: "#f8f9fa",
@@ -185,138 +136,6 @@ export const themes: Record<ThemeType, Theme> = {
 
       blueSelection: "#1e3a8a",
       blueText: "#93c5fd",
-    },
-  },
-
-  ocean: {
-    id: "ocean",
-    name: "Ocean Breeze",
-    colors: {
-      background: "#f0f9ff",
-      surface: "#ffffff",
-      surfaceHover: "#e0f2fe",
-
-      textPrimary: "#164e63",
-      textSecondary: "#0e7490",
-      textMuted: "#0891b2",
-
-      primary: "#0891b2",
-      primaryHover: "#0e7490",
-      primaryText: "#ffffff",
-
-      secondary: "#0284c7",
-      secondaryHover: "#0369a1",
-      secondaryText: "#ffffff",
-
-      success: "#059669",
-      successHover: "#047857",
-      error: "#dc2626",
-      errorHover: "#b91c1c",
-      warning: "#d97706",
-      info: "#0891b2",
-
-      border: "#a7f3d0",
-      borderLight: "#bfdbfe",
-      divider: "#e0f2fe",
-
-      gradient: "linear-gradient(135deg, #0891b2 0%, #0284c7 100%)",
-      shadow:
-        "0 4px 6px -1px rgb(8 145 178 / 0.1), 0 2px 4px -2px rgb(8 145 178 / 0.1)",
-      cardBg: "#ffffff",
-      inputBg: "#ffffff",
-      inputBorder: "#67e8f9",
-      inputFocus: "#0891b2",
-
-      blueSelection: "#cffafe",
-      blueText: "#0e7490",
-    },
-  },
-
-  forest: {
-    id: "forest",
-    name: "Forest Green",
-    colors: {
-      background: "#f0fdf4",
-      surface: "#ffffff",
-      surfaceHover: "#dcfce7",
-
-      textPrimary: "#14532d",
-      textSecondary: "#166534",
-      textMuted: "#15803d",
-
-      primary: "#16a34a",
-      primaryHover: "#15803d",
-      primaryText: "#ffffff",
-
-      secondary: "#059669",
-      secondaryHover: "#047857",
-      secondaryText: "#ffffff",
-
-      success: "#22c55e",
-      successHover: "#16a34a",
-      error: "#dc2626",
-      errorHover: "#b91c1c",
-      warning: "#eab308",
-      info: "#0891b2",
-
-      border: "#bbf7d0",
-      borderLight: "#dcfce7",
-      divider: "#f0fdf4",
-
-      gradient: "linear-gradient(135deg, #16a34a 0%, #059669 100%)",
-      shadow:
-        "0 4px 6px -1px rgb(22 163 74 / 0.1), 0 2px 4px -2px rgb(22 163 74 / 0.1)",
-      cardBg: "#ffffff",
-      inputBg: "#ffffff",
-      inputBorder: "#86efac",
-      inputFocus: "#16a34a",
-
-      blueSelection: "#dcfce7",
-      blueText: "#166534",
-    },
-  },
-
-  sunset: {
-    id: "sunset",
-    name: "Sunset Orange",
-    colors: {
-      background: "#fff7ed",
-      surface: "#ffffff",
-      surfaceHover: "#fed7aa",
-
-      textPrimary: "#9a3412",
-      textSecondary: "#c2410c",
-      textMuted: "#ea580c",
-
-      primary: "#ea580c",
-      primaryHover: "#dc2626",
-      primaryText: "#ffffff",
-
-      secondary: "#f97316",
-      secondaryHover: "#ea580c",
-      secondaryText: "#ffffff",
-
-      success: "#16a34a",
-      successHover: "#15803d",
-      error: "#dc2626",
-      errorHover: "#b91c1c",
-      warning: "#f59e0b",
-      info: "#0891b2",
-
-      border: "#fed7aa",
-      borderLight: "#ffedd5",
-      divider: "#fff7ed",
-
-      gradient: "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
-      shadow:
-        "0 4px 6px -1px rgb(234 88 12 / 0.1), 0 2px 4px -2px rgb(234 88 12 / 0.1)",
-      cardBg: "#ffffff",
-      inputBg: "#ffffff",
-      inputBorder: "#fdba74",
-      inputFocus: "#ea580c",
-
-      blueSelection: "#fed7aa",
-      blueText: "#c2410c",
     },
   },
 };

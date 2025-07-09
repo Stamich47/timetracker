@@ -68,7 +68,7 @@ export const settingsApi = {
       email_notifications: true,
       reminder_notifications: true,
       weekly_reports: true,
-      theme: "system",
+      theme: "light",
       language: "en",
       date_format: "MM/dd/yyyy",
       time_format: "12h",

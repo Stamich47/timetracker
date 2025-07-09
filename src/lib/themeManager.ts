@@ -2,7 +2,7 @@ import React from "react";
 import { themes, type ThemeType } from "./themes";
 
 class ThemeManager {
-  private currentThemeType: ThemeType = "default";
+  private currentThemeType: ThemeType = "light";
   private listeners: ((theme: ThemeType) => void)[] = [];
 
   constructor() {

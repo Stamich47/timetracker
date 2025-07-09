@@ -81,7 +81,7 @@ const Settings: React.FC = () => {
     hourly_rate: 0,
     currency: "USD",
     tax_rate: 0,
-    theme: "system",
+    theme: "light",
     language: "en",
     date_format: "MM/dd/yyyy",
     time_format: "12h",

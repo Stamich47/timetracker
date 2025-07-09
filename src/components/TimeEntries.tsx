@@ -383,7 +383,10 @@ const TimeEntries: React.FC = () => {
 
                       if (isEditing) {
                         return (
-                          <div key={entry.id} className="p-6 bg-blue-50">
+                          <div
+                            key={entry.id}
+                            className="p-3 sm:p-6 bg-blue-50 dark:bg-blue-900/20"
+                          >
                             <div className="space-y-4">
                               <div>
                                 <label
@@ -503,16 +506,16 @@ const TimeEntries: React.FC = () => {
                                 </div>
                               </div>
 
-                              <div className="flex justify-end gap-2">
+                              <div className="flex flex-col sm:flex-row justify-end gap-2">
                                 <button
                                   onClick={cancelEditing}
-                                  className="px-4 py-2 text-sm font-medium text-primary bg-white border border-theme rounded-md hover:bg-surface"
+                                  className="btn-secondary text-sm order-2 sm:order-1"
                                 >
                                   Cancel
                                 </button>
                                 <button
                                   onClick={saveEdit}
-                                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                                  className="btn-primary text-sm order-1 sm:order-2"
                                 >
                                   Save Changes
                                 </button>
@@ -525,51 +528,76 @@ const TimeEntries: React.FC = () => {
                       return (
                         <div
                           key={entry.id}
-                          className="p-6 hover:bg-surface relative"
+                          className="p-3 sm:p-6 hover:bg-surface relative"
                           style={{
                             borderLeft: project
                               ? `4px solid ${project.color || "#3B82F6"}`
                               : "4px solid transparent",
                           }}
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-start space-x-3">
-                                {project && (
-                                  <div
-                                    className="w-4 h-4 rounded-full flex-shrink-0 mt-1"
-                                    style={{
-                                      backgroundColor:
-                                        project.color || "#3B82F6",
-                                    }}
-                                  />
-                                )}
-                                <div className="flex-1">
-                                  <p className="text-primary font-medium">
-                                    {entry.description || "No description"}
-                                  </p>
+                          {/* Mobile Layout */}
+                          <div className="block sm:hidden">
+                            <div className="space-y-3">
+                              {/* Description and Project */}
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-2 flex-1 min-w-0">
                                   {project && (
-                                    <p className="text-sm text-secondary mt-1">
-                                      {project.name}
-                                      {project.client &&
-                                        ` • ${project.client.name}`}
-                                    </p>
+                                    <div
+                                      className="w-3 h-3 rounded-full flex-shrink-0 mt-1"
+                                      style={{
+                                        backgroundColor:
+                                          project.color || "#3B82F6",
+                                      }}
+                                    />
                                   )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-primary font-medium text-sm break-words">
+                                      {entry.description || "No description"}
+                                    </p>
+                                    {project && (
+                                      <p className="text-xs text-secondary mt-1">
+                                        {project.name}
+                                        {project.client &&
+                                          ` • ${project.client.name}`}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons - Top Right */}
+                                <div className="flex items-start space-x-1 ml-2 flex-shrink-0">
+                                  <button
+                                    onClick={() => handleRestartEntry(entry)}
+                                    className="p-1.5 text-muted hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md transition-colors"
+                                    title="Restart timer"
+                                  >
+                                    <Play className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => startEditing(entry)}
+                                    className="p-1.5 text-muted hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                                    title="Edit entry"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteEntry(entry.id!)}
+                                    className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                                    title="Delete entry"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
                                 </div>
                               </div>
-                            </div>
 
-                            <div className="flex items-center space-x-6 ml-4">
-                              {" "}
-                              {/* Time Range & Duration - Clean Layout with Divider */}
-                              <div className="flex items-start space-x-4">
-                                <div className="text-right min-w-0">
-                                  <div className="text-xs text-muted uppercase tracking-wide font-medium mb-1 h-4">
-                                    Time Range
-                                  </div>
-                                  <div className="flex items-center text-sm text-primary font-medium whitespace-nowrap h-6">
-                                    <Clock className="h-3 w-3 mr-1.5 text-muted flex-shrink-0" />
-                                    <span>
+                              {/* Time and Duration - Horizontal with Separator */}
+                              <div className="ml-5">
+                                <div className="flex items-center space-x-4">
+                                  <div>
+                                    <div className="text-xs text-muted uppercase tracking-wide font-medium mb-1">
+                                      Time Range
+                                    </div>
+                                    <div className="text-sm text-primary font-medium">
                                       {formatTimeShort(
                                         new Date(entry.start_time),
                                         is24Hour
@@ -581,46 +609,118 @@ const TimeEntries: React.FC = () => {
                                             is24Hour
                                           )
                                         : "Running"}
-                                    </span>
+                                    </div>
                                   </div>
-                                </div>
 
-                                {/* Vertical Divider */}
-                                <div className="w-px h-10 bg-gray-300 dark:bg-gray-600 self-center"></div>
+                                  {/* Vertical Separator */}
+                                  <div className="w-px h-10 bg-theme self-center"></div>
 
-                                <div className="text-right min-w-0">
-                                  <div className="text-xs text-muted uppercase tracking-wide font-medium mb-1 h-4">
-                                    Duration
-                                  </div>
-                                  <div className="text-lg font-semibold text-primary whitespace-nowrap h-6 flex items-center justify-end">
-                                    {entry.duration
-                                      ? secondsToHMS(entry.duration)
-                                      : "0:00:00"}
+                                  <div>
+                                    <div className="text-xs text-muted uppercase tracking-wide font-medium mb-1">
+                                      Duration
+                                    </div>
+                                    <div className="text-base font-semibold text-primary">
+                                      {entry.duration
+                                        ? secondsToHMS(entry.duration)
+                                        : "0:00:00"}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => handleRestartEntry(entry)}
-                                  className="p-2 text-muted hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                                  title="Restart timer with same details"
-                                >
-                                  <Play className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => startEditing(entry)}
-                                  className="p-2 text-muted hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                  title="Edit entry"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteEntry(entry.id!)}
-                                  className="p-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                  title="Delete entry"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
+                            </div>
+                          </div>
+
+                          {/* Desktop Layout */}
+                          <div className="hidden sm:block">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-start space-x-3">
+                                  {project && (
+                                    <div
+                                      className="w-4 h-4 rounded-full flex-shrink-0 mt-1"
+                                      style={{
+                                        backgroundColor:
+                                          project.color || "#3B82F6",
+                                      }}
+                                    />
+                                  )}
+                                  <div className="flex-1">
+                                    <p className="text-primary font-medium">
+                                      {entry.description || "No description"}
+                                    </p>
+                                    {project && (
+                                      <p className="text-sm text-secondary mt-1">
+                                        {project.name}
+                                        {project.client &&
+                                          ` • ${project.client.name}`}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center space-x-6 ml-4">
+                                {/* Time Range & Duration - Clean Layout with Divider */}
+                                <div className="flex items-start space-x-4">
+                                  <div className="text-right min-w-0">
+                                    <div className="text-xs text-muted uppercase tracking-wide font-medium mb-1 h-4">
+                                      Time Range
+                                    </div>
+                                    <div className="flex items-center text-sm text-primary font-medium whitespace-nowrap h-6">
+                                      <Clock className="h-3 w-3 mr-1.5 text-muted flex-shrink-0" />
+                                      <span>
+                                        {formatTimeShort(
+                                          new Date(entry.start_time),
+                                          is24Hour
+                                        )}{" "}
+                                        -{" "}
+                                        {entry.end_time
+                                          ? formatTimeShort(
+                                              new Date(entry.end_time),
+                                              is24Hour
+                                            )
+                                          : "Running"}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Vertical Divider */}
+                                  <div className="w-px h-10 bg-gray-300 dark:bg-gray-600 self-center"></div>
+
+                                  <div className="text-right min-w-0">
+                                    <div className="text-xs text-muted uppercase tracking-wide font-medium mb-1 h-4">
+                                      Duration
+                                    </div>
+                                    <div className="text-lg font-semibold text-primary whitespace-nowrap h-6 flex items-center justify-end">
+                                      {entry.duration
+                                        ? secondsToHMS(entry.duration)
+                                        : "0:00:00"}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => handleRestartEntry(entry)}
+                                    className="p-2 text-muted hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md transition-colors"
+                                    title="Restart timer with same details"
+                                  >
+                                    <Play className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => startEditing(entry)}
+                                    className="p-2 text-muted hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                                    title="Edit entry"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteEntry(entry.id!)}
+                                    className="p-2 text-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                                    title="Delete entry"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>

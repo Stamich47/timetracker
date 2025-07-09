@@ -19,7 +19,7 @@ interface ThemeProviderProps {
 const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [themeType, setThemeType] = useState<ThemeType>(() => {
     const savedTheme = localStorage.getItem("time-tracker-theme");
-    return (savedTheme as ThemeType) || "default";
+    return (savedTheme as ThemeType) || "light";
   });
 
   const setTheme = (newTheme: ThemeType) => {
