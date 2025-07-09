@@ -8,6 +8,8 @@ import {
   User,
   Building,
   Loader2,
+  FileDown,
+  Layout,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import type { TimeEntry } from "../lib/timeEntriesApi";
@@ -19,6 +21,7 @@ import {
   exportInvoiceAsCSV,
   groupLineItemsByProject,
   type InvoiceData,
+  type InvoiceStyle,
 } from "../utils/invoiceUtils";
 import { formatCurrency } from "../utils/revenueUtils";
 import { formatDate, secondsToHMS } from "../utils/timeUtils";
@@ -60,7 +63,7 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
     businessAddress: "",
     notes: "",
     dueDate: "",
-    groupByProject: true,
+    invoiceStyle: "detailed" as InvoiceStyle,
   });
 
   // Initialize form data when modal opens
@@ -107,6 +110,7 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
           dueDate: formData.dueDate
             ? new Date(formData.dueDate).toISOString()
             : undefined,
+          style: formData.invoiceStyle,
         }
       );
 
@@ -148,6 +152,18 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = async () => {
+    if (!invoice) return;
+
+    try {
+      // Dynamic import for PDF functionality to reduce bundle size
+      const { exportInvoiceAsPDF } = await import("../utils/invoiceUtils");
+      exportInvoiceAsPDF(invoice, formData.invoiceStyle);
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+    }
   };
 
   if (!isOpen) return null;
@@ -470,6 +486,112 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
                       className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm ${themeClasses.input}`}
                     />
                   </div>
+
+                  <div>
+                    <label
+                      className={`block text-sm font-medium ${themeClasses.textSecondary} mb-3`}
+                    >
+                      Invoice Style
+                    </label>
+                    <div className="grid grid-cols-1 gap-3">
+                      {[
+                        {
+                          value: "detailed",
+                          label: "Detailed",
+                          description:
+                            "Show all time entries with descriptions",
+                          icon: "📄",
+                          features: [
+                            "Individual time entries",
+                            "Full descriptions",
+                            "Date breakdown",
+                          ],
+                        },
+                        {
+                          value: "summary",
+                          label: "Summary",
+                          description: "Group by project, show totals only",
+                          icon: "📊",
+                          features: [
+                            "Grouped by project",
+                            "Total hours per project",
+                            "Clean overview",
+                          ],
+                        },
+                        {
+                          value: "compact",
+                          label: "Compact",
+                          description: "Minimal format with period totals",
+                          icon: "📋",
+                          features: [
+                            "Minimal design",
+                            "Period totals",
+                            "Quick overview",
+                          ],
+                        },
+                      ].map((style) => (
+                        <div
+                          key={style.value}
+                          className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                            formData.invoiceStyle === style.value
+                              ? themeType === "dark"
+                                ? "border-blue-500 bg-blue-900/20"
+                                : "border-blue-500 bg-blue-50"
+                              : themeType === "dark"
+                              ? "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                              : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                          }`}
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              invoiceStyle: style.value as InvoiceStyle,
+                            }))
+                          }
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className="text-2xl">{style.icon}</div>
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="radio"
+                                  name="invoiceStyle"
+                                  value={style.value}
+                                  checked={
+                                    formData.invoiceStyle === style.value
+                                  }
+                                  onChange={() => {}}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                />
+                                <h4
+                                  className={`font-medium ${themeClasses.text}`}
+                                >
+                                  {style.label}
+                                </h4>
+                              </div>
+                              <p
+                                className={`text-sm mt-1 ${themeClasses.textSecondary}`}
+                              >
+                                {style.description}
+                              </p>
+                              <ul
+                                className={`text-xs mt-2 space-y-1 ${themeClasses.textSecondary}`}
+                              >
+                                {style.features.map((feature, index) => (
+                                  <li
+                                    key={index}
+                                    className="flex items-center space-x-1"
+                                  >
+                                    <span className="text-green-500">•</span>
+                                    <span>{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -568,75 +690,190 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
 
                 {/* Line Items */}
                 <div className="space-y-4">
-                  <h3 className={`font-semibold ${themeClasses.text}`}>
-                    Services
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className={`font-semibold ${themeClasses.text}`}>
+                      Services
+                    </h3>
+                    <div
+                      className={`flex items-center space-x-2 text-sm ${themeClasses.textSecondary}`}
+                    >
+                      <Layout className="h-4 w-4" />
+                      <span className="capitalize">
+                        {formData.invoiceStyle} Style
+                      </span>
+                    </div>
+                  </div>
 
-                  {groupLineItemsByProject(invoice.lineItems).map(
-                    (group, index) => (
-                      <div
-                        key={index}
-                        className={`border rounded-lg p-4 ${
-                          themeType === "dark"
-                            ? "border-gray-700"
-                            : "border-gray-200"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className={`font-medium ${themeClasses.text}`}>
-                            {group.projectName}
-                          </h4>
+                  {formData.invoiceStyle === "detailed" && (
+                    <>
+                      {groupLineItemsByProject(invoice.lineItems).map(
+                        (group, index) => (
                           <div
-                            className={`text-sm ${themeClasses.textSecondary}`}
+                            key={index}
+                            className={`border rounded-lg p-4 ${
+                              themeType === "dark"
+                                ? "border-gray-700"
+                                : "border-gray-200"
+                            }`}
                           >
-                            {group.totalHours.toFixed(2)} hours
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          {group.items.map((item, itemIndex) => (
-                            <div
-                              key={itemIndex}
-                              className="grid grid-cols-1 md:grid-cols-5 gap-2 text-sm"
-                            >
-                              <div className={themeClasses.textSecondary}>
-                                {item.date}
-                              </div>
-                              <div
-                                className={`md:col-span-2 ${themeClasses.text}`}
+                            <div className="flex items-center justify-between mb-3">
+                              <h4
+                                className={`font-medium ${themeClasses.text}`}
                               >
-                                {item.description}
+                                {group.projectName}
+                              </h4>
+                              <div
+                                className={`text-sm ${themeClasses.textSecondary}`}
+                              >
+                                {group.totalHours.toFixed(2)} hours
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              {group.items.map((item, itemIndex) => (
+                                <div
+                                  key={itemIndex}
+                                  className="grid grid-cols-1 md:grid-cols-5 gap-2 text-sm"
+                                >
+                                  <div className={themeClasses.textSecondary}>
+                                    {item.date}
+                                  </div>
+                                  <div
+                                    className={`md:col-span-2 ${themeClasses.text}`}
+                                  >
+                                    {item.description}
+                                  </div>
+                                  <div className={themeClasses.textSecondary}>
+                                    {secondsToHMS(item.duration)} (
+                                    {item.quantity.toFixed(2)}h)
+                                  </div>
+                                  <div
+                                    className={`text-right ${themeClasses.text}`}
+                                  >
+                                    {formatCurrency(
+                                      item.amount,
+                                      invoice.currency
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div
+                              className={`mt-3 pt-3 border-t text-right ${
+                                themeType === "dark"
+                                  ? "border-gray-700"
+                                  : "border-gray-200"
+                              }`}
+                            >
+                              <span
+                                className={`font-medium ${themeClasses.text}`}
+                              >
+                                Project Total:{" "}
+                                {formatCurrency(
+                                  group.totalAmount,
+                                  invoice.currency
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </>
+                  )}
+
+                  {formData.invoiceStyle === "summary" && (
+                    <div
+                      className={`border rounded-lg p-4 ${
+                        themeType === "dark"
+                          ? "border-gray-700"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                        <div className={`font-medium ${themeClasses.text}`}>
+                          Project
+                        </div>
+                        <div className={`font-medium ${themeClasses.text}`}>
+                          Hours
+                        </div>
+                        <div className={`font-medium ${themeClasses.text}`}>
+                          Rate
+                        </div>
+                        <div
+                          className={`font-medium ${themeClasses.text} text-right`}
+                        >
+                          Amount
+                        </div>
+                      </div>
+                      {groupLineItemsByProject(invoice.lineItems).map(
+                        (group, index) => {
+                          const avgRate = group.totalAmount / group.totalHours;
+                          return (
+                            <div
+                              key={index}
+                              className="grid grid-cols-1 md:grid-cols-4 gap-4 py-2 text-sm"
+                            >
+                              <div className={themeClasses.text}>
+                                {group.projectName}
                               </div>
                               <div className={themeClasses.textSecondary}>
-                                {secondsToHMS(item.duration)} (
-                                {item.quantity.toFixed(2)}h)
+                                {group.totalHours.toFixed(2)}h
+                              </div>
+                              <div className={themeClasses.textSecondary}>
+                                ${avgRate.toFixed(2)}/hr
                               </div>
                               <div
                                 className={`text-right ${themeClasses.text}`}
                               >
-                                {formatCurrency(item.amount, invoice.currency)}
+                                {formatCurrency(
+                                  group.totalAmount,
+                                  invoice.currency
+                                )}
                               </div>
                             </div>
-                          ))}
-                        </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  )}
 
+                  {formData.invoiceStyle === "compact" && (
+                    <div
+                      className={`border rounded-lg p-4 ${
+                        themeType === "dark"
+                          ? "border-gray-700"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className={`font-medium ${themeClasses.text}`}>
+                            Professional Services
+                          </h4>
+                          <p
+                            className={`text-sm ${themeClasses.textSecondary}`}
+                          >
+                            {formatDate(new Date(invoice.periodStart))} -{" "}
+                            {formatDate(new Date(invoice.periodEnd))}
+                          </p>
+                          <p
+                            className={`text-sm ${themeClasses.textSecondary}`}
+                          >
+                            Total:{" "}
+                            {invoice.lineItems
+                              .reduce((sum, item) => sum + item.quantity, 0)
+                              .toFixed(2)}{" "}
+                            hours
+                          </p>
+                        </div>
                         <div
-                          className={`mt-3 pt-3 border-t text-right ${
-                            themeType === "dark"
-                              ? "border-gray-700"
-                              : "border-gray-200"
-                          }`}
+                          className={`text-xl font-semibold ${themeClasses.text}`}
                         >
-                          <span className={`font-medium ${themeClasses.text}`}>
-                            Project Total:{" "}
-                            {formatCurrency(
-                              group.totalAmount,
-                              invoice.currency
-                            )}
-                          </span>
+                          {formatCurrency(invoice.subtotal, invoice.currency)}
                         </div>
                       </div>
-                    )
+                    </div>
                   )}
                 </div>
 
@@ -754,10 +991,17 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
                   </button>
                   <button
                     onClick={handleExportCSV}
-                    className={`px-4 py-2 rounded-lg transition-colors ${themeClasses.button}`}
+                    className={`px-4 py-2 rounded-lg border transition-colors ${themeClasses.secondaryButton}`}
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Export CSV
+                  </button>
+                  <button
+                    onClick={handleExportPDF}
+                    className={`px-4 py-2 rounded-lg transition-colors ${themeClasses.button}`}
+                  >
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Export PDF
                   </button>
                 </>
               )}

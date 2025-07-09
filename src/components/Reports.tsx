@@ -1091,7 +1091,21 @@ const Reports: React.FC = () => {
               return startOfLastMonth.toISOString();
             }
             case "custom": {
-              return new Date(customStartDate).toISOString();
+              // Create start date in local timezone to avoid timezone shifts
+              if (!customStartDate) return today.toISOString();
+              const [startYear, startMonth, startDay] = customStartDate
+                .split("-")
+                .map(Number);
+              const startDate = new Date(
+                startYear,
+                startMonth - 1,
+                startDay,
+                0,
+                0,
+                0,
+                0
+              );
+              return startDate.toISOString();
             }
             default:
               return today.toISOString();
@@ -1153,7 +1167,25 @@ const Reports: React.FC = () => {
               ).toISOString();
             }
             case "custom": {
-              return new Date(customEndDate).toISOString();
+              // Create end date in local timezone to avoid timezone shifts
+              if (!customEndDate) {
+                return new Date(
+                  today.getTime() + 24 * 60 * 60 * 1000 - 1
+                ).toISOString();
+              }
+              const [endYear, endMonth, endDay] = customEndDate
+                .split("-")
+                .map(Number);
+              const endDate = new Date(
+                endYear,
+                endMonth - 1,
+                endDay,
+                23,
+                59,
+                59,
+                999
+              );
+              return endDate.toISOString();
             }
             default:
               return new Date(

@@ -53,6 +53,57 @@ export interface InvoiceData {
   periodEnd: string;
 }
 
+export type InvoiceStyle = "detailed" | "summary" | "compact";
+
+// Type for PDF instance (to avoid importing jsPDF statically)
+type PDFInstance = {
+  setFontSize: (size: number) => void;
+  setFont: (font: string, style?: string) => void;
+  text: (
+    text: string | string[],
+    x: number,
+    y: number,
+    options?: { align?: string }
+  ) => void;
+  line: (x1: number, y1: number, x2: number, y2: number) => void;
+  rect: (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    style?: string
+  ) => void;
+  setTextColor: (r: number, g?: number, b?: number) => void;
+  setDrawColor: (r: number, g?: number, b?: number) => void;
+  setFillColor: (r: number, g?: number, b?: number) => void;
+  getTextWidth: (text: string) => number;
+  save: (filename: string) => void;
+  internal: {
+    pageSize: {
+      width: number;
+      height: number;
+    };
+  };
+};
+
+export interface InvoiceOptions {
+  clientId?: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  periodStart: string;
+  periodEnd: string;
+  businessInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
+  notes?: string;
+  dueDate?: string;
+  style?: InvoiceStyle;
+}
+
 /**
  * Generate invoice from time entries and settings
  */
@@ -60,22 +111,7 @@ export function generateInvoiceFromTimeEntries(
   timeEntries: TimeEntry[],
   projects: Project[],
   userSettings: UserSettings,
-  options: {
-    clientId?: string;
-    clientName?: string;
-    clientEmail?: string;
-    clientPhone?: string;
-    periodStart: string;
-    periodEnd: string;
-    businessInfo?: {
-      name?: string;
-      email?: string;
-      phone?: string;
-      address?: string;
-    };
-    notes?: string;
-    dueDate?: string;
-  }
+  options: InvoiceOptions
 ): InvoiceData {
   // Filter billable entries only
   const billableEntries = timeEntries.filter((entry) => {
@@ -333,4 +369,581 @@ export function exportInvoiceAsCSV(invoice: InvoiceData): string {
   return [headers, ...rows]
     .map((row) => row.map((cell) => `"${cell}"`).join(","))
     .join("\n");
+}
+
+/**
+ * Export invoice as PDF (dynamically imports jsPDF to reduce bundle size)
+ */
+export async function exportInvoiceAsPDF(
+  invoice: InvoiceData,
+  style: InvoiceStyle = "detailed"
+): Promise<void> {
+  // Dynamic import for jsPDF to reduce initial bundle size
+  const jsPDF = (await import("jspdf")).default;
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.width;
+  const margin = 20;
+  const contentWidth = pageWidth - margin * 2;
+
+  // Colors for professional look
+  const primaryColor = [66, 139, 202]; // Blue
+  const secondaryColor = [108, 117, 125]; // Gray
+  const darkColor = [33, 37, 41]; // Dark gray
+
+  let y = 30;
+
+  // Professional Header with gradient-like styling
+  pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.rect(0, 0, pageWidth, 60, "F");
+
+  // Add subtle accent line
+  pdf.setFillColor(255, 255, 255, 0.2);
+  pdf.rect(0, 55, pageWidth, 5, "F");
+
+  // Invoice title in header
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(32);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("INVOICE", margin, 35);
+
+  // Invoice number and date in header
+  pdf.setFontSize(12);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(`Invoice #${invoice.invoiceNumber}`, pageWidth - margin, 25, {
+    align: "right",
+  });
+  pdf.text(
+    `Date: ${formatDate(new Date(invoice.dateCreated))}`,
+    pageWidth - margin,
+    40,
+    { align: "right" }
+  );
+
+  // Add company branding in header
+  pdf.setFontSize(10);
+  pdf.setTextColor(255, 255, 255, 0.8);
+  pdf.text("Powered by MJS Web Design", margin, 52);
+
+  // Reset colors for body content
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  y = 80;
+
+  // Business and Client Info Section
+  const fromToY = y;
+
+  // FROM section (left side)
+  pdf.setFontSize(12);
+  pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("FROM", margin, fromToY);
+
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setFont("helvetica", "normal");
+  let leftY = fromToY + 10;
+
+  if (invoice.businessName) {
+    pdf.setFont("helvetica", "bold");
+    pdf.text(invoice.businessName, margin, leftY);
+    leftY += 7;
+    pdf.setFont("helvetica", "normal");
+  }
+  if (invoice.businessEmail) {
+    pdf.text(invoice.businessEmail, margin, leftY);
+    leftY += 6;
+  }
+  if (invoice.businessPhone) {
+    pdf.text(invoice.businessPhone, margin, leftY);
+    leftY += 6;
+  }
+  if (invoice.businessAddress) {
+    const addressLines = invoice.businessAddress.split("\n");
+    addressLines.forEach((line) => {
+      pdf.text(line, margin, leftY);
+      leftY += 6;
+    });
+  }
+
+  // TO section (right side - properly aligned)
+  const rightStartX = pageWidth / 2 + 10;
+  pdf.setFontSize(12);
+  pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("TO", rightStartX, fromToY);
+
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setFont("helvetica", "normal");
+  let rightY = fromToY + 10;
+
+  pdf.setFont("helvetica", "bold");
+  pdf.text(invoice.clientName, rightStartX, rightY);
+  rightY += 7;
+  pdf.setFont("helvetica", "normal");
+
+  if (invoice.clientEmail) {
+    pdf.text(invoice.clientEmail, rightStartX, rightY);
+    rightY += 6;
+  }
+  if (invoice.clientPhone) {
+    pdf.text(invoice.clientPhone, rightStartX, rightY);
+    rightY += 6;
+  }
+
+  // Calculate y position after both columns
+  y = Math.max(leftY, rightY) + 20;
+
+  // Invoice Details Box
+  pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.setFillColor(248, 249, 250); // Light gray background
+  pdf.rect(margin, y, contentWidth, 25, "FD");
+
+  // Invoice details inside the box
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "bold");
+
+  const detailsY = y + 8;
+  pdf.text("Invoice Date:", margin + 10, detailsY);
+  pdf.text("Due Date:", margin + 80, detailsY);
+  pdf.text("Period:", margin + 150, detailsY);
+
+  pdf.setFont("helvetica", "normal");
+  pdf.text(
+    formatDate(new Date(invoice.dateCreated)),
+    margin + 10,
+    detailsY + 10
+  );
+  pdf.text(formatDate(new Date(invoice.dueDate)), margin + 80, detailsY + 10);
+  pdf.text(
+    `${formatDate(new Date(invoice.periodStart))} - ${formatDate(
+      new Date(invoice.periodEnd)
+    )}`,
+    margin + 150,
+    detailsY + 10
+  );
+
+  y += 40;
+
+  // Line Items Section
+  y = addProfessionalLineItems(
+    pdf,
+    invoice,
+    y,
+    style,
+    margin,
+    contentWidth,
+    primaryColor,
+    secondaryColor,
+    darkColor
+  );
+
+  // Payment Terms Section
+  y += 15;
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("PAYMENT TERMS", margin, y);
+
+  y += 8;
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(`Payment is due within 30 days of invoice date.`, margin, y);
+  y += 6;
+  pdf.text(
+    `Please reference invoice #${invoice.invoiceNumber} with your payment.`,
+    margin,
+    y
+  );
+
+  // Footer with branding
+  const footerY = pdf.internal.pageSize.height - 30;
+  pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
+
+  pdf.setFontSize(8);
+  pdf.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+  pdf.text("This invoice was generated by Time Tracker", margin, footerY);
+  pdf.text(
+    "Powered by MJS Web Design | mjswebdesign.com",
+    pageWidth - margin,
+    footerY,
+    { align: "right" }
+  );
+
+  // Save the PDF
+  pdf.save(`invoice-${invoice.invoiceNumber}.pdf`);
+}
+
+function addProfessionalLineItems(
+  pdf: PDFInstance,
+  invoice: InvoiceData,
+  startY: number,
+  style: InvoiceStyle,
+  margin: number,
+  contentWidth: number,
+  primaryColor: number[],
+  secondaryColor: number[],
+  darkColor: number[]
+): number {
+  let y = startY;
+
+  // Services Section Header
+  pdf.setFontSize(14);
+  pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("SERVICES", margin, y);
+  y += 10;
+
+  // Horizontal line under services
+  pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.line(margin, y, margin + contentWidth, y);
+  y += 15;
+
+  if (style === "detailed") {
+    y = addDetailedProfessionalItems(
+      pdf,
+      invoice,
+      y,
+      margin,
+      contentWidth,
+      primaryColor,
+      secondaryColor,
+      darkColor
+    );
+  } else if (style === "summary") {
+    y = addSummaryProfessionalItems(
+      pdf,
+      invoice,
+      y,
+      margin,
+      contentWidth,
+      primaryColor,
+      secondaryColor,
+      darkColor
+    );
+  } else if (style === "compact") {
+    y = addCompactProfessionalItems(
+      pdf,
+      invoice,
+      y,
+      margin,
+      contentWidth,
+      primaryColor,
+      secondaryColor,
+      darkColor
+    );
+  }
+
+  return addProfessionalTotalsSection(
+    pdf,
+    invoice,
+    y + 20,
+    margin,
+    contentWidth,
+    primaryColor,
+    darkColor
+  );
+}
+
+function addDetailedProfessionalItems(
+  pdf: PDFInstance,
+  invoice: InvoiceData,
+  startY: number,
+  margin: number,
+  contentWidth: number,
+  primaryColor: number[],
+  _secondaryColor: number[],
+  darkColor: number[]
+): number {
+  let y = startY;
+
+  // Table header with background
+  pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.rect(margin, y - 5, contentWidth, 15, "F");
+
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(9);
+  pdf.setFont("helvetica", "bold");
+
+  // Header columns with better spacing
+  pdf.text("Date", margin + 5, y + 5);
+  pdf.text("Description", margin + 50, y + 5);
+  pdf.text("Hours", margin + 280, y + 5);
+  pdf.text("Rate", margin + 320, y + 5);
+  pdf.text("Amount", margin + contentWidth - 5, y + 5, { align: "right" });
+
+  y += 20;
+
+  // Group by project
+  const groupedItems = groupLineItemsByProject(invoice.lineItems);
+  let isEvenRow = true;
+
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+
+  groupedItems.forEach((group) => {
+    // Project header with subtle background
+    if (!isEvenRow) {
+      pdf.setFillColor(248, 249, 250);
+      pdf.rect(margin, y - 3, contentWidth, 12, "F");
+    }
+
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(group.projectName, margin + 5, y + 5);
+    pdf.text(`${group.totalHours.toFixed(2)}h`, margin + 280, y + 5);
+    pdf.text(
+      formatCurrency(group.totalAmount, invoice.currency),
+      margin + contentWidth - 5,
+      y + 5,
+      { align: "right" }
+    );
+
+    y += 15;
+    isEvenRow = !isEvenRow;
+
+    // Individual items
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(
+      _secondaryColor[0],
+      _secondaryColor[1],
+      _secondaryColor[2]
+    );
+
+    group.items.forEach((item) => {
+      if (!isEvenRow) {
+        pdf.setFillColor(248, 249, 250);
+        pdf.rect(margin, y - 2, contentWidth, 10, "F");
+      }
+
+      const description =
+        item.description.length > 35
+          ? item.description.substring(0, 32) + "..."
+          : item.description;
+
+      pdf.text(item.date, margin + 10, y + 4);
+      pdf.text(description, margin + 50, y + 4);
+      pdf.text(item.quantity.toFixed(2), margin + 280, y + 4);
+      pdf.text(`$${item.rate.toFixed(2)}`, margin + 320, y + 4);
+      pdf.text(
+        formatCurrency(item.amount, invoice.currency),
+        margin + contentWidth - 5,
+        y + 4,
+        { align: "right" }
+      );
+
+      y += 10;
+      isEvenRow = !isEvenRow;
+    });
+
+    y += 5;
+  });
+
+  return y;
+}
+
+function addSummaryProfessionalItems(
+  pdf: PDFInstance,
+  invoice: InvoiceData,
+  startY: number,
+  margin: number,
+  contentWidth: number,
+  _primaryColor: number[],
+  _secondaryColor: number[],
+  darkColor: number[]
+): number {
+  let y = startY;
+
+  // Table header
+  pdf.setFillColor(_primaryColor[0], _primaryColor[1], _primaryColor[2]);
+  pdf.rect(margin, y - 5, contentWidth, 15, "F");
+
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "bold");
+
+  pdf.text("Project", margin + 5, y + 5);
+  pdf.text("Hours", margin + 120, y + 5);
+  pdf.text("Rate", margin + 150, y + 5);
+  pdf.text("Amount", margin + contentWidth - 5, y + 5, { align: "right" });
+
+  y += 20;
+
+  const groupedItems = groupLineItemsByProject(invoice.lineItems);
+  let isEvenRow = true;
+
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "normal");
+
+  groupedItems.forEach((group) => {
+    if (!isEvenRow) {
+      pdf.setFillColor(248, 249, 250);
+      pdf.rect(margin, y - 3, contentWidth, 12, "F");
+    }
+
+    const avgRate = group.totalAmount / group.totalHours;
+
+    pdf.text(group.projectName, margin + 5, y + 5);
+    pdf.text(`${group.totalHours.toFixed(2)}h`, margin + 120, y + 5);
+    pdf.text(`$${avgRate.toFixed(2)}`, margin + 150, y + 5);
+    pdf.text(
+      formatCurrency(group.totalAmount, invoice.currency),
+      margin + contentWidth - 5,
+      y + 5,
+      { align: "right" }
+    );
+
+    y += 15;
+    isEvenRow = !isEvenRow;
+  });
+
+  return y;
+}
+
+function addCompactProfessionalItems(
+  pdf: PDFInstance,
+  invoice: InvoiceData,
+  startY: number,
+  margin: number,
+  contentWidth: number,
+  _primaryColor: number[],
+  _secondaryColor: number[],
+  darkColor: number[]
+): number {
+  const y = startY;
+
+  const totalHours = invoice.lineItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
+
+  // Single line item for professional services
+  pdf.setFillColor(248, 249, 250);
+  pdf.rect(margin, y, contentWidth, 25, "F");
+
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setFontSize(12);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Professional Services", margin + 10, y + 10);
+
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "normal");
+  pdf.setTextColor(_secondaryColor[0], _secondaryColor[1], _secondaryColor[2]);
+  pdf.text(
+    `${formatDate(new Date(invoice.periodStart))} - ${formatDate(
+      new Date(invoice.periodEnd)
+    )}`,
+    margin + 10,
+    y + 18
+  );
+
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setFontSize(11);
+  pdf.setFont("helvetica", "bold");
+  pdf.text(`${totalHours.toFixed(2)} hours`, margin + 120, y + 15);
+  pdf.text(
+    formatCurrency(invoice.subtotal, invoice.currency),
+    margin + 165,
+    y + 15,
+    { align: "right" }
+  );
+
+  return y + 30;
+}
+
+function addProfessionalTotalsSection(
+  pdf: PDFInstance,
+  invoice: InvoiceData,
+  startY: number,
+  margin: number,
+  contentWidth: number,
+  primaryColor: number[],
+  darkColor: number[]
+): number {
+  let y = startY;
+
+  // Totals box
+  const totalsWidth = 100;
+  const totalsX = margin + contentWidth - totalsWidth;
+
+  pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.setFillColor(248, 249, 250);
+  pdf.rect(totalsX, y, totalsWidth, invoice.taxAmount > 0 ? 45 : 30, "FD");
+
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "normal");
+
+  // Subtotal
+  pdf.text("Subtotal:", totalsX + 5, y + 10);
+  pdf.text(
+    formatCurrency(invoice.subtotal, invoice.currency),
+    totalsX + 95,
+    y + 10,
+    { align: "right" }
+  );
+
+  y += 12;
+
+  // Tax if applicable
+  if (invoice.taxAmount > 0) {
+    pdf.text(`Tax (${invoice.taxRate}%):`, totalsX + 5, y);
+    pdf.text(
+      formatCurrency(invoice.taxAmount, invoice.currency),
+      totalsX + 95,
+      y,
+      { align: "right" }
+    );
+    y += 12;
+  }
+
+  // Total with emphasis
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.text("TOTAL:", totalsX + 5, y);
+  pdf.text(formatCurrency(invoice.total, invoice.currency), totalsX + 95, y, {
+    align: "right",
+  });
+
+  y += 20;
+
+  // Notes section if present
+  if (invoice.notes) {
+    y += 10;
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    pdf.text("NOTES", margin, y);
+
+    y += 8;
+    pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+    pdf.setFont("helvetica", "normal");
+
+    // Wrap notes text
+    const noteLines = invoice.notes.split("\n");
+    noteLines.forEach((line) => {
+      const words = line.split(" ");
+      let currentLine = "";
+
+      words.forEach((word) => {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (pdf.getTextWidth(testLine) < contentWidth - 20) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            pdf.text(currentLine, margin, y);
+            y += 6;
+          }
+          currentLine = word;
+        }
+      });
+
+      if (currentLine) {
+        pdf.text(currentLine, margin, y);
+        y += 6;
+      }
+    });
+  }
+
+  return y;
 }
