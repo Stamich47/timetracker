@@ -213,7 +213,7 @@ const Reports: React.FC = () => {
       return stringValue;
     };
 
-    // New format: Project, Client, Description, Tags, Billable, start_time, end_time, duration
+    // New format: Project, Client, Description, Tags, Billable, start_time, end_time, duration, Start Date, Start Time, End Date, End Time
     const csvContent = [
       [
         "Project",
@@ -224,16 +224,26 @@ const Reports: React.FC = () => {
         "start_time",
         "end_time",
         "duration",
+        "Start Date",
+        "Start Time",
+        "End Date",
+        "End Time",
       ],
       ...reportData.filteredEntries.map((entry) => {
         const project = projects.find((p) => p.id === entry.project_id);
-        // Type-safe tags extraction
         let tags = "";
         if (typeof entry === "object" && entry !== null && "tags" in entry) {
           const t = (entry as { tags?: unknown }).tags;
           if (Array.isArray(t)) tags = t.join(",");
         }
         const billable = project?.billable ? "Yes" : "No";
+        // Split ISO into date and time (local)
+        const startDate = entry.start_time ? new Date(entry.start_time) : null;
+        const endDate = entry.end_time ? new Date(entry.end_time) : null;
+        const startDateStr = startDate ? startDate.toLocaleDateString() : "";
+        const startTimeStr = startDate ? startDate.toLocaleTimeString() : "";
+        const endDateStr = endDate ? endDate.toLocaleDateString() : "";
+        const endTimeStr = endDate ? endDate.toLocaleTimeString() : "";
         return [
           project?.name || "No Project",
           project?.client?.name || "No Client",
@@ -243,6 +253,10 @@ const Reports: React.FC = () => {
           entry.start_time || "",
           entry.end_time || "",
           entry.duration?.toString() || "",
+          startDateStr,
+          startTimeStr,
+          endDateStr,
+          endTimeStr,
         ];
       }),
     ]

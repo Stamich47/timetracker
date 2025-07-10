@@ -73,12 +73,61 @@ export interface ImportResult {
   errors: string[];
 }
 
-// Helper function to parse CSV
+// Helper: map alternative column names to our internal schema
+const COLUMN_ALIASES: Record<string, string> = {
+  project: "Project",
+  "project name": "Project",
+  projecttitle: "Project",
+  project_name: "Project",
+  client: "Client",
+  "client name": "Client",
+  customer: "Client",
+  company: "Client",
+  description: "Description",
+  notes: "Description",
+  details: "Description",
+  task: "Description",
+  entry: "Description",
+  activity: "Description",
+  "work description": "Description",
+  tags: "Tags",
+  tag: "Tags",
+  labels: "Tags",
+  categories: "Tags",
+  billable: "Billable",
+  "is billable": "Billable",
+  "billable?": "Billable",
+  start: "start_time",
+  begin: "start_time",
+  from: "start_time",
+  "started at": "start_time",
+  "date start": "start_time",
+  end: "end_time",
+  stop: "end_time",
+  to: "end_time",
+  "ended at": "end_time",
+  "date end": "end_time",
+  duration: "duration",
+  "time spent": "duration",
+  hours: "duration",
+  minutes: "duration",
+  "total time": "duration",
+  elapsed: "duration",
+  "work date": "date",
+  "entry date": "date",
+  "date worked": "date",
+};
+
+// Helper function to parse CSV with column mapping
 function parseCSV(text: string): Record<string, string>[] {
   const lines = text.split("\n");
-  const headers = lines[0].split(",").map((h) => h.replace(/"/g, "").trim());
+  if (lines.length < 2) return [];
+  let headers = lines[0]
+    .split(",")
+    .map((h) => h.replace(/"/g, "").trim().toLowerCase());
+  // Map headers to our internal schema
+  headers = headers.map((h) => COLUMN_ALIASES[h] || h);
   const data: Record<string, string>[] = [];
-
   for (let i = 1; i < lines.length; i++) {
     if (lines[i].trim() === "") continue;
 
@@ -124,16 +173,24 @@ function validateTimeTrackerCSV(csvText: string): {
       };
     }
     const headers = lines[0].toLowerCase();
-    const requiredFields = ["project", "start_time", "end_time"];
-    const missingFields = requiredFields.filter(
-      (field) => !headers.includes(field)
-    );
+    // Accept either combined or separate date/time columns
+    const hasStart =
+      headers.includes("start_time") ||
+      (headers.includes("start date") && headers.includes("start time"));
+    const hasEnd =
+      headers.includes("end_time") ||
+      (headers.includes("end date") && headers.includes("end time"));
+    const hasProject = headers.includes("project");
+    const missingFields = [];
+    if (!hasProject) missingFields.push("project");
+    if (!hasStart) missingFields.push("start_time");
+    if (!hasEnd) missingFields.push("end_time");
     if (missingFields.length > 0) {
       return {
         valid: false,
         message: `Missing required columns: ${missingFields.join(
           ", "
-        )}. Please export your data using the Reports CSV export.`,
+        )}. Please export your data using the Reports CSV export or a compatible format.`,
       };
     }
     return { valid: true, message: "CSV format is valid" };
@@ -246,58 +303,121 @@ async function previewTimeTrackerData(csvText: string): Promise<ImportPreview> {
           }
         }
         // Process time entry
-        if (row.start_time && row.end_time) {
-          const startTime = new Date(row.start_time);
-          const endTime = new Date(row.end_time);
-          if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-            throw new Error(
-              "Invalid start_time or end_time format (must be ISO 8601)"
+        // --- Handle start_time and end_time from separate or combined columns ---
+        // Always use lowercase keys for compatibility with parsed headers
+        const startDate =
+          row["start date"] ||
+          row["Start Date"] ||
+          row["date"] ||
+          row["Date"] ||
+          "";
+        const startTimePart = row["start time"] || row["Start Time"] || "";
+        const endDate =
+          row["end date"] ||
+          row["End Date"] ||
+          row["date"] ||
+          row["Date"] ||
+          "";
+        const endTimePart = row["end time"] || row["End Time"] || "";
+        let startTimeStr = row.start_time || "";
+        let endTimeStr = row.end_time || "";
+        // Always combine date and time if both are present, regardless of project
+        if (startDate && startTimePart) {
+          startTimeStr = `${startDate} ${startTimePart}`;
+        }
+        if (endDate && endTimePart) {
+          endTimeStr = `${endDate} ${endTimePart}`;
+        }
+        // If only time is present and no date, show a clear error
+        if ((startTimePart && !startDate) || (endTimePart && !endDate)) {
+          throw new Error(
+            `Missing date column for time-only value(s). Raw values: start='${startTimeStr}', end='${endTimeStr}'`
+          );
+        }
+        // Robust parse: try ISO, then M/D/YYYY h:mm:ss AM/PM
+        const parseDateTime = (str: string): Date | undefined => {
+          if (!str) return undefined;
+          // Try native Date first
+          const d = new Date(str);
+          if (!isNaN(d.getTime())) return d;
+          // Try Clockify/Toggl style: M/D/YYYY h:mm:ss AM/PM
+          const match = str.match(
+            /^(\d{1,2})\/(\d{1,2})\/(\d{4})[ ,]+(\d{1,2}):(\d{2})(?::(\d{2}))? ?([AP]M)?$/i
+          );
+          if (match) {
+            const [, m, d, y, h, min, s, ampm] = match;
+            let hour = parseInt(h, 10);
+            if (ampm) {
+              if (ampm.toUpperCase() === "PM" && hour < 12) hour += 12;
+              if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
+            }
+            return new Date(
+              Number(y),
+              Number(m) - 1,
+              Number(d),
+              hour,
+              Number(min),
+              s ? Number(s) : 0
             );
           }
-          const duration = Math.floor(
-            (endTime.getTime() - startTime.getTime()) / 1000
+          return undefined;
+        };
+        const startTime = parseDateTime(startTimeStr);
+        const endTime = parseDateTime(endTimeStr);
+        if (
+          !startTime ||
+          !endTime ||
+          isNaN(startTime.getTime()) ||
+          isNaN(endTime.getTime())
+        ) {
+          throw new Error(
+            `Invalid start_time or end_time format (must be ISO 8601, valid date/time, or valid 'Start Date'/'Start Time' columns). Raw values: start='${startTimeStr}', end='${endTimeStr}'`
           );
-          const projectName = row.Project?.trim();
-          const projectKey = projectName?.toLowerCase();
-          // Use the real DB project ID if it exists, otherwise the temp one
-          const dbProjectId = projectName
-            ? existingProjectMap.get(projectKey)
-            : undefined;
-          const previewProjectId = projectName
-            ? uniqueProjects.get(projectKey)?.id
-            : undefined;
-          const projectId = dbProjectId || previewProjectId;
-          const tags = row.Tags
-            ? row.Tags.split(",")
-                .map((tag: string) => tag.trim())
-                .filter((tag: string) => tag)
-            : [];
-          const clientName = row.Client?.trim();
-          // Duplicate check for preview (must use DB project ID if available)
-          const key = [
-            dbProjectId || previewProjectId,
-            normalizeIsoDate(startTime.toISOString()),
-            normalizeIsoDate(endTime.toISOString()),
-            row.Description || "",
-          ].join("||");
-          const isNew = !existingKeys.has(key);
-          if (isNew) newTimeEntriesCount++;
-          preview.timeEntries.push({
-            id: `preview-entry-${index}`,
-            description: row.Description || "",
-            startTime: startTime.toISOString(),
-            endTime: endTime.toISOString(),
-            duration,
-            projectId,
-            projectName,
-            clientName:
-              clientName && clientName !== "No client" ? clientName : undefined,
-            tags,
-            billable: row.Billable === "Yes",
-            originalRow: row,
-            isNew, // <-- Mark as new/duplicate
-          });
         }
+        const duration = Math.floor(
+          (endTime.getTime() - startTime.getTime()) / 1000
+        );
+        // Allow empty project (treat as undefined or 'No project')
+        const projectName = row.Project?.trim() || undefined;
+        const projectKey = projectName?.toLowerCase();
+        // Use the real DB project ID if it exists, otherwise the temp one
+        const dbProjectId = projectKey
+          ? existingProjectMap.get(projectKey)
+          : undefined;
+        const previewProjectId = projectKey
+          ? uniqueProjects.get(projectKey)?.id
+          : undefined;
+        const projectId = dbProjectId || previewProjectId;
+        const tags = row.Tags
+          ? row.Tags.split(",")
+              .map((tag: string) => tag.trim())
+              .filter((tag: string) => tag)
+          : [];
+        const clientName = row.Client?.trim();
+        // Duplicate check for preview (must use DB project ID if available)
+        const key = [
+          dbProjectId || previewProjectId || "NoProject",
+          normalizeIsoDate(startTime.toISOString()),
+          normalizeIsoDate(endTime.toISOString()),
+          row.Description || "",
+        ].join("||");
+        const isNew = !existingKeys.has(key);
+        if (isNew) newTimeEntriesCount++;
+        preview.timeEntries.push({
+          id: `preview-entry-${index}`,
+          description: row.Description || "",
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          duration,
+          projectId,
+          projectName,
+          clientName:
+            clientName && clientName !== "No client" ? clientName : undefined,
+          tags,
+          billable: row.Billable === "Yes",
+          originalRow: row,
+          isNew, // <-- Mark as new/duplicate
+        });
       } catch (error) {
         preview.errors.push(
           `Row ${index + 1}: ${

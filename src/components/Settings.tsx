@@ -583,7 +583,7 @@ const Settings: React.FC = () => {
                           onClick={handleShowExportModal}
                           className="btn-secondary justify-center w-full"
                         >
-                          <Download className="w-4 h-4" />
+                          <Upload className="w-4 h-4" />
                           Export All Data
                         </button>
                         <p className="text-xs text-secondary text-center">
@@ -604,7 +604,7 @@ const Settings: React.FC = () => {
                             </>
                           ) : (
                             <>
-                              <Upload className="w-4 h-4" />
+                              <Download className="w-4 h-4" />
                               Import Data
                             </>
                           )}
