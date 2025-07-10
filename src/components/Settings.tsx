@@ -97,6 +97,7 @@ const Settings: React.FC = () => {
     null
   );
   const [showQuickStartGuide, setShowQuickStartGuide] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [dataManagementCollapsed, setDataManagementCollapsed] = useState(true); // Collapsed by default
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -144,15 +145,22 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format: "json" | "csv") => {
     try {
-      await settingsApi.exportUserData();
+      setShowExportModal(false);
+      if (format === "csv") {
+        await settingsApi.exportUserDataAsCSV();
+      } else {
+        await settingsApi.exportUserData();
+      }
       alert("Data exported successfully!");
     } catch (error) {
       console.error("Error exporting data:", error);
       alert("Error exporting data. Please try again.");
     }
   };
+
+  const handleShowExportModal = () => setShowExportModal(true);
 
   const handleImport = () => {
     fileInputRef.current?.click();
@@ -567,32 +575,65 @@ const Settings: React.FC = () => {
                 }`}
               >
                 <div className="px-6 pb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                      onClick={handleExport}
-                      className="btn-secondary justify-center"
-                    >
-                      <Download className="w-4 h-4" />
-                      Export Data
-                    </button>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <button
+                          onClick={handleShowExportModal}
+                          className="btn-secondary justify-center w-full"
+                        >
+                          <Download className="w-4 h-4" />
+                          Export All Data
+                        </button>
+                        <p className="text-xs text-secondary text-center">
+                          Complete backup (choose format)
+                        </p>
+                      </div>
 
-                    <button
-                      onClick={handleImport}
-                      disabled={importing}
-                      className="btn-secondary justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {importing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Importing...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-4 h-4" />
-                          Import Data
-                        </>
-                      )}
-                    </button>
+                      <div className="space-y-2">
+                        <button
+                          onClick={handleImport}
+                          disabled={importing}
+                          className="btn-secondary justify-center w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {importing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Importing...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4" />
+                              Import Data
+                            </>
+                          )}
+                        </button>
+                        <p className="text-xs text-secondary text-center">
+                          From CSV file (time entries)
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Export vs Reports Export Clarification */}
+                    <div className="p-3 bg-info/10 border border-info/30 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <FileText className="w-4 h-4 text-info mt-0.5" />
+                        <div className="text-xs text-info">
+                          <p className="font-medium mb-1">Export Options:</p>
+                          <ul className="space-y-1">
+                            <li>
+                              <strong>Export All Data:</strong> Complete backup
+                              including all settings, clients, projects, and
+                              time entries in your choice of format
+                            </li>
+                            <li>
+                              <strong>Reports Export:</strong> For filtered time
+                              entries only, go to Reports → Export CSV
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Hidden file input */}
@@ -738,9 +779,12 @@ const Settings: React.FC = () => {
 
                   <div className="mt-4 p-4 bg-warning/10 border border-warning/30 rounded-lg">
                     <div className="text-sm text-warning">
-                      <strong>Note:</strong> Export includes all your time
-                      entries, projects, and settings. Import will merge with
-                      existing data and won't create duplicates.
+                      <strong>Note:</strong> "Export All Data" creates a
+                      complete backup of your account including settings,
+                      clients, projects, and ALL time entries. You can choose
+                      between JSON (technical format) or CSV (spreadsheet
+                      format). For filtered time reports, use the CSV export in
+                      the Reports section instead.
                     </div>
                   </div>
                 </div>
@@ -1007,6 +1051,67 @@ const Settings: React.FC = () => {
             onConfirmImport={handleConfirmImport}
             isImporting={importing}
           />
+        )}
+
+        {/* Export Format Selection Modal */}
+        {showExportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-surface border border-theme rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center gap-3 mb-4">
+                <Download className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-semibold text-primary">
+                  Choose Export Format
+                </h3>
+              </div>
+
+              <p className="text-sm text-secondary mb-6">
+                Select the format for your complete data backup:
+              </p>
+
+              <div className="space-y-3 mb-6">
+                <button
+                  onClick={() => handleExport("json")}
+                  className="w-full p-4 text-left border border-theme rounded-lg hover:bg-surface-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-info" />
+                    <div>
+                      <div className="font-medium text-primary">
+                        JSON Format
+                      </div>
+                      <div className="text-xs text-secondary">
+                        Single file, technical format, ideal for backups
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleExport("csv")}
+                  className="w-full p-4 text-left border border-theme rounded-lg hover:bg-surface-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-success" />
+                    <div>
+                      <div className="font-medium text-primary">CSV Format</div>
+                      <div className="text-xs text-secondary">
+                        4 spreadsheet files, easy to import into Excel/Sheets
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowExportModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </>

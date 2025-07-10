@@ -199,6 +199,20 @@ const Reports: React.FC = () => {
 
   // Handle export functionality
   const handleExport = () => {
+    // Helper function to escape CSV values
+    const escapeCsvValue = (value: string | number): string => {
+      const stringValue = String(value);
+      // If the value contains comma, quote, or newline, wrap it in quotes and escape quotes
+      if (
+        stringValue.includes(",") ||
+        stringValue.includes('"') ||
+        stringValue.includes("\n")
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
     const csvContent = [
       [
         "Date",
@@ -220,7 +234,7 @@ const Reports: React.FC = () => {
         ];
       }),
     ]
-      .map((row) => row.join(","))
+      .map((row) => row.map(escapeCsvValue).join(","))
       .join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv" });

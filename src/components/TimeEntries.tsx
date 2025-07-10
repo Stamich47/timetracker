@@ -259,70 +259,81 @@ const TimeEntries: React.FC = () => {
 
       {/* Date Range Filter */}
       <div className="card p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center gap-2">
             <Filter className="h-5 w-5 text-muted" />
             <span className="text-sm font-medium text-primary">
               Date Range:
             </span>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-            <label htmlFor="start-date" className="sr-only">
-              Start Date
-            </label>
-            <input
-              type="date"
-              id="start-date"
-              name="startDate"
-              value={dateRange.startDate}
-              onChange={(e) =>
-                setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-              }
-              className="input-field text-sm w-full sm:w-auto h-10"
-            />
-            <span className="text-muted hidden sm:block">to</span>
-            <label htmlFor="end-date" className="sr-only">
-              End Date
-            </label>
-            <input
-              type="date"
-              id="end-date"
-              name="endDate"
-              value={dateRange.endDate}
-              onChange={(e) =>
-                setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-              }
-              className="input-field text-sm w-full sm:w-auto h-10"
-              max={new Date().toISOString().split("T")[0]}
-            />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              onClick={() =>
-                setDateRange({
-                  startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                    .toISOString()
-                    .split("T")[0],
-                  endDate: new Date().toISOString().split("T")[0],
-                })
-              }
-              className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium w-full sm:w-auto h-10"
-            >
-              Last Week
-            </button>
-            <button
-              onClick={() =>
-                setDateRange({
-                  startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                    .toISOString()
-                    .split("T")[0],
-                  endDate: new Date().toISOString().split("T")[0],
-                })
-              }
-              className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium w-full sm:w-auto h-10"
-            >
-              Last Month
-            </button>
+
+          {/* Date inputs and quick buttons */}
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Date Range Inputs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
+              <label htmlFor="start-date" className="sr-only">
+                Start Date
+              </label>
+              <input
+                type="date"
+                id="start-date"
+                name="startDate"
+                value={dateRange.startDate}
+                onChange={(e) =>
+                  setDateRange((prev) => ({
+                    ...prev,
+                    startDate: e.target.value,
+                  }))
+                }
+                className="input-field text-sm w-full sm:flex-1 h-10"
+              />
+              <span className="text-muted text-center sm:px-2">to</span>
+              <label htmlFor="end-date" className="sr-only">
+                End Date
+              </label>
+              <input
+                type="date"
+                id="end-date"
+                name="endDate"
+                value={dateRange.endDate}
+                onChange={(e) =>
+                  setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                }
+                className="input-field text-sm w-full sm:flex-1 h-10"
+                max={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+
+            {/* Quick Select Buttons */}
+            <div className="flex gap-2 lg:flex-shrink-0">
+              <button
+                onClick={() =>
+                  setDateRange({
+                    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                      .toISOString()
+                      .split("T")[0],
+                    endDate: new Date().toISOString().split("T")[0],
+                  })
+                }
+                className="flex-1 lg:flex-initial px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium h-10 whitespace-nowrap"
+              >
+                Last Week
+              </button>
+              <button
+                onClick={() =>
+                  setDateRange({
+                    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                      .toISOString()
+                      .split("T")[0],
+                    endDate: new Date().toISOString().split("T")[0],
+                  })
+                }
+                className="flex-1 lg:flex-initial px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium h-10 whitespace-nowrap"
+              >
+                Last Month
+              </button>
+            </div>
           </div>
         </div>
       </div>

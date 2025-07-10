@@ -157,4 +157,137 @@ export const settingsApi = {
       throw error;
     }
   },
+
+  // Export user data as CSV files in a ZIP archive
+  async exportUserDataAsCSV() {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("No authenticated user");
+
+      // Get all user data
+      const [profile, projects, timeEntries, clients] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
+        supabase.from("projects").select("*").eq("user_id", user.id),
+        supabase.from("time_entries").select("*").eq("user_id", user.id),
+        supabase.from("clients").select("*").eq("user_id", user.id),
+      ]);
+
+      // Helper function to escape CSV values
+      const escapeCsvValue = (value: unknown): string => {
+        if (value === null || value === undefined) return "";
+        const stringValue = String(value);
+        if (
+          stringValue.includes(",") ||
+          stringValue.includes('"') ||
+          stringValue.includes("\n")
+        ) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      };
+
+      // Convert data to CSV format
+      const createCSV = (
+        data: Record<string, unknown>[],
+        headers: string[]
+      ) => {
+        if (!data || data.length === 0) return headers.join(",") + "\n";
+
+        const rows = data.map((item) =>
+          headers.map((header) => escapeCsvValue(item[header])).join(",")
+        );
+        return [headers.join(","), ...rows].join("\n");
+      };
+
+      // Create CSV content for each data type
+      const profileHeaders = [
+        "id",
+        "full_name",
+        "email",
+        "timezone",
+        "hourly_rate",
+        "currency",
+        "tax_rate",
+        "created_at",
+        "updated_at",
+      ];
+      const clientHeaders = [
+        "id",
+        "name",
+        "email",
+        "phone",
+        "address",
+        "created_at",
+        "updated_at",
+      ];
+      const projectHeaders = [
+        "id",
+        "name",
+        "description",
+        "client_id",
+        "hourly_rate",
+        "color",
+        "is_active",
+        "created_at",
+        "updated_at",
+      ];
+      const timeEntryHeaders = [
+        "id",
+        "project_id",
+        "description",
+        "start_time",
+        "end_time",
+        "duration",
+        "created_at",
+        "updated_at",
+      ];
+
+      const profileCSV = createCSV(
+        profile.data ? [profile.data] : [],
+        profileHeaders
+      );
+      const clientsCSV = createCSV(clients.data || [], clientHeaders);
+      const projectsCSV = createCSV(projects.data || [], projectHeaders);
+      const timeEntriesCSV = createCSV(
+        timeEntries.data || [],
+        timeEntryHeaders
+      );
+
+      // Create a simple multi-file download approach
+      // Since we can't easily create ZIP files without additional libraries,
+      // we'll download separate CSV files
+      const downloadCSV = (content: string, filename: string) => {
+        const blob = new Blob([content], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+
+      const dateStr = new Date().toISOString().split("T")[0];
+
+      // Download each CSV file with a small delay to avoid browser blocking
+      setTimeout(() => downloadCSV(profileCSV, `profile-${dateStr}.csv`), 0);
+      setTimeout(() => downloadCSV(clientsCSV, `clients-${dateStr}.csv`), 200);
+      setTimeout(
+        () => downloadCSV(projectsCSV, `projects-${dateStr}.csv`),
+        400
+      );
+      setTimeout(
+        () => downloadCSV(timeEntriesCSV, `time-entries-${dateStr}.csv`),
+        600
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Error exporting CSV data:", error);
+      throw error;
+    }
+  },
 };
