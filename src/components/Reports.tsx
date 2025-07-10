@@ -213,24 +213,36 @@ const Reports: React.FC = () => {
       return stringValue;
     };
 
+    // New format: Project, Client, Description, Tags, Billable, start_time, end_time, duration
     const csvContent = [
       [
-        "Date",
-        "Client",
         "Project",
+        "Client",
         "Description",
-        "Duration (hours)",
-        "Duration (formatted)",
+        "Tags",
+        "Billable",
+        "start_time",
+        "end_time",
+        "duration",
       ],
       ...reportData.filteredEntries.map((entry) => {
         const project = projects.find((p) => p.id === entry.project_id);
+        // Type-safe tags extraction
+        let tags = "";
+        if (typeof entry === "object" && entry !== null && "tags" in entry) {
+          const t = (entry as { tags?: unknown }).tags;
+          if (Array.isArray(t)) tags = t.join(",");
+        }
+        const billable = project?.billable ? "Yes" : "No";
         return [
-          formatDate(new Date(entry.start_time)),
-          project?.client?.name || "No Client",
           project?.name || "No Project",
-          entry.description || "No description",
-          (entry.duration! / 3600).toFixed(2),
-          secondsToHMS(entry.duration || 0),
+          project?.client?.name || "No Client",
+          entry.description || "",
+          tags,
+          billable,
+          entry.start_time || "",
+          entry.end_time || "",
+          entry.duration?.toString() || "",
         ];
       }),
     ]
@@ -632,7 +644,7 @@ const Reports: React.FC = () => {
             className="h-10 px-3 py-2 btn-primary rounded-lg transition-colors font-medium flex items-center justify-center gap-2 text-sm w-full sm:w-auto"
           >
             <Download className="w-4 h-4" />
-            <span>Export CSV</span>
+            <span>Export CSV (Full Data)</span>
           </button>
 
           <button

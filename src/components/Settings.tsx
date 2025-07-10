@@ -24,6 +24,7 @@ import {
 } from "../lib/importApi";
 import ImportPreviewModal from "./ImportPreviewModal";
 import { useTheme } from "../hooks/useTheme";
+import { useTimeEntries } from "../hooks/useTimeEntries";
 
 // Minimalist Theme Selector Component
 const MinimalThemeSelector: React.FC = () => {
@@ -100,6 +101,7 @@ const Settings: React.FC = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [dataManagementCollapsed, setDataManagementCollapsed] = useState(true); // Collapsed by default
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { refreshTimeEntries } = useTimeEntries();
 
   // Load settings on component mount
   useEffect(() => {
@@ -178,12 +180,10 @@ const Settings: React.FC = () => {
 
     try {
       setImporting(true);
-
       // Read file content
       const text = await file.text();
-
-      // Validate CSV format
-      const validation = importApi.validateClockifyCSV(text);
+      // Validate CSV format (new format)
+      const validation = importApi.validateTimeTrackerCSV(text);
       if (!validation.valid) {
         setImportResult({
           success: false,
@@ -193,9 +193,8 @@ const Settings: React.FC = () => {
         });
         return;
       }
-
-      // Generate preview
-      const preview = await importApi.previewClockifyData(text);
+      // Generate preview (new format)
+      const preview = await importApi.previewTimeTrackerData(text);
       setImportPreview(preview);
       setShowPreviewModal(true);
     } catch (error) {
@@ -221,6 +220,8 @@ const Settings: React.FC = () => {
       setImporting(true);
       const result = await importApi.importFromPreview(editedPreview);
       setImportResult(result);
+      // Refresh all time entries and projects after import
+      await refreshTimeEntries();
       setShowPreviewModal(false);
     } catch (error) {
       setImportResult({
@@ -673,19 +674,18 @@ const Settings: React.FC = () => {
                               </li>
                               <li>
                                 <span className="font-semibold">
-                                  Start Date
+                                  start_time
                                 </span>{" "}
-                                - Date in YYYY-MM-DD format
+                                - Start time (ISO 8601, e.g.
+                                2024-05-01T09:00:00Z)
                               </li>
                               <li>
-                                <span className="font-semibold">
-                                  Start Time
-                                </span>{" "}
-                                - Time in HH:MM format
+                                <span className="font-semibold">end_time</span>{" "}
+                                - End time (ISO 8601, e.g. 2024-05-01T10:00:00Z)
                               </li>
                               <li>
-                                <span className="font-semibold">Duration</span>{" "}
-                                - Duration in HH:MM:SS format
+                                <span className="font-semibold">Tags</span> -
+                                Comma-separated tags (optional)
                               </li>
                             </ul>
                           </div>
@@ -694,18 +694,13 @@ const Settings: React.FC = () => {
                             <ol className="mt-1 ml-4 list-decimal space-y-1">
                               <li>
                                 Export your time tracking data as a CSV file
+                                from Reports
                               </li>
                               <li>
                                 Ensure your CSV has the exact column names
                                 listed above
                               </li>
-                              <li>
-                                Click "Import Data" and select your CSV file
-                              </li>
-                              <li>
-                                Missing clients and projects will be created
-                                automatically
-                              </li>
+                              <li>Import the file here</li>
                             </ol>
                           </div>
                         </div>

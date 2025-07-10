@@ -192,6 +192,9 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                     {editedPreview.stats.totalTimeEntries}
                   </span>
                   <span className="text-muted text-sm ml-1">total</span>
+                  <span className="ml-2 text-green-700 font-semibold">
+                    ({editedPreview.stats.newTimeEntries} new)
+                  </span>
                 </div>
               </div>
 
@@ -491,11 +494,15 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                 {editedPreview.timeEntries.map((entry) => {
                   const isExpanded = expandedEntries.has(entry.id);
                   const isEditing = editingEntryId === entry.id;
-
+                  const isNew = entry.isNew;
                   return (
                     <div
                       key={entry.id}
-                      className="border border-theme rounded-lg bg-surface hover:bg-surface-hover transition-colors"
+                      className={`border rounded-lg transition-colors ${
+                        isNew
+                          ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/10"
+                          : "border-gray-200 bg-gray-50 opacity-70 dark:border-gray-700 dark:bg-gray-900/10"
+                      } hover:bg-surface-hover`}
                     >
                       <div className="p-3 sm:p-4">
                         <div className="flex items-start justify-between gap-3">
@@ -503,8 +510,17 @@ const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                             <Clock className="w-4 h-4 text-muted mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               {/* Description - Full width on mobile */}
-                              <div className="font-medium text-primary mb-2 break-words">
+                              <div className="font-medium text-primary mb-2 break-words flex items-center gap-2">
                                 {entry.description || "No description"}
+                                {isNew ? (
+                                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full ml-2">
+                                    New
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full ml-2">
+                                    Duplicate
+                                  </span>
+                                )}
                               </div>
 
                               {/* Mobile Layout - Stack time info */}
