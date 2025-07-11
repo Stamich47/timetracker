@@ -16,6 +16,10 @@ import Footer from "./components/Footer";
 import { Loader2, LogOut, User } from "lucide-react";
 // Import theme manager to ensure it's initialized
 import { themeManager } from "./lib/themeManager";
+import InvoiceGeneratorModal from "./components/InvoiceGeneratorModal";
+import type { TimeEntry } from "./lib/timeEntriesApi";
+import type { Project } from "./lib/projectsApi";
+import type { UserSettings } from "./lib/settingsApi";
 
 // Initialize theme system
 themeManager.getCurrentTheme();
@@ -25,6 +29,15 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState("timer");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [invoiceModalData, setInvoiceModalData] = useState<{
+    timeEntries: TimeEntry[];
+    projects: Project[];
+    userSettings: UserSettings;
+    selectedClientId?: string;
+    periodStart: string;
+    periodEnd: string;
+  } | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close user menu when clicking outside
@@ -57,6 +70,19 @@ function AppContent() {
     }, 200);
   };
 
+  // Function to open modal from anywhere
+  const openInvoiceModal = (data: {
+    timeEntries: TimeEntry[];
+    projects: Project[];
+    userSettings: UserSettings;
+    selectedClientId?: string;
+    periodStart: string;
+    periodEnd: string;
+  }) => {
+    setInvoiceModalData(data);
+    setInvoiceModalOpen(true);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "timer":
@@ -74,7 +100,7 @@ function AppContent() {
           </div>
         );
       case "reports":
-        return <Reports />;
+        return <Reports openInvoiceModal={openInvoiceModal} />;
       case "projects":
         return <Projects />;
       case "clients":
@@ -201,6 +227,14 @@ function AppContent() {
             {/* Footer */}
             <Footer />
           </div>
+          {/* Invoice Modal overlayed at app level */}
+          {invoiceModalOpen && invoiceModalData && (
+            <InvoiceGeneratorModal
+              isOpen={invoiceModalOpen}
+              onClose={() => setInvoiceModalOpen(false)}
+              {...invoiceModalData}
+            />
+          )}
         </div>
       </TimeEntriesProvider>
     </TimerProvider>

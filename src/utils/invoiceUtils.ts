@@ -373,153 +373,148 @@ export function exportInvoiceAsCSV(invoice: InvoiceData): string {
 
 /**
  * Export invoice as PDF (dynamically imports jsPDF to reduce bundle size)
+ * @param invoice Invoice data
+ * @param style Invoice style
+ * @param logoDataUrl Optional logo image as data URL
  */
 export async function exportInvoiceAsPDF(
   invoice: InvoiceData,
-  style: InvoiceStyle = "detailed"
+  style: InvoiceStyle = "detailed",
+  logoDataUrl?: string
 ): Promise<void> {
-  // Dynamic import for jsPDF to reduce initial bundle size
   const jsPDF = (await import("jspdf")).default;
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.width;
+  const pageHeight = pdf.internal.pageSize.height;
   const margin = 20;
   const contentWidth = pageWidth - margin * 2;
 
-  // Colors for professional look
+  // Colors
   const primaryColor = [66, 139, 202]; // Blue
   const secondaryColor = [108, 117, 125]; // Gray
   const darkColor = [33, 37, 41]; // Dark gray
+  const lightGray = [248, 249, 250];
 
-  let y = 30;
+  let y = 20;
 
-  // Professional Header with gradient-like styling
+  // Header background (reduced height)
   pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.rect(0, 0, pageWidth, 60, "F");
+  pdf.rect(0, 0, pageWidth, 40, "F");
 
-  // Add subtle accent line
-  pdf.setFillColor(255, 255, 255, 0.2);
-  pdf.rect(0, 55, pageWidth, 5, "F");
+  // Logo (if provided, smaller and vertically centered)
+  if (logoDataUrl) {
+    try {
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(margin, 7, 32, 24, "F");
+      pdf.addImage(
+        logoDataUrl,
+        "PNG",
+        margin + 2,
+        9,
+        28,
+        20,
+        undefined,
+        "FAST"
+      );
+    } catch {
+      // Optionally log error or ignore
+    }
+  }
 
-  // Invoice title in header
+  // Invoice title (smaller, vertically centered)
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(32);
+  pdf.setFontSize(22);
   pdf.setFont("helvetica", "bold");
-  pdf.text("INVOICE", margin, 35);
+  pdf.text("INVOICE", margin + (logoDataUrl ? 38 : 0), 22);
 
-  // Invoice number and date in header
-  pdf.setFontSize(12);
+  // Invoice meta (number, date, due, period) - smaller font, tighter spacing
+  pdf.setFontSize(9);
   pdf.setFont("helvetica", "normal");
-  pdf.text(`Invoice #${invoice.invoiceNumber}`, pageWidth - margin, 25, {
-    align: "right",
-  });
+  const metaStartY = 12;
+  const metaLineHeight = 5.2;
+  pdf.text(
+    `Invoice #${invoice.invoiceNumber}`,
+    pageWidth - margin,
+    metaStartY,
+    { align: "right" }
+  );
   pdf.text(
     `Date: ${formatDate(new Date(invoice.dateCreated))}`,
     pageWidth - margin,
-    40,
+    metaStartY + metaLineHeight,
+    { align: "right" }
+  );
+  pdf.text(
+    `Due: ${formatDate(new Date(invoice.dueDate))}`,
+    pageWidth - margin,
+    metaStartY + metaLineHeight * 2,
+    { align: "right" }
+  );
+  pdf.text(
+    `Period: ${formatDate(new Date(invoice.periodStart))} - ${formatDate(
+      new Date(invoice.periodEnd)
+    )}`,
+    pageWidth - margin,
+    metaStartY + metaLineHeight * 3,
     { align: "right" }
   );
 
-  // Reset colors for body content
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  y = 80;
+  y = 48;
 
-  // Business and Client Info Section
-  const fromToY = y;
-
-  // FROM section (left side)
+  // Business/Client Info
   pdf.setFontSize(12);
   pdf.setFont("helvetica", "bold");
   pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.text("FROM", margin, fromToY);
-
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.text("From", margin, y);
+  pdf.text("Bill To", pageWidth / 2 + 5, y);
+  y += 7;
+  pdf.setFontSize(10);
   pdf.setFont("helvetica", "normal");
-  let leftY = fromToY + 10;
-
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  let leftY = y,
+    rightY = y;
+  // Business info
   if (invoice.businessName) {
     pdf.setFont("helvetica", "bold");
     pdf.text(invoice.businessName, margin, leftY);
-    leftY += 7;
+    leftY += 6;
     pdf.setFont("helvetica", "normal");
   }
   if (invoice.businessEmail) {
     pdf.text(invoice.businessEmail, margin, leftY);
-    leftY += 6;
+    leftY += 5;
   }
   if (invoice.businessPhone) {
     pdf.text(invoice.businessPhone, margin, leftY);
-    leftY += 6;
+    leftY += 5;
   }
   if (invoice.businessAddress) {
-    const addressLines = invoice.businessAddress.split("\n");
-    addressLines.forEach((line) => {
+    invoice.businessAddress.split("\n").forEach((line) => {
       pdf.text(line, margin, leftY);
-      leftY += 6;
+      leftY += 5;
     });
   }
-
-  // TO section (right side - properly aligned)
-  const rightStartX = pageWidth / 2 + 10;
-  pdf.setFontSize(12);
+  // Client info
   pdf.setFont("helvetica", "bold");
-  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.text("TO", rightStartX, fromToY);
-
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.text(invoice.clientName, pageWidth / 2 + 5, rightY);
+  rightY += 6;
   pdf.setFont("helvetica", "normal");
-  let rightY = fromToY + 10;
-
-  pdf.setFont("helvetica", "bold");
-  pdf.text(invoice.clientName, rightStartX, rightY);
-  rightY += 7;
-  pdf.setFont("helvetica", "normal");
-
   if (invoice.clientEmail) {
-    pdf.text(invoice.clientEmail, rightStartX, rightY);
-    rightY += 6;
+    pdf.text(invoice.clientEmail, pageWidth / 2 + 5, rightY);
+    rightY += 5;
   }
   if (invoice.clientPhone) {
-    pdf.text(invoice.clientPhone, rightStartX, rightY);
-    rightY += 6;
+    pdf.text(invoice.clientPhone, pageWidth / 2 + 5, rightY);
+    rightY += 5;
   }
+  y = Math.max(leftY, rightY) + 8;
+  // Divider
+  pdf.setDrawColor(230, 230, 230);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 8;
 
-  // Calculate y position after both columns
-  y = Math.max(leftY, rightY) + 20;
-
-  // Invoice Details Box
-  pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.setFillColor(248, 249, 250); // Light gray background
-  pdf.rect(margin, y, contentWidth, 25, "FD");
-
-  // Invoice details inside the box
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  pdf.setFontSize(10);
-  pdf.setFont("helvetica", "bold");
-
-  const detailsY = y + 8;
-  pdf.text("Invoice Date:", margin + 10, detailsY);
-  pdf.text("Due Date:", margin + 80, detailsY);
-  pdf.text("Period:", margin + 150, detailsY);
-
-  pdf.setFont("helvetica", "normal");
-  pdf.text(
-    formatDate(new Date(invoice.dateCreated)),
-    margin + 10,
-    detailsY + 10
-  );
-  pdf.text(formatDate(new Date(invoice.dueDate)), margin + 80, detailsY + 10);
-  pdf.text(
-    `${formatDate(new Date(invoice.periodStart))} - ${formatDate(
-      new Date(invoice.periodEnd)
-    )}`,
-    margin + 150,
-    detailsY + 10
-  );
-
-  y += 40;
-
-  // Line Items Section
-  y = addProfessionalLineItems(
+  // Services Table
+  y = addModernProfessionalLineItems(
     pdf,
     invoice,
     y,
@@ -528,32 +523,73 @@ export async function exportInvoiceAsPDF(
     contentWidth,
     primaryColor,
     secondaryColor,
-    darkColor
+    darkColor,
+    lightGray
   );
 
-  // Payment Terms Section
-  y += 15;
-  pdf.setFontSize(10);
-  pdf.setFont("helvetica", "bold");
-  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.text("PAYMENT TERMS", margin, y);
-
-  y += 8;
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  pdf.setFont("helvetica", "normal");
-  pdf.text(`Payment is due within 30 days of invoice date.`, margin, y);
-  y += 6;
-  pdf.text(
-    `Please reference invoice #${invoice.invoiceNumber} with your payment.`,
+  // Totals Section
+  y = addModernProfessionalTotalsSection(
+    pdf,
+    invoice,
+    y + 10,
     margin,
-    y
+    contentWidth,
+    primaryColor,
+    darkColor,
+    lightGray
   );
 
-  // Save the PDF
+  // Notes/Terms Section
+  if (invoice.notes) {
+    y += 10;
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    pdf.text("Notes / Payment Terms", margin, y);
+    y += 7;
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+    const notes =
+      invoice.notes ||
+      `Payment is due within 30 days of invoice date. Please reference invoice #${invoice.invoiceNumber} with your payment.`;
+    const noteLines = notes.split("\n");
+    noteLines.forEach((line) => {
+      const words = line.split(" ");
+      let currentLine = "";
+      words.forEach((word) => {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (pdf.getTextWidth(testLine) < contentWidth - 20) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            pdf.text(currentLine, margin, y);
+            y += 5;
+          }
+          currentLine = word;
+        }
+      });
+      if (currentLine) {
+        pdf.text(currentLine, margin, y);
+        y += 5;
+      }
+    });
+  }
+
+  // Footer
+  pdf.setFontSize(9);
+  pdf.setTextColor(180, 180, 180);
+  pdf.text(
+    `Thank you for your business!  |  Page 1 of 1`,
+    pageWidth / 2,
+    pageHeight - 10,
+    { align: "center" }
+  );
+
   pdf.save(`invoice-${invoice.invoiceNumber}.pdf`);
 }
 
-function addProfessionalLineItems(
+// Modern, striped, professional table
+function addModernProfessionalLineItems(
   pdf: PDFInstance,
   invoice: InvoiceData,
   startY: number,
@@ -562,368 +598,262 @@ function addProfessionalLineItems(
   contentWidth: number,
   primaryColor: number[],
   secondaryColor: number[],
-  darkColor: number[]
+  darkColor: number[],
+  lightGray: number[]
 ): number {
-  let y = startY;
-
-  // Services Section Header
-  pdf.setFontSize(14);
-  pdf.setFont("helvetica", "bold");
-  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.text("SERVICES", margin, y);
-  y += 10;
-
-  // Horizontal line under services
-  pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.line(margin, y, margin + contentWidth, y);
-  y += 15;
-
-  if (style === "detailed") {
-    y = addDetailedProfessionalItems(
+  if (style === "summary") {
+    return addModernSummaryLineItems(
       pdf,
       invoice,
-      y,
+      startY,
       margin,
       contentWidth,
       primaryColor,
       secondaryColor,
-      darkColor
-    );
-  } else if (style === "summary") {
-    y = addSummaryProfessionalItems(
-      pdf,
-      invoice,
-      y,
-      margin,
-      contentWidth,
-      primaryColor,
-      secondaryColor,
-      darkColor
+      darkColor,
+      lightGray
     );
   } else if (style === "compact") {
-    y = addCompactProfessionalItems(
+    return addModernCompactLineItems(
       pdf,
       invoice,
-      y,
+      startY,
       margin,
       contentWidth,
       primaryColor,
-      secondaryColor,
       darkColor
     );
   }
-
-  return addProfessionalTotalsSection(
-    pdf,
-    invoice,
-    y + 20,
-    margin,
-    contentWidth,
-    primaryColor,
-    darkColor
-  );
+  // Default: detailed
+  let y = startY;
+  pdf.setFontSize(12);
+  pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("Services", margin, y);
+  y += 8;
+  // Table header
+  pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.rect(margin, y, contentWidth, 12, "F");
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(10);
+  pdf.text("Date", margin + 4, y + 8);
+  pdf.text("Description", margin + 44, y + 8);
+  pdf.text("Hours", margin + 170, y + 8, { align: "right" });
+  pdf.text("Rate", margin + 210, y + 8, { align: "right" });
+  pdf.text("Amount", margin + contentWidth - 8, y + 8, { align: "right" });
+  y += 12;
+  // Table rows
+  const grouped = groupLineItemsByProject(invoice.lineItems);
+  let isEven = false;
+  pdf.setFontSize(9);
+  grouped.forEach((group) => {
+    group.items.forEach((item) => {
+      if (isEven) {
+        pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+        pdf.rect(margin, y, contentWidth, 10, "F");
+      }
+      pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(item.date, margin + 4, y + 7);
+      const desc =
+        item.description.length > 40
+          ? item.description.slice(0, 37) + "..."
+          : item.description;
+      pdf.text(desc, margin + 44, y + 7);
+      pdf.text(item.quantity.toFixed(2), margin + 170, y + 7, {
+        align: "right",
+      });
+      pdf.text(
+        formatCurrency(item.rate, invoice.currency),
+        margin + 210,
+        y + 7,
+        { align: "right" }
+      );
+      pdf.text(
+        formatCurrency(item.amount, invoice.currency),
+        margin + contentWidth - 8,
+        y + 7,
+        { align: "right" }
+      );
+      y += 10;
+      isEven = !isEven;
+    });
+    // Project subtotal row
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    pdf.text(`${group.projectName} subtotal:`, margin + 44, y + 2);
+    pdf.text(
+      formatCurrency(group.totalAmount, invoice.currency),
+      margin + contentWidth - 8,
+      y + 2,
+      { align: "right" }
+    );
+    y += 8;
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  });
+  return y;
 }
 
-function addDetailedProfessionalItems(
+// Modern summary table
+function addModernSummaryLineItems(
   pdf: PDFInstance,
   invoice: InvoiceData,
   startY: number,
   margin: number,
   contentWidth: number,
   primaryColor: number[],
-  _secondaryColor: number[],
-  darkColor: number[]
+  _secondaryColor: number[], // unused
+  darkColor: number[],
+  lightGray: number[] // use this param
 ): number {
   let y = startY;
-
-  // Table header with background
-  pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.rect(margin, y - 5, contentWidth, 15, "F");
-
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(9);
+  pdf.setFontSize(12);
   pdf.setFont("helvetica", "bold");
-
-  // Header columns with better spacing
-  pdf.text("Date", margin + 5, y + 5);
-  pdf.text("Description", margin + 50, y + 5);
-  pdf.text("Hours", margin + 280, y + 5);
-  pdf.text("Rate", margin + 320, y + 5);
-  pdf.text("Amount", margin + contentWidth - 5, y + 5, { align: "right" });
-
-  y += 20;
-
-  // Group by project
-  const groupedItems = groupLineItemsByProject(invoice.lineItems);
-  let isEvenRow = true;
-
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-
-  groupedItems.forEach((group) => {
-    // Project header with subtle background
-    if (!isEvenRow) {
-      pdf.setFillColor(248, 249, 250);
-      pdf.rect(margin, y - 3, contentWidth, 12, "F");
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("Services Summary", margin, y);
+  y += 8;
+  // Table header
+  pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.rect(margin, y, contentWidth, 12, "F");
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(10);
+  pdf.text("Project", margin + 4, y + 8);
+  pdf.text("Hours", margin + 120, y + 8, { align: "right" });
+  pdf.text("Rate", margin + 170, y + 8, { align: "right" });
+  pdf.text("Amount", margin + contentWidth - 8, y + 8, { align: "right" });
+  y += 12;
+  // Table rows
+  const grouped = groupLineItemsByProject(invoice.lineItems);
+  let isEven = false;
+  pdf.setFontSize(9);
+  grouped.forEach((group) => {
+    if (isEven) {
+      pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      pdf.rect(margin, y, contentWidth, 10, "F");
     }
-
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(group.projectName, margin + 5, y + 5);
-    pdf.text(`${group.totalHours.toFixed(2)}h`, margin + 280, y + 5);
+    pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+    pdf.setFont("helvetica", "normal");
+    const avgRate = group.totalAmount / group.totalHours;
+    pdf.text(group.projectName, margin + 4, y + 7);
+    pdf.text(group.totalHours.toFixed(2), margin + 120, y + 7, {
+      align: "right",
+    });
+    pdf.text(formatCurrency(avgRate, invoice.currency), margin + 170, y + 7, {
+      align: "right",
+    });
     pdf.text(
       formatCurrency(group.totalAmount, invoice.currency),
-      margin + contentWidth - 5,
-      y + 5,
+      margin + contentWidth - 8,
+      y + 7,
       { align: "right" }
     );
-
-    y += 15;
-    isEvenRow = !isEvenRow;
-
-    // Individual items
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "normal");
-    pdf.setTextColor(
-      _secondaryColor[0],
-      _secondaryColor[1],
-      _secondaryColor[2]
-    );
-
-    group.items.forEach((item) => {
-      if (!isEvenRow) {
-        pdf.setFillColor(248, 249, 250);
-        pdf.rect(margin, y - 2, contentWidth, 10, "F");
-      }
-
-      const description =
-        item.description.length > 35
-          ? item.description.substring(0, 32) + "..."
-          : item.description;
-
-      pdf.text(item.date, margin + 10, y + 4);
-      pdf.text(description, margin + 50, y + 4);
-      pdf.text(item.quantity.toFixed(2), margin + 280, y + 4);
-      pdf.text(`$${item.rate.toFixed(2)}`, margin + 320, y + 4);
-      pdf.text(
-        formatCurrency(item.amount, invoice.currency),
-        margin + contentWidth - 5,
-        y + 4,
-        { align: "right" }
-      );
-
-      y += 10;
-      isEvenRow = !isEvenRow;
-    });
-
-    y += 5;
+    y += 10;
+    isEven = !isEven;
   });
-
   return y;
 }
 
-function addSummaryProfessionalItems(
+// Modern compact table
+function addModernCompactLineItems(
   pdf: PDFInstance,
   invoice: InvoiceData,
   startY: number,
   margin: number,
   contentWidth: number,
-  _primaryColor: number[],
-  _secondaryColor: number[],
-  darkColor: number[]
+  primaryColor: number[],
+  darkColor: number[] // unused
 ): number {
   let y = startY;
-
-  // Table header
-  pdf.setFillColor(_primaryColor[0], _primaryColor[1], _primaryColor[2]);
-  pdf.rect(margin, y - 5, contentWidth, 15, "F");
-
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
+  pdf.setFontSize(12);
   pdf.setFont("helvetica", "bold");
-
-  pdf.text("Project", margin + 5, y + 5);
-  pdf.text("Hours", margin + 120, y + 5);
-  pdf.text("Rate", margin + 150, y + 5);
-  pdf.text("Amount", margin + contentWidth - 5, y + 5, { align: "right" });
-
-  y += 20;
-
-  const groupedItems = groupLineItemsByProject(invoice.lineItems);
-  let isEvenRow = true;
-
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("Professional Services", margin, y);
+  y += 8;
   pdf.setFontSize(10);
   pdf.setFont("helvetica", "normal");
-
-  groupedItems.forEach((group) => {
-    if (!isEvenRow) {
-      pdf.setFillColor(248, 249, 250);
-      pdf.rect(margin, y - 3, contentWidth, 12, "F");
-    }
-
-    const avgRate = group.totalAmount / group.totalHours;
-
-    pdf.text(group.projectName, margin + 5, y + 5);
-    pdf.text(`${group.totalHours.toFixed(2)}h`, margin + 120, y + 5);
-    pdf.text(`$${avgRate.toFixed(2)}`, margin + 150, y + 5);
-    pdf.text(
-      formatCurrency(group.totalAmount, invoice.currency),
-      margin + contentWidth - 5,
-      y + 5,
-      { align: "right" }
-    );
-
-    y += 15;
-    isEvenRow = !isEvenRow;
-  });
-
-  return y;
-}
-
-function addCompactProfessionalItems(
-  pdf: PDFInstance,
-  invoice: InvoiceData,
-  startY: number,
-  margin: number,
-  contentWidth: number,
-  _primaryColor: number[],
-  _secondaryColor: number[],
-  darkColor: number[]
-): number {
-  const y = startY;
-
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
   const totalHours = invoice.lineItems.reduce(
     (sum, item) => sum + item.quantity,
     0
   );
-
-  // Single line item for professional services
-  pdf.setFillColor(248, 249, 250);
-  pdf.rect(margin, y, contentWidth, 25, "F");
-
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  pdf.setFontSize(12);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("Professional Services", margin + 10, y + 10);
-
-  pdf.setFontSize(10);
-  pdf.setFont("helvetica", "normal");
-  pdf.setTextColor(_secondaryColor[0], _secondaryColor[1], _secondaryColor[2]);
   pdf.text(
     `${formatDate(new Date(invoice.periodStart))} - ${formatDate(
       new Date(invoice.periodEnd)
     )}`,
-    margin + 10,
-    y + 18
+    margin,
+    y + 6
   );
-
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  pdf.setFontSize(11);
-  pdf.setFont("helvetica", "bold");
-  pdf.text(`${totalHours.toFixed(2)} hours`, margin + 120, y + 15);
+  pdf.text(`${totalHours.toFixed(2)} hours`, margin + 120, y + 6, {
+    align: "right",
+  });
   pdf.text(
     formatCurrency(invoice.subtotal, invoice.currency),
-    margin + 165,
-    y + 15,
+    margin + contentWidth - 8,
+    y + 6,
     { align: "right" }
   );
-
-  return y + 30;
+  return y + 16;
 }
 
-function addProfessionalTotalsSection(
+// Modern, striped, professional totals section
+function addModernProfessionalTotalsSection(
   pdf: PDFInstance,
   invoice: InvoiceData,
   startY: number,
   margin: number,
   contentWidth: number,
   primaryColor: number[],
-  darkColor: number[]
+  darkColor: number[],
+  lightGray: number[]
 ): number {
   let y = startY;
-
-  // Totals box
-  const totalsWidth = 100;
-  const totalsX = margin + contentWidth - totalsWidth;
-
-  pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.setFillColor(248, 249, 250);
-  pdf.rect(totalsX, y, totalsWidth, invoice.taxAmount > 0 ? 45 : 30, "FD");
-
-  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  pdf.setFontSize(10);
-  pdf.setFont("helvetica", "normal");
-
   // Subtotal
-  pdf.text("Subtotal:", totalsX + 5, y + 10);
+  pdf.setFontSize(12);
+  pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("Subtotal", margin, y);
+  pdf.setFontSize(12);
+  pdf.setFont("helvetica", "normal");
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
   pdf.text(
     formatCurrency(invoice.subtotal, invoice.currency),
-    totalsX + 95,
-    y + 10,
+    margin + contentWidth - 8,
+    y,
     { align: "right" }
   );
-
-  y += 12;
-
-  // Tax if applicable
+  y += 8;
+  // Tax
   if (invoice.taxAmount > 0) {
-    pdf.text(`Tax (${invoice.taxRate}%):`, totalsX + 5, y);
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    pdf.text(`Tax (${invoice.taxRate}%`, margin, y);
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
     pdf.text(
       formatCurrency(invoice.taxAmount, invoice.currency),
-      totalsX + 95,
+      margin + contentWidth - 8,
       y,
       { align: "right" }
     );
-    y += 12;
-  }
-
-  // Total with emphasis
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  pdf.text("TOTAL:", totalsX + 5, y);
-  pdf.text(formatCurrency(invoice.total, invoice.currency), totalsX + 95, y, {
-    align: "right",
-  });
-
-  y += 20;
-
-  // Notes section if present
-  if (invoice.notes) {
-    y += 10;
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    pdf.text("NOTES", margin, y);
-
     y += 8;
-    pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-    pdf.setFont("helvetica", "normal");
-
-    // Wrap notes text
-    const noteLines = invoice.notes.split("\n");
-    noteLines.forEach((line) => {
-      const words = line.split(" ");
-      let currentLine = "";
-
-      words.forEach((word) => {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        if (pdf.getTextWidth(testLine) < contentWidth - 20) {
-          currentLine = testLine;
-        } else {
-          if (currentLine) {
-            pdf.text(currentLine, margin, y);
-            y += 6;
-          }
-          currentLine = word;
-        }
-      });
-
-      if (currentLine) {
-        pdf.text(currentLine, margin, y);
-        y += 6;
-      }
-    });
   }
-
+  // Total
+  pdf.setFontSize(14);
+  pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.text("TOTAL", margin, y);
+  pdf.setFontSize(14);
+  pdf.setFont("helvetica", "normal");
+  pdf.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  pdf.text(
+    formatCurrency(invoice.total, invoice.currency),
+    margin + contentWidth - 8,
+    y,
+    { align: "right" }
+  );
+  y += 16;
   return y;
 }

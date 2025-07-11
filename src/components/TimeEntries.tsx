@@ -15,22 +15,39 @@ import { type Project } from "../lib/projectsApi";
 import { useTimeEntries } from "../hooks/useTimeEntries";
 import { useTimeFormat } from "../hooks/useTimeFormat";
 import CustomDropdown from "./CustomDropdown";
+import { useAuth } from "../hooks/useAuth";
 
 // Custom hook for persistent date range state
-const usePersistentDateRange = () => {
+const usePersistentDateRange = (userId: string | null) => {
   const [dateRange, setDateRange] = useState(() => {
     const savedStartDate = localStorage.getItem("timeentries-start-date");
     const savedEndDate = localStorage.getItem("timeentries-end-date");
-
     return {
       startDate:
         savedStartDate ||
         new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
           .toISOString()
-          .split("T")[0], // Last week
-      endDate: savedEndDate || new Date().toISOString().split("T")[0], // Today
+          .split("T")[0],
+      endDate: savedEndDate || new Date().toISOString().split("T")[0],
     };
   });
+
+  // Only reset date range if userId changes (login event)
+  useEffect(() => {
+    if (!userId) return;
+    const lastUserId = localStorage.getItem("timeentries-last-user-id");
+    if (lastUserId !== userId) {
+      // User just logged in or switched
+      const today = new Date().toISOString().split("T")[0];
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+      setDateRange({ startDate: weekAgo, endDate: today });
+      localStorage.setItem("timeentries-last-user-id", userId);
+      localStorage.setItem("timeentries-start-date", weekAgo);
+      localStorage.setItem("timeentries-end-date", today);
+    }
+  }, [userId]);
 
   // Save to localStorage whenever values change
   useEffect(() => {
@@ -42,6 +59,7 @@ const usePersistentDateRange = () => {
 };
 
 const TimeEntries: React.FC = () => {
+  const { user } = useAuth();
   const {
     timeEntries,
     projects,
@@ -55,7 +73,7 @@ const TimeEntries: React.FC = () => {
   const { is24Hour } = useTimeFormat();
 
   // Persistent date range hook
-  const { dateRange, setDateRange } = usePersistentDateRange();
+  const { dateRange, setDateRange } = usePersistentDateRange(user?.id || null);
 
   // State for collapsible dates
   const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());

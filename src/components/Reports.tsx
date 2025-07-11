@@ -12,9 +12,10 @@ import {
 import { secondsToHMS, formatDate } from "../utils/timeUtils";
 import { useTimeEntries } from "../hooks/useTimeEntries";
 import CustomDropdown from "./CustomDropdown";
-import InvoiceGeneratorModal from "./InvoiceGeneratorModal";
 import type { TimeEntry } from "../lib/timeEntriesApi";
-import { settingsApi, type UserSettings } from "../lib/settingsApi";
+import type { Project } from "../lib/projectsApi";
+import type { UserSettings } from "../lib/settingsApi";
+import { settingsApi } from "../lib/settingsApi";
 import {
   calculateTotalRevenue,
   calculateProjectRevenueBreakdown,
@@ -112,7 +113,18 @@ interface ReportData {
   filteredEntries: TimeEntry[];
 }
 
-const Reports: React.FC = () => {
+interface ReportsProps {
+  openInvoiceModal: (data: {
+    timeEntries: TimeEntry[];
+    projects: Project[];
+    userSettings: UserSettings;
+    selectedClientId?: string;
+    periodStart: string;
+    periodEnd: string;
+  }) => void;
+}
+
+const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
   const { timeEntries, projects, loading } = useTimeEntries();
   const {
     dateRange,
@@ -131,9 +143,6 @@ const Reports: React.FC = () => {
     hourly_rate: 0,
     tax_rate: 0,
   });
-
-  // Invoice generation state
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   // Helper function to get month/year labels
   const getMonthYearLabels = () => {
@@ -371,34 +380,32 @@ const Reports: React.FC = () => {
 
     const { start, end } = getDateRangeLocal();
 
-    // Filter time entries by date range and client - use date-only comparison for proper filtering
+    // Filter time entries by date range and client - use date string comparison for proper filtering
     const filteredEntries = timeEntries.filter((entry) => {
-      // Extract date string directly from start_time to avoid timezone issues
-      const entryDateStr = entry.start_time.split("T")[0]; // Gets "2025-06-18" format
-      const [entryYear, entryMonth, entryDay] = entryDateStr
-        .split("-")
-        .map(Number);
-
-      // Get start and end date strings in same format
-      const startDateStr = start.toISOString().split("T")[0];
-      const [startYear, startMonth, startDay] = startDateStr
-        .split("-")
-        .map(Number);
-
-      const endDateStr = end.toISOString().split("T")[0];
-      const [endYear, endMonth, endDay] = endDateStr.split("-").map(Number);
-
-      // Create date objects for comparison (all in local timezone)
-      const entryDate = new Date(entryYear, entryMonth - 1, entryDay);
-      const startDate = new Date(startYear, startMonth - 1, startDay);
-      const endDate = new Date(endYear, endMonth - 1, endDay);
-
-      const inDateRange = entryDate >= startDate && entryDate <= endDate;
-
+      const entryDateStr = entry.start_time.split("T")[0]; // "YYYY-MM-DD"
+      let inDateRange = false;
+      if (dateRange === "custom" && customStartDate && customEndDate) {
+        inDateRange =
+          entryDateStr >= customStartDate && entryDateStr <= customEndDate;
+      } else {
+        // For preset ranges, use the original logic
+        const [entryYear, entryMonth, entryDay] = entryDateStr
+          .split("-")
+          .map(Number);
+        const startDateStr = start.toISOString().split("T")[0];
+        const [startYear, startMonth, startDay] = startDateStr
+          .split("-")
+          .map(Number);
+        const endDateStr = end.toISOString().split("T")[0];
+        const [endYear, endMonth, endDay] = endDateStr.split("-").map(Number);
+        const entryDate = new Date(entryYear, entryMonth - 1, entryDay);
+        const startDate = new Date(startYear, startMonth - 1, startDay);
+        const endDate = new Date(endYear, endMonth - 1, endDay);
+        inDateRange = entryDate >= startDate && entryDate <= endDate;
+      }
       // Client filter (if selected)
       if (selectedClientId && selectedClientId !== "") {
         const project = projects.find((p) => p.id === entry.project_id);
-
         if (selectedClientId === "NO_CLIENT") {
           // Filter for projects without a client
           const matchesNoClient = !project?.client_id;
@@ -409,7 +416,6 @@ const Reports: React.FC = () => {
           return inDateRange && matchesClient;
         }
       }
-
       return inDateRange;
     });
 
@@ -576,7 +582,7 @@ const Reports: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -589,6 +595,23 @@ const Reports: React.FC = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Client Filter - move to the left */}
+          <CustomDropdown
+            value={selectedClientId}
+            onChange={setSelectedClientId}
+            options={[
+              { value: "", label: "All Clients" },
+              { value: "NO_CLIENT", label: "Unassigned Projects" },
+              ...uniqueClients.map((client) => ({
+                value: client.id,
+                label: client.name,
+              })),
+            ]}
+            size="sm"
+            className="w-full sm:w-auto min-w-[140px] h-10"
+          />
+
+          {/* Date Range Dropdown */}
           <CustomDropdown
             value={dateRange}
             onChange={setDateRange}
@@ -637,22 +660,6 @@ const Reports: React.FC = () => {
             </div>
           )}
 
-          {/* Client Filter */}
-          <CustomDropdown
-            value={selectedClientId}
-            onChange={setSelectedClientId}
-            options={[
-              { value: "", label: "All Clients" },
-              { value: "NO_CLIENT", label: "Unassigned Projects" },
-              ...uniqueClients.map((client) => ({
-                value: client.id,
-                label: client.name,
-              })),
-            ]}
-            size="sm"
-            className="w-full sm:w-auto min-w-[140px] h-10"
-          />
-
           <button
             onClick={handleExport}
             className="h-10 px-3 py-2 btn-primary rounded-lg transition-colors font-medium flex items-center justify-center gap-2 text-sm w-full sm:w-auto"
@@ -662,7 +669,164 @@ const Reports: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setShowInvoiceModal(true)}
+            onClick={() =>
+              openInvoiceModal({
+                timeEntries: reportData.filteredEntries,
+                projects,
+                userSettings,
+                selectedClientId,
+                periodStart: (() => {
+                  const now = new Date();
+                  const today = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate()
+                  );
+
+                  switch (dateRange) {
+                    case "today": {
+                      return today.toISOString();
+                    }
+                    case "yesterday": {
+                      const yesterday = new Date(today);
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      return yesterday.toISOString();
+                    }
+                    case "thisWeek": {
+                      const startOfWeek = new Date(today);
+                      startOfWeek.setDate(today.getDate() - today.getDay());
+                      return startOfWeek.toISOString();
+                    }
+                    case "lastWeek": {
+                      const startOfLastWeek = new Date(today);
+                      startOfLastWeek.setDate(
+                        today.getDate() - today.getDay() - 7
+                      );
+                      return startOfLastWeek.toISOString();
+                    }
+                    case "thisMonth": {
+                      const startOfMonth = new Date(
+                        today.getFullYear(),
+                        today.getMonth(),
+                        1
+                      );
+                      return startOfMonth.toISOString();
+                    }
+                    case "lastMonth": {
+                      const startOfLastMonth = new Date(
+                        today.getFullYear(),
+                        today.getMonth() - 1,
+                        1
+                      );
+                      return startOfLastMonth.toISOString();
+                    }
+                    case "custom": {
+                      // Create start date in local timezone to avoid timezone shifts
+                      if (!customStartDate) return today.toISOString();
+                      const [startYear, startMonth, startDay] = customStartDate
+                        .split("-")
+                        .map(Number);
+                      const startDate = new Date(
+                        startYear,
+                        startMonth - 1,
+                        startDay,
+                        0,
+                        0,
+                        0,
+                        0
+                      );
+                      return startDate.toISOString();
+                    }
+                    default:
+                      return today.toISOString();
+                  }
+                })(),
+                periodEnd: (() => {
+                  const now = new Date();
+                  const today = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate()
+                  );
+
+                  switch (dateRange) {
+                    case "today": {
+                      return new Date(
+                        today.getTime() + 24 * 60 * 60 * 1000 - 1
+                      ).toISOString();
+                    }
+                    case "yesterday": {
+                      const yesterday = new Date(today);
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      return new Date(
+                        yesterday.getTime() + 24 * 60 * 60 * 1000 - 1
+                      ).toISOString();
+                    }
+                    case "thisWeek": {
+                      const endOfWeek = new Date(today);
+                      endOfWeek.setDate(today.getDate() + (6 - today.getDay()));
+                      return new Date(
+                        endOfWeek.getTime() + 24 * 60 * 60 * 1000 - 1
+                      ).toISOString();
+                    }
+                    case "lastWeek": {
+                      const endOfLastWeek = new Date(today);
+                      endOfLastWeek.setDate(
+                        today.getDate() - today.getDay() - 1
+                      );
+                      return new Date(
+                        endOfLastWeek.getTime() + 24 * 60 * 60 * 1000 - 1
+                      ).toISOString();
+                    }
+                    case "thisMonth": {
+                      const endOfMonth = new Date(
+                        today.getFullYear(),
+                        today.getMonth() + 1,
+                        0
+                      );
+                      return new Date(
+                        endOfMonth.getTime() + 24 * 60 * 60 * 1000 - 1
+                      ).toISOString();
+                    }
+                    case "lastMonth": {
+                      const endOfLastMonth = new Date(
+                        today.getFullYear(),
+                        today.getMonth(),
+                        0
+                      );
+                      return new Date(
+                        endOfLastMonth.getTime() + 24 * 60 * 60 * 1000 - 1
+                      ).toISOString();
+                    }
+                    case "custom": {
+                      // Create end date in local timezone to avoid timezone shifts
+                      if (!customEndDate) {
+                        return new Date(
+                          today.getTime() + 24 * 60 * 60 * 1000 - 1
+                        ).toISOString();
+                      }
+                      const [endYear, endMonth, endDay] = customEndDate
+                        .split("-")
+                        .map(Number);
+                      const endDate = new Date(
+                        endYear,
+                        endMonth - 1,
+                        endDay,
+                        23,
+                        59,
+                        59,
+                        999
+                      );
+                      return endDate.toISOString();
+                    }
+                    default:
+                      return new Date(
+                        today.getTime() + 24 * 60 * 60 * 1000 - 1
+                      ).toISOString();
+                  }
+                })(),
+              })
+            }
             className="h-10 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2 text-sm w-full sm:w-auto"
           >
             <FileText className="w-4 h-4" />
@@ -1078,162 +1242,6 @@ const Reports: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Invoice Generation Modal */}
-      <InvoiceGeneratorModal
-        isOpen={showInvoiceModal}
-        onClose={() => setShowInvoiceModal(false)}
-        timeEntries={reportData.filteredEntries}
-        projects={projects}
-        userSettings={userSettings}
-        selectedClientId={selectedClientId}
-        periodStart={(() => {
-          const now = new Date();
-          const today = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate()
-          );
-
-          switch (dateRange) {
-            case "today": {
-              return today.toISOString();
-            }
-            case "yesterday": {
-              const yesterday = new Date(today);
-              yesterday.setDate(yesterday.getDate() - 1);
-              return yesterday.toISOString();
-            }
-            case "thisWeek": {
-              const startOfWeek = new Date(today);
-              startOfWeek.setDate(today.getDate() - today.getDay());
-              return startOfWeek.toISOString();
-            }
-            case "lastWeek": {
-              const startOfLastWeek = new Date(today);
-              startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
-              return startOfLastWeek.toISOString();
-            }
-            case "thisMonth": {
-              const startOfMonth = new Date(
-                today.getFullYear(),
-                today.getMonth(),
-                1
-              );
-              return startOfMonth.toISOString();
-            }
-            case "lastMonth": {
-              const startOfLastMonth = new Date(
-                today.getFullYear(),
-                today.getMonth() - 1,
-                1
-              );
-              return startOfLastMonth.toISOString();
-            }
-            case "custom": {
-              // Create start date in local timezone to avoid timezone shifts
-              if (!customStartDate) return today.toISOString();
-              const [startYear, startMonth, startDay] = customStartDate
-                .split("-")
-                .map(Number);
-              const startDate = new Date(
-                startYear,
-                startMonth - 1,
-                startDay,
-                0,
-                0,
-                0,
-                0
-              );
-              return startDate.toISOString();
-            }
-            default:
-              return today.toISOString();
-          }
-        })()}
-        periodEnd={(() => {
-          const now = new Date();
-          const today = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate()
-          );
-
-          switch (dateRange) {
-            case "today": {
-              return new Date(
-                today.getTime() + 24 * 60 * 60 * 1000 - 1
-              ).toISOString();
-            }
-            case "yesterday": {
-              const yesterday = new Date(today);
-              yesterday.setDate(yesterday.getDate() - 1);
-              return new Date(
-                yesterday.getTime() + 24 * 60 * 60 * 1000 - 1
-              ).toISOString();
-            }
-            case "thisWeek": {
-              const endOfWeek = new Date(today);
-              endOfWeek.setDate(today.getDate() + (6 - today.getDay()));
-              return new Date(
-                endOfWeek.getTime() + 24 * 60 * 60 * 1000 - 1
-              ).toISOString();
-            }
-            case "lastWeek": {
-              const endOfLastWeek = new Date(today);
-              endOfLastWeek.setDate(today.getDate() - today.getDay() - 1);
-              return new Date(
-                endOfLastWeek.getTime() + 24 * 60 * 60 * 1000 - 1
-              ).toISOString();
-            }
-            case "thisMonth": {
-              const endOfMonth = new Date(
-                today.getFullYear(),
-                today.getMonth() + 1,
-                0
-              );
-              return new Date(
-                endOfMonth.getTime() + 24 * 60 * 60 * 1000 - 1
-              ).toISOString();
-            }
-            case "lastMonth": {
-              const endOfLastMonth = new Date(
-                today.getFullYear(),
-                today.getMonth(),
-                0
-              );
-              return new Date(
-                endOfLastMonth.getTime() + 24 * 60 * 60 * 1000 - 1
-              ).toISOString();
-            }
-            case "custom": {
-              // Create end date in local timezone to avoid timezone shifts
-              if (!customEndDate) {
-                return new Date(
-                  today.getTime() + 24 * 60 * 60 * 1000 - 1
-                ).toISOString();
-              }
-              const [endYear, endMonth, endDay] = customEndDate
-                .split("-")
-                .map(Number);
-              const endDate = new Date(
-                endYear,
-                endMonth - 1,
-                endDay,
-                23,
-                59,
-                59,
-                999
-              );
-              return endDate.toISOString();
-            }
-            default:
-              return new Date(
-                today.getTime() + 24 * 60 * 60 * 1000 - 1
-              ).toISOString();
-          }
-        })()}
-      />
     </div>
   );
 };

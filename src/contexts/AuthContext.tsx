@@ -100,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(true);
     await supabase.auth.signOut();
     setUser(null);
+    localStorage.removeItem("timeentries-last-user-id");
     setLoading(false);
   };
 

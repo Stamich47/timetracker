@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   FileText,
@@ -51,6 +51,8 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
   const [step, setStep] = useState<"setup" | "preview" | "export">("setup");
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Form state for invoice setup
   const [formData, setFormData] = useState({
@@ -156,14 +158,27 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
 
   const handleExportPDF = async () => {
     if (!invoice) return;
-
     try {
-      // Dynamic import for PDF functionality to reduce bundle size
       const { exportInvoiceAsPDF } = await import("../utils/invoiceUtils");
-      exportInvoiceAsPDF(invoice, formData.invoiceStyle);
+      await exportInvoiceAsPDF(
+        invoice,
+        formData.invoiceStyle,
+        logoDataUrl ?? undefined
+      );
     } catch (error) {
       console.error("Error exporting PDF:", error);
     }
+  };
+
+  // Logo upload handler
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setLogoDataUrl(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   if (!isOpen) return null;
@@ -418,6 +433,42 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
                         className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm ${themeClasses.input}`}
                       />
                     </div>
+
+                    {/* Logo Upload Section - moved here */}
+                    <div>
+                      <label
+                        className={`block text-sm font-medium ${themeClasses.textSecondary}`}
+                      >
+                        Business Logo (optional)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={logoInputRef}
+                        onChange={handleLogoUpload}
+                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                      {logoDataUrl && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <img
+                            src={logoDataUrl}
+                            alt="Logo preview"
+                            className="h-16 w-auto object-contain rounded shadow border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLogoDataUrl(null);
+                              if (logoInputRef.current)
+                                logoInputRef.current.value = "";
+                            }}
+                            className="text-xs text-red-500 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -599,14 +650,27 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
             {/* Step 2: Preview */}
             {step === "preview" && invoice && (
               <div className="space-y-6">
-                {/* Invoice Header */}
-                <div className="text-center border-b pb-4">
-                  <h1 className={`text-2xl font-bold ${themeClasses.text}`}>
-                    INVOICE
-                  </h1>
-                  <p className={`text-lg ${themeClasses.textSecondary}`}>
-                    {invoice.invoiceNumber}
-                  </p>
+                {/* Invoice Header with Logo */}
+                <div className="flex items-center border-b pb-4">
+                  {logoDataUrl ? (
+                    <img
+                      src={logoDataUrl}
+                      alt="Logo"
+                      className="h-16 w-auto object-contain mr-4 rounded shadow border"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 mr-4 bg-gray-100 rounded flex items-center justify-center text-gray-400 border">
+                      No Logo
+                    </div>
+                  )}
+                  <div className="flex-1 text-center">
+                    <h1 className={`text-2xl font-bold ${themeClasses.text}`}>
+                      INVOICE
+                    </h1>
+                    <p className={`text-lg ${themeClasses.textSecondary}`}>
+                      {invoice.invoiceNumber}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Invoice Details */}
