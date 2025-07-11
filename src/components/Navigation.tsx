@@ -44,6 +44,29 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   }, []);
 
   const handleTabClick = (tabId: string) => {
+    if (tabId === activeTab) return;
+    // Fire custom event for settings tab change if leaving settings
+    if (activeTab === "settings") {
+      const event = new CustomEvent("settingsTabChange", { cancelable: true });
+      window.dispatchEvent(event);
+      // Only proceed if not prevented (modal will handle navigation)
+      let proceed = false;
+      const proceedListener = () => {
+        proceed = true;
+        onTabChange(tabId);
+      };
+      window.addEventListener("proceedTabChange", proceedListener, {
+        once: true,
+      });
+      // If there are no unsaved changes, the modal won't show and proceedTabChange won't fire,
+      // so we need to check if the event was not prevented and proceed immediately.
+      setTimeout(() => {
+        if (!proceed) {
+          onTabChange(tabId);
+        }
+      }, 0);
+      return;
+    }
     onTabChange(tabId);
     setIsMobileMenuOpen(false); // Close mobile menu after selection
   };
@@ -59,7 +82,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
           return (
             <button
               key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+              onClick={() => handleTabClick(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                 isActive
                   ? "text-white bg-white bg-opacity-20 font-medium"

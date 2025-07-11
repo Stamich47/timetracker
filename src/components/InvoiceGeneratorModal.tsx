@@ -68,24 +68,33 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
     invoiceStyle: "detailed" as InvoiceStyle,
   });
 
-  // Initialize form data when modal opens
+  // Initialize form data when modal opens (autopopulate business info from userSettings)
   useEffect(() => {
-    if (isOpen && selectedClientId) {
-      // Find client info from projects
-      const clientProjects = projects.filter(
-        (p) => p.client_id === selectedClientId
-      );
-      const clientName = clientProjects[0]?.client?.name || "";
-
+    if (isOpen) {
+      let clientName = "";
+      if (selectedClientId) {
+        // Find client info from projects
+        const clientProjects = projects.filter(
+          (p) => p.client_id === selectedClientId
+        );
+        clientName = clientProjects[0]?.client?.name || "";
+      }
       setFormData((prev) => ({
         ...prev,
-        clientName,
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
+        clientName: clientName || prev.clientName,
+        dueDate:
+          prev.dueDate ||
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+        businessName: prev.businessName || userSettings.business_name || "",
+        businessEmail: prev.businessEmail || userSettings.business_email || "",
+        businessPhone: prev.businessPhone || userSettings.business_phone || "",
+        businessAddress:
+          prev.businessAddress || userSettings.business_address || "",
       }));
     }
-  }, [isOpen, selectedClientId, projects]);
+  }, [isOpen, selectedClientId, projects, userSettings]);
 
   // Generate invoice when moving to preview
   const handleGenerateInvoice = async () => {

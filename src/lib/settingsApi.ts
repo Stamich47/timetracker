@@ -18,6 +18,11 @@ export interface UserSettings {
   time_format?: string;
   auto_start?: boolean;
   reminder_interval?: number;
+  // Business info fields
+  business_name?: string;
+  business_email?: string;
+  business_phone?: string;
+  business_address?: string;
 }
 
 // Settings API functions
@@ -74,6 +79,10 @@ export const settingsApi = {
       time_format: "12h",
       auto_start: false,
       reminder_interval: 15,
+      business_name: "",
+      business_email: "",
+      business_phone: "",
+      business_address: "",
     };
 
     const { data, error } = await supabase

@@ -11,12 +11,14 @@ import Reports from "./components/Reports";
 import Projects from "./components/Projects";
 import Clients from "./components/Clients";
 import Settings from "./components/Settings";
+import type { SettingsHandle } from "./components/Settings";
 import Auth from "./components/Auth";
 import Footer from "./components/Footer";
 import { Loader2, LogOut, User } from "lucide-react";
 // Import theme manager to ensure it's initialized
 import { themeManager } from "./lib/themeManager";
 import InvoiceGeneratorModal from "./components/InvoiceGeneratorModal";
+import UnsavedChangesModal from "./components/UnsavedChangesModal";
 import type { TimeEntry } from "./lib/timeEntriesApi";
 import type { Project } from "./lib/projectsApi";
 import type { UserSettings } from "./lib/settingsApi";
@@ -38,7 +40,16 @@ function AppContent() {
     periodStart: string;
     periodEnd: string;
   } | null>(null);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<
+    null | (() => void)
+  >(null);
+  const [initialSettings, setInitialSettings] = useState<UserSettings | null>(
+    null
+  );
+  const [settingsDirty, setSettingsDirty] = useState(false); // Track unsaved changes
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const settingsRef = useRef<SettingsHandle>(null);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -57,11 +68,24 @@ function AppContent() {
     };
   }, []);
 
+  // Navigation handler with unsaved changes logic
   const handleTabChange = (newTab: string) => {
     if (newTab === activeTab) return;
-
+    // Only block navigation if on settings and there are unsaved changes
+    if (activeTab === "settings" && settingsDirty) {
+      setShowUnsavedModal(true);
+      setPendingNavigation(() => () => {
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setActiveTab(newTab);
+          setTimeout(() => {
+            setIsTransitioning(false);
+          }, 50);
+        }, 200);
+      });
+      return;
+    }
     setIsTransitioning(true);
-
     setTimeout(() => {
       setActiveTab(newTab);
       setTimeout(() => {
@@ -81,6 +105,24 @@ function AppContent() {
   }) => {
     setInvoiceModalData(data);
     setInvoiceModalOpen(true);
+  };
+
+  // Handlers for modal actions
+  const handleSaveAndLeave = async () => {
+    if (settingsRef.current) {
+      const savedSettings = await settingsRef.current.saveSettings();
+      if (savedSettings) {
+        setInitialSettings(savedSettings); // Update initialSettings to match saved
+        setSettingsDirty(false); // Reset dirty state after save
+      }
+    }
+    setShowUnsavedModal(false);
+    if (pendingNavigation) pendingNavigation();
+  };
+  const handleDiscardAndLeave = () => {
+    setShowUnsavedModal(false);
+    setSettingsDirty(false); // Reset dirty state after discard
+    if (pendingNavigation) pendingNavigation();
   };
 
   const renderContent = () => {
@@ -106,7 +148,21 @@ function AppContent() {
       case "clients":
         return <Clients />;
       case "settings":
-        return <Settings />;
+        return (
+          <Settings
+            ref={settingsRef}
+            showUnsavedModal={showUnsavedModal}
+            setShowUnsavedModal={setShowUnsavedModal}
+            handleSaveAndLeave={handleSaveAndLeave}
+            handleDiscardAndLeave={handleDiscardAndLeave}
+            setPendingNavigation={setPendingNavigation}
+            initialSettings={initialSettings}
+            setInitialSettings={setInitialSettings}
+            settingsDirty={settingsDirty}
+            setSettingsDirty={setSettingsDirty}
+            // ...other props as needed...
+          />
+        );
       default:
         return null;
     }
@@ -235,6 +291,13 @@ function AppContent() {
               {...invoiceModalData}
             />
           )}
+          {/* Unsaved Changes Modal at app root */}
+          <UnsavedChangesModal
+            isOpen={showUnsavedModal}
+            onSave={handleSaveAndLeave}
+            onDiscard={handleDiscardAndLeave}
+            onCancel={() => setShowUnsavedModal(false)}
+          />
         </div>
       </TimeEntriesProvider>
     </TimerProvider>
