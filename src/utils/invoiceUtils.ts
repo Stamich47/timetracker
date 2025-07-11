@@ -535,8 +535,7 @@ export async function exportInvoiceAsPDF(
     margin,
     contentWidth,
     primaryColor,
-    darkColor,
-    lightGray
+    darkColor
   );
 
   // Notes/Terms Section
@@ -804,8 +803,7 @@ function addModernProfessionalTotalsSection(
   margin: number,
   contentWidth: number,
   primaryColor: number[],
-  darkColor: number[],
-  lightGray: number[]
+  darkColor: number[]
 ): number {
   let y = startY;
   // Subtotal
