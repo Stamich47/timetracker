@@ -22,13 +22,34 @@ const usePersistentDateRange = (userId: string | null) => {
   const [dateRange, setDateRange] = useState(() => {
     const savedStartDate = localStorage.getItem("timeentries-start-date");
     const savedEndDate = localStorage.getItem("timeentries-end-date");
+    const today = new Date().toISOString().split("T")[0];
+    // If savedEndDate is before today, shift the range to end today
+    if (savedEndDate && savedEndDate < today) {
+      const rangeLength =
+        savedStartDate && savedEndDate
+          ? (new Date(savedEndDate).getTime() -
+              new Date(savedStartDate).getTime()) /
+            (1000 * 60 * 60 * 24)
+          : 7;
+      const newStartDate = new Date(
+        new Date(today).getTime() - rangeLength * 24 * 60 * 60 * 1000
+      )
+        .toISOString()
+        .split("T")[0];
+      localStorage.setItem("timeentries-start-date", newStartDate);
+      localStorage.setItem("timeentries-end-date", today);
+      return {
+        startDate: newStartDate,
+        endDate: today,
+      };
+    }
     return {
       startDate:
         savedStartDate ||
         new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
           .toISOString()
           .split("T")[0],
-      endDate: savedEndDate || new Date().toISOString().split("T")[0],
+      endDate: savedEndDate || today,
     };
   });
 
