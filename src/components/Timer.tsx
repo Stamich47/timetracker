@@ -23,7 +23,11 @@ import { secondsToHMS } from "../utils/timeUtils";
 const Timer: React.FC = () => {
   const { projects, timeEntries } = useTimeEntries();
   const { loading: authLoading } = useAuth();
-  const { timer } = useTimer();
+  const {
+    timer,
+    startTimer: startTimerContext,
+    stopTimer: stopTimerContext,
+  } = useTimer();
   const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [description, setDescription] = useState("");
@@ -67,14 +71,20 @@ const Timer: React.FC = () => {
       });
       setDescription(runningEntry.description || "");
       setSelectedProjectId(runningEntry.project_id || "");
+
+      // Sync with TimerContext
+      startTimerContext();
     } else if (!runningEntry && activeTimer) {
       // Timer was stopped from elsewhere
       setActiveTimer(null);
       setElapsedTime(0);
       setDescription("");
       setSelectedProjectId("");
+
+      // Sync with TimerContext
+      stopTimerContext();
     }
-  }, [timeEntries, activeTimer]);
+  }, [timeEntries, activeTimer, startTimerContext, stopTimerContext]);
 
   // Sync selected project from TimerContext
   useEffect(() => {
@@ -163,6 +173,9 @@ const Timer: React.FC = () => {
         project: newTimer.project,
       });
 
+      // Sync with TimerContext
+      startTimerContext();
+
       // Real-time subscription will handle adding the new entry
     } catch (error) {
       console.error("Error starting timer:", error);
@@ -178,6 +191,9 @@ const Timer: React.FC = () => {
       await timeEntriesApi.stopActiveTimer();
       setActiveTimer(null);
       setElapsedTime(0);
+
+      // Sync with TimerContext
+      stopTimerContext();
 
       // Real-time subscription will handle updating the entry
       setDescription("");
@@ -239,12 +255,11 @@ const Timer: React.FC = () => {
     e.preventDefault();
 
     if (
-      !description.trim() ||
       !manualEntry.startTime ||
       !manualEntry.endTime ||
       manualEntry.duration <= 0
     ) {
-      alert("Please fill in all required fields with valid times.");
+      alert("Please fill in start time, end time, and ensure valid duration.");
       return;
     }
 
@@ -448,7 +463,6 @@ const Timer: React.FC = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="input-field"
-              required
             />
           </div>
 
@@ -546,9 +560,7 @@ const Timer: React.FC = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={
-              isSaving || manualEntry.duration <= 0 || !description.trim()
-            }
+            disabled={isSaving || manualEntry.duration <= 0}
             className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? (
