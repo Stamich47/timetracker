@@ -197,7 +197,7 @@ function AppContent() {
           <div className="relative z-10 flex flex-col min-h-screen">
             <header className="fixed top-0 left-0 right-0 bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 py-4 z-50">
               <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between">
-                <button 
+                <button
                   onClick={() => setActiveTab("timer")}
                   className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity duration-200 cursor-pointer"
                 >

@@ -644,9 +644,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
                 className="input-field text-sm flex-1 h-10"
                 title="From Date"
               />
-              <span className="text-muted text-sm px-1 flex-shrink-0">
-                to
-              </span>
+              <span className="text-muted text-sm px-1 flex-shrink-0">to</span>
               <input
                 type="date"
                 id="reports-end-date"
