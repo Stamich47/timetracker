@@ -456,7 +456,7 @@ const TimeEntries: React.FC = () => {
                                       description: e.target.value,
                                     }))
                                   }
-                                  className="w-full px-3 py-2 border border-theme rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400"
                                   placeholder="What did you work on?"
                                 />
                               </div>
@@ -508,7 +508,7 @@ const TimeEntries: React.FC = () => {
                                         date: e.target.value,
                                       }))
                                     }
-                                    className="w-full px-3 py-2 border border-theme rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400"
                                     max={new Date().toISOString().split("T")[0]}
                                   />
                                 </div>
@@ -530,7 +530,7 @@ const TimeEntries: React.FC = () => {
                                         startTime: e.target.value,
                                       }))
                                     }
-                                    className="w-full px-3 py-2 border border-theme rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400"
                                   />
                                 </div>
                                 <div>
@@ -551,7 +551,7 @@ const TimeEntries: React.FC = () => {
                                         endTime: e.target.value,
                                       }))
                                     }
-                                    className="w-full px-3 py-2 border border-theme rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400"
                                   />
                                 </div>
                               </div>
