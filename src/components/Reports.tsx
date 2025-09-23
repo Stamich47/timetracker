@@ -634,17 +634,17 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
 
           {/* Custom Date Range Inputs - Inline on Desktop */}
           {dateRange === "custom" && (
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-1 w-full sm:w-auto items-center">
+            <div className="flex flex-row gap-2 items-center w-full">
               <input
                 type="date"
                 id="reports-start-date"
                 name="reportsStartDate"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="input-field text-sm w-full sm:w-[140px] h-10"
+                className="input-field text-sm flex-1 h-10"
                 title="From Date"
               />
-              <span className="hidden sm:block text-muted text-sm px-1">
+              <span className="text-muted text-sm px-1 flex-shrink-0">
                 to
               </span>
               <input
@@ -653,7 +653,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
                 name="reportsEndDate"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="input-field text-sm w-full sm:w-[140px] h-10"
+                className="input-field text-sm flex-1 h-10"
                 max={new Date().toISOString().split("T")[0]}
                 title="To Date"
               />

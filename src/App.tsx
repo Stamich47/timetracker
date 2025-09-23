@@ -197,7 +197,10 @@ function AppContent() {
           <div className="relative z-10 flex flex-col min-h-screen">
             <header className="fixed top-0 left-0 right-0 bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 py-4 z-50">
               <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between">
-                <div className="flex items-center gap-2 sm:gap-3">
+                <button 
+                  onClick={() => setActiveTab("timer")}
+                  className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity duration-200 cursor-pointer"
+                >
                   <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
                     <svg
                       className="w-5 h-5 sm:w-6 sm:h-6 text-white"
@@ -210,7 +213,7 @@ function AppContent() {
                   <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                     TimeTracker Pro
                   </h1>
-                </div>
+                </button>
 
                 <div className="flex items-center gap-4">
                   <Navigation
