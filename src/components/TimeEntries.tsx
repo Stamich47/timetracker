@@ -332,7 +332,7 @@ const TimeEntries: React.FC = () => {
           {/* Date inputs and quick buttons */}
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Date Range Inputs */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 min-w-0">
               <label htmlFor="start-date" className="sr-only">
                 Start Date
               </label>
@@ -347,9 +347,9 @@ const TimeEntries: React.FC = () => {
                     startDate: e.target.value,
                   }))
                 }
-                className="input-field text-sm w-full sm:flex-1 h-10"
+                className="input-field text-sm w-full sm:flex-1 sm:min-w-0 h-10"
               />
-              <span className="text-muted text-center sm:px-2">to</span>
+              <span className="text-muted text-center sm:px-2 flex-shrink-0">to</span>
               <label htmlFor="end-date" className="sr-only">
                 End Date
               </label>
@@ -361,7 +361,7 @@ const TimeEntries: React.FC = () => {
                 onChange={(e) =>
                   setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
                 }
-                className="input-field text-sm w-full sm:flex-1 h-10"
+                className="input-field text-sm w-full sm:flex-1 sm:min-w-0 h-10"
                 max={new Date().toISOString().split("T")[0]}
               />
             </div>
