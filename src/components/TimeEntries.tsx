@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Clock,
   Play,
@@ -109,6 +110,12 @@ const TimeEntries: React.FC = () => {
     date: "",
   });
 
+  // State for delete confirmation
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    entryId: string | null;
+  }>({ isOpen: false, entryId: null });
+
   // Toggle date section collapse
   const toggleDateCollapse = (date: string) => {
     const newCollapsed = new Set(collapsedDates);
@@ -189,15 +196,30 @@ const TimeEntries: React.FC = () => {
   };
 
   const handleDeleteEntry = async (entryId: string) => {
-    if (window.confirm("Are you sure you want to delete this time entry?")) {
+    setDeleteConfirmation({ isOpen: true, entryId });
+    // Prevent background scrolling
+    document.body.style.overflow = "hidden";
+  };
+
+  const confirmDelete = async () => {
+    if (deleteConfirmation.entryId) {
       try {
-        await timeEntriesApi.deleteTimeEntry(entryId);
-        deleteTimeEntry(entryId); // Update context
+        await timeEntriesApi.deleteTimeEntry(deleteConfirmation.entryId);
+        deleteTimeEntry(deleteConfirmation.entryId); // Update context
       } catch (err) {
         console.error("Error deleting entry:", err);
         // Error will be handled by the context
       }
     }
+    setDeleteConfirmation({ isOpen: false, entryId: null });
+    // Restore scrolling
+    document.body.style.overflow = "unset";
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmation({ isOpen: false, entryId: null });
+    // Restore scrolling
+    document.body.style.overflow = "unset";
   };
 
   const handleRestartEntry = async (entry: TimeEntry) => {
@@ -784,6 +806,57 @@ const TimeEntries: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.isOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+            }}
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full shadow-xl transform transition-all">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Delete Time Entry
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                Are you sure you want to delete this time entry?
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelDelete}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

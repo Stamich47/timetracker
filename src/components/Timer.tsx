@@ -9,6 +9,7 @@ import {
   Calendar,
   ChevronDown,
   FolderOpen,
+  CheckCircle,
 } from "lucide-react";
 import {
   timeEntriesApi,
@@ -36,6 +37,9 @@ const Timer: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Success state for submit button
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Manual entry mode state
   const [isManualMode, setIsManualMode] = useState(false);
@@ -220,6 +224,12 @@ const Timer: React.FC = () => {
     }
   };
 
+  // Success notification function
+  const showSuccessState = () => {
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 2000); // Hide after 2 seconds
+  };
+
   // Manual entry helper functions
   const calculateManualDuration = (
     startTime: string,
@@ -292,7 +302,7 @@ const Timer: React.FC = () => {
         duration: 0,
       });
 
-      alert("Time entry added successfully!");
+      showSuccessState();
     } catch (error) {
       console.error("Error creating manual entry:", error);
       alert("Failed to create time entry. Please try again.");
@@ -560,18 +570,27 @@ const Timer: React.FC = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isSaving || manualEntry.duration <= 0}
-            className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSaving || manualEntry.duration <= 0 || showSuccess}
+            className={`w-full btn-primary transition-all duration-300 disabled:cursor-not-allowed flex items-center justify-center ${
+              showSuccess
+                ? "!bg-green-500 hover:!bg-green-600 !text-white !opacity-100"
+                : "disabled:opacity-50"
+            }`}
           >
-            {isSaving ? (
+            {showSuccess ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Adding Entry...
+                <CheckCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                <span>Added Successfully!</span>
+              </>
+            ) : isSaving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2 flex-shrink-0" />
+                <span>Adding Entry...</span>
               </>
             ) : (
               <>
-                <Calendar className="w-5 h-5 mr-2" />
-                Add Time Entry
+                <Calendar className="w-5 h-5 mr-2 flex-shrink-0" />
+                <span>Add Time Entry</span>
               </>
             )}
           </button>
