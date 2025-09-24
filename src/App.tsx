@@ -14,6 +14,8 @@ import Settings from "./components/Settings";
 import type { SettingsHandle } from "./components/Settings";
 import Auth from "./components/Auth";
 import Footer from "./components/Footer";
+import ErrorBoundary from "./components/ErrorBoundary";
+import ToastContainer from "./components/ToastContainer";
 import { Loader2, LogOut, User } from "lucide-react";
 // Import theme manager to ensure it's initialized
 import { themeManager } from "./lib/themeManager";
@@ -22,6 +24,9 @@ import UnsavedChangesModal from "./components/UnsavedChangesModal";
 import type { TimeEntry } from "./lib/timeEntriesApi";
 import type { Project } from "./lib/projectsApi";
 import type { UserSettings } from "./lib/settingsApi";
+import * as ErrorLoggerModule from "./lib/errorLogger";
+
+const { errorLogger } = ErrorLoggerModule;
 
 // Initialize theme system
 themeManager.getCurrentTheme();
@@ -131,13 +136,70 @@ function AppContent() {
         return (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-8">
             <div className="lg:col-span-2">
-              <Timer />
+              <ErrorBoundary
+                onError={(error, errorInfo) => {
+                  errorLogger.logReactError(error, errorInfo, {
+                    component: "Timer",
+                  });
+                }}
+                fallback={
+                  <div className="card p-6 text-center">
+                    <h3 className="text-lg font-semibold text-primary mb-2">
+                      Timer Unavailable
+                    </h3>
+                    <p className="text-secondary">
+                      There was an issue with the timer. Please refresh the
+                      page.
+                    </p>
+                  </div>
+                }
+              >
+                <Timer />
+              </ErrorBoundary>
             </div>
             <div className="lg:col-span-3">
-              <ProjectManager />
+              <ErrorBoundary
+                onError={(error, errorInfo) => {
+                  errorLogger.logReactError(error, errorInfo, {
+                    component: "ProjectManager",
+                  });
+                }}
+                fallback={
+                  <div className="card p-6 text-center">
+                    <h3 className="text-lg font-semibold text-primary mb-2">
+                      Project Manager Unavailable
+                    </h3>
+                    <p className="text-secondary">
+                      There was an issue loading projects. Please refresh the
+                      page.
+                    </p>
+                  </div>
+                }
+              >
+                <ProjectManager />
+              </ErrorBoundary>
             </div>
             <div className="lg:col-span-5">
-              <TimeEntries />
+              <ErrorBoundary
+                onError={(error, errorInfo) => {
+                  errorLogger.logReactError(error, errorInfo, {
+                    component: "TimeEntries",
+                  });
+                }}
+                fallback={
+                  <div className="card p-6 text-center">
+                    <h3 className="text-lg font-semibold text-primary mb-2">
+                      Time Entries Unavailable
+                    </h3>
+                    <p className="text-secondary">
+                      There was an issue loading time entries. Please refresh
+                      the page.
+                    </p>
+                  </div>
+                }
+              >
+                <TimeEntries />
+              </ErrorBoundary>
             </div>
           </div>
         );
@@ -229,7 +291,7 @@ function AppContent() {
                     >
                       <User className="w-5 h-5" />
                       <span className="hidden sm:block">
-                        {user?.user_metadata?.full_name || user?.email}
+                        {user?.user_metadata?.["full_name"] || user?.email}
                       </span>
                     </button>
 
@@ -237,7 +299,7 @@ function AppContent() {
                       <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                         <div className="px-4 py-2 border-b border-gray-100">
                           <p className="text-sm font-medium text-gray-900">
-                            {user?.user_metadata?.full_name || "User"}
+                            {user?.user_metadata?.["full_name"] || "User"}
                           </p>
                           <p className="text-xs text-gray-500">{user?.email}</p>
                         </div>
@@ -301,6 +363,9 @@ function AppContent() {
             onDiscard={handleDiscardAndLeave}
             onCancel={() => setShowUnsavedModal(false)}
           />
+
+          {/* Global Toast Container */}
+          <ToastContainer />
         </div>
       </TimeEntriesProvider>
     </TimerProvider>
@@ -309,9 +374,18 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        errorLogger.logReactError(error, errorInfo, {
+          component: "App Root",
+          timestamp: new Date().toISOString(),
+        });
+      }}
+    >
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

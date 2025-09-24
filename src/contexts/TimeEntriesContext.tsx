@@ -117,7 +117,7 @@ export const TimeEntriesProvider: React.FC<TimeEntriesProviderProps> = ({
                   // Fetch the full entry with project details
                   timeEntriesApi.getTimeEntries().then((entries) => {
                     const newEntry = entries.find(
-                      (e) => e.id === payload.new.id
+                      (e) => e["id"] === payload.new["id"]
                     );
                     if (newEntry) {
                       setTimeEntries((prev) => {
@@ -135,7 +135,7 @@ export const TimeEntriesProvider: React.FC<TimeEntriesProviderProps> = ({
                   // Fetch the updated entry with project details
                   timeEntriesApi.getTimeEntries().then((entries) => {
                     const updatedEntry = entries.find(
-                      (e) => e.id === payload.new.id
+                      (e) => e["id"] === payload.new["id"]
                     );
                     if (updatedEntry) {
                       setTimeEntries((prev) =>
@@ -149,7 +149,7 @@ export const TimeEntriesProvider: React.FC<TimeEntriesProviderProps> = ({
 
                 case "DELETE":
                   setTimeEntries((prev) =>
-                    prev.filter((entry) => entry.id !== payload.old.id)
+                    prev.filter((entry) => entry["id"] !== payload.old["id"])
                   );
                   break;
               }

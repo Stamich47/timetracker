@@ -418,7 +418,7 @@ const TimeEntries: React.FC = () => {
           {groupedEntries.map(([date, entries]) => {
             const isCollapsed = collapsedDates.has(date);
             return (
-              <div key={date} className="card overflow-hidden">
+              <div key={date} className="card overflow-visible">
                 <div
                   className="bg-surface px-6 py-3 border-b border-theme cursor-pointer hover:bg-surface-hover transition-colors"
                   onClick={() => toggleDateCollapse(date)}
@@ -444,10 +444,10 @@ const TimeEntries: React.FC = () => {
                   </div>
                 </div>
                 <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  className={`transition-all duration-300 ease-in-out ${
                     isCollapsed
-                      ? "max-h-0 opacity-0"
-                      : "max-h-[2000px] opacity-100"
+                      ? "max-h-0 opacity-0 overflow-hidden"
+                      : "max-h-[2000px] opacity-100 overflow-visible"
                   }`}
                 >
                   <div className="divide-y divide-gray-200">
@@ -459,7 +459,7 @@ const TimeEntries: React.FC = () => {
                         return (
                           <div
                             key={entry.id}
-                            className="p-3 sm:p-6 bg-blue-50 dark:bg-blue-900/20"
+                            className="p-3 sm:p-6 bg-blue-50 dark:bg-blue-900/20 overflow-visible relative z-10"
                           >
                             <div className="space-y-4">
                               <div>

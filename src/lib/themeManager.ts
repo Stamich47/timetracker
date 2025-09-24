@@ -87,7 +87,7 @@ class ThemeManager {
 export const themeManager = new ThemeManager();
 
 // Make it globally available for debugging (only in development)
-if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+if (typeof window !== "undefined" && import.meta.env.DEV) {
   (window as unknown as { themeManager: ThemeManager }).themeManager =
     themeManager;
 }

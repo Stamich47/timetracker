@@ -1,4 +1,10 @@
 import { supabase } from "./supabase";
+import { UserSettingsSchema } from "./validation";
+import {
+  validateApiResponse,
+  validateWithToast,
+  sanitizeUserInput,
+} from "./validationUtils";
 
 // Types for settings
 export interface UserSettings {
@@ -103,10 +109,48 @@ export const settingsApi = {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("No authenticated user");
 
+      // Sanitize string fields
+      const sanitizedSettings = { ...settings };
+      if (sanitizedSettings.full_name) {
+        sanitizedSettings.full_name = sanitizeUserInput(
+          sanitizedSettings.full_name
+        );
+      }
+      if (sanitizedSettings.business_name) {
+        sanitizedSettings.business_name = sanitizeUserInput(
+          sanitizedSettings.business_name
+        );
+      }
+      if (sanitizedSettings.business_email) {
+        sanitizedSettings.business_email = sanitizeUserInput(
+          sanitizedSettings.business_email
+        );
+      }
+      if (sanitizedSettings.business_phone) {
+        sanitizedSettings.business_phone = sanitizeUserInput(
+          sanitizedSettings.business_phone
+        );
+      }
+      if (sanitizedSettings.business_address) {
+        sanitizedSettings.business_address = sanitizeUserInput(
+          sanitizedSettings.business_address
+        );
+      }
+
+      // Validate settings using partial schema
+      const validatedSettings = validateWithToast(
+        UserSettingsSchema.partial(),
+        sanitizedSettings,
+        "Settings Update"
+      );
+      if (!validatedSettings) {
+        throw new Error("Settings validation failed");
+      }
+
       const { data, error } = await supabase
         .from("profiles")
         .update({
-          ...settings,
+          ...validatedSettings,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id)
@@ -114,7 +158,18 @@ export const settingsApi = {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Validate response data
+      const validatedResponse = validateApiResponse(
+        UserSettingsSchema,
+        data,
+        "/profiles/update"
+      );
+      if (!validatedResponse.success || !validatedResponse.data) {
+        throw new Error("Invalid response from server");
+      }
+
+      return validatedResponse.data as UserSettings;
     } catch (error) {
       console.error("Error updating settings:", error);
       throw error;

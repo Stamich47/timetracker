@@ -18,6 +18,12 @@ import {
 import { useTimeEntries } from "../hooks/useTimeEntries";
 import { getRandomProjectColor } from "../utils/colorUtils";
 import CustomDropdown from "./CustomDropdown";
+import { validateWithToast, sanitizeUserInput } from "../lib/validationUtils";
+import {
+  ProjectCreateSchema,
+  ProjectUpdateSchema,
+  ClientCreateSchema,
+} from "../lib/validation";
 
 const Projects: React.FC = () => {
   const { projects, refreshTimeEntries } = useTimeEntries();
@@ -60,26 +66,38 @@ const Projects: React.FC = () => {
   const handleSubmit = async () => {
     if (formData.name.trim()) {
       try {
+        // Sanitize form inputs
+        const sanitizedData = {
+          name: sanitizeUserInput(formData.name),
+          client_id: formData.client_id || undefined,
+          color: formData.color,
+          description: sanitizeUserInput(formData.description),
+          billable: formData.billable,
+          hourly_rate: formData.hourly_rate,
+        };
+
         if (editingProject) {
+          // Validate update data
+          const validatedData = validateWithToast(
+            ProjectUpdateSchema,
+            sanitizedData,
+            "Project Update"
+          );
+          if (!validatedData) return;
+
           // Update existing project
-          await projectsApi.updateProject(editingProject.id!, {
-            name: formData.name,
-            client_id: formData.client_id || undefined,
-            color: formData.color,
-            description: formData.description,
-            billable: formData.billable,
-            hourly_rate: formData.hourly_rate,
-          });
+          await projectsApi.updateProject(editingProject.id!, validatedData);
         } else {
+          // Validate creation data
+          const validatedData = validateWithToast(
+            ProjectCreateSchema,
+            sanitizedData,
+            "Project Creation"
+          );
+          if (!validatedData) return;
+
           // Add new project
-          await projectsApi.createProject({
-            name: formData.name,
-            client_id: formData.client_id || undefined,
-            color: formData.color,
-            description: formData.description,
-            billable: formData.billable,
-            hourly_rate: formData.hourly_rate,
-          });
+          await projectsApi.createProject(validatedData);
         }
 
         // Refresh projects in the shared context
@@ -147,9 +165,18 @@ const Projects: React.FC = () => {
   const handleQuickAddClient = async () => {
     if (quickClientName.trim()) {
       try {
-        const newClient = await projectsApi.createClient({
-          name: quickClientName.trim(),
-        });
+        // Sanitize and validate client data
+        const sanitizedName = sanitizeUserInput(quickClientName.trim());
+        const clientData = { name: sanitizedName };
+
+        const validatedData = validateWithToast(
+          ClientCreateSchema,
+          clientData,
+          "Client Creation"
+        );
+        if (!validatedData) return;
+
+        const newClient = await projectsApi.createClient(validatedData);
 
         // Refresh clients list
         await loadData();
@@ -223,7 +250,10 @@ const Projects: React.FC = () => {
                 type="text"
                 value={formData.name}
                 onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
+                  setFormData({
+                    ...formData,
+                    name: sanitizeUserInput(e.target.value),
+                  })
                 }
                 className="input-field"
                 placeholder="Enter project name"
@@ -265,7 +295,9 @@ const Projects: React.FC = () => {
                   <input
                     type="text"
                     value={quickClientName}
-                    onChange={(e) => setQuickClientName(e.target.value)}
+                    onChange={(e) =>
+                      setQuickClientName(sanitizeUserInput(e.target.value))
+                    }
                     placeholder="Client name"
                     className="input-field flex-1 text-sm"
                     onKeyDown={(e) => {
@@ -349,7 +381,10 @@ const Projects: React.FC = () => {
               <textarea
                 value={formData.description}
                 onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
+                  setFormData({
+                    ...formData,
+                    description: sanitizeUserInput(e.target.value),
+                  })
                 }
                 className="input-field"
                 rows={3}
@@ -394,7 +429,9 @@ const Projects: React.FC = () => {
                 <input
                   type="text"
                   value={quickClientName}
-                  onChange={(e) => setQuickClientName(e.target.value)}
+                  onChange={(e) =>
+                    setQuickClientName(sanitizeUserInput(e.target.value))
+                  }
                   className="input-field flex-1"
                   placeholder="Enter client name"
                 />

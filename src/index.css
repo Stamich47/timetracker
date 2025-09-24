@@ -237,13 +237,70 @@ input[type="time"] {
   align-items: center;
 }
 
+/* Enhanced time input styling */
+input[type="time"] {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  letter-spacing: 0.05em;
+}
+
+input[type="time"]::-webkit-datetime-edit-text {
+  color: var(--color-textSecondary, #6b7280);
+}
+
+input[type="time"]::-webkit-datetime-edit-hour-field,
+input[type="time"]::-webkit-datetime-edit-minute-field {
+  color: var(--color-textPrimary, #333);
+}
+
+input[type="time"]:invalid::-webkit-datetime-edit-text {
+  color: var(--color-textMuted, #9ca3af);
+}
+
+input[type="time"]:placeholder-shown::-webkit-datetime-edit-text,
+input[type="time"]:placeholder-shown::-webkit-datetime-edit-hour-field,
+input[type="time"]:placeholder-shown::-webkit-datetime-edit-minute-field {
+  color: var(--color-textMuted, #9ca3af);
+}
+
+/* Calendar and Clock picker indicators */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   display: block;
-  background: transparent;
+  background-image: none;
+  background: none;
   color: var(--color-textSecondary, #6b7280);
   cursor: pointer;
   margin-left: auto;
+  width: 20px;
+  height: 20px;
+  opacity: 1;
+  filter: none;
+}
+
+/* Calendar icon for date inputs */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3e%3cline x1='16' y1='2' x2='16' y2='6'/%3e%3cline x1='8' y1='2' x2='8' y2='6'/%3e%3cline x1='3' y1='10' x2='21' y2='10'/%3e%3c/svg%3e");
+  background-size: 16px 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Clock icon for time inputs */
+input[type="time"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='10'/%3e%3cpolyline points='12,6 12,12 16,14'/%3e%3c/svg%3e");
+  background-size: 16px 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Dark mode icons */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3e%3cline x1='16' y1='2' x2='16' y2='6'/%3e%3cline x1='8' y1='2' x2='8' y2='6'/%3e%3cline x1='3' y1='10' x2='21' y2='10'/%3e%3c/svg%3e");
+}
+
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='10'/%3e%3cpolyline points='12,6 12,12 16,14'/%3e%3c/svg%3e");
 }
 
 /* Mobile-specific fixes for date and time inputs */
@@ -257,6 +314,29 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     height: 2.75rem;
     -webkit-appearance: none;
     -moz-appearance: textfield;
+  }
+
+  /* Enhanced mobile time input styling */
+  input[type="time"] {
+    position: relative;
+  }
+
+  input[type="time"]::-webkit-datetime-edit {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Show colon between fields more prominently */
+  input[type="time"]::-webkit-datetime-edit-text {
+    font-weight: 500;
+    color: var(--color-textSecondary, #6b7280);
   }
 
   /* Ensure grid containers don't overflow */
@@ -382,7 +462,25 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .scrollbar-thin {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border, #e5e7eb) var(--color-surface, #ffffff);
-  padding-right: 8px; /* Add space between content and scrollbar */
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: var(--color-surface, #ffffff);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border, #e5e7eb);
+  border-radius: 3px;
+  border: 1px solid var(--color-surface, #ffffff);
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--color-textMuted, #6b7280);
 }
 
 .scrollbar-thin::-webkit-scrollbar {

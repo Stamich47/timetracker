@@ -20,6 +20,7 @@ import { useTimeEntries } from "../hooks/useTimeEntries";
 import { useAuth } from "../hooks/useAuth";
 import { useTimer } from "../hooks/useTimer";
 import { secondsToHMS } from "../utils/timeUtils";
+import { sanitizeUserInput } from "../lib/validationUtils";
 
 const Timer: React.FC = () => {
   const { projects, timeEntries } = useTimeEntries();
@@ -165,8 +166,12 @@ const Timer: React.FC = () => {
   const handleStart = async () => {
     try {
       setIsSaving(true);
+
+      // Sanitize description input before starting timer
+      const sanitizedDescription = sanitizeUserInput(description);
+
       const newTimer = await timeEntriesApi.startTimer(
-        description,
+        sanitizedDescription,
         selectedProjectId || undefined
       );
       setActiveTimer({
@@ -211,12 +216,14 @@ const Timer: React.FC = () => {
   };
 
   const updateDescription = async (newDescription: string) => {
-    setDescription(newDescription);
+    // Sanitize description input
+    const sanitizedDescription = sanitizeUserInput(newDescription);
+    setDescription(sanitizedDescription);
 
     if (activeTimer) {
       try {
         await timeEntriesApi.updateTimeEntry(activeTimer.id, {
-          description: newDescription,
+          description: sanitizedDescription,
         });
       } catch (error) {
         console.error("Error updating description:", error);
@@ -474,7 +481,11 @@ const Timer: React.FC = () => {
               name="manualEntryDescription"
               placeholder="What did you work on?"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                // Sanitize input in real-time to prevent XSS
+                const sanitizedValue = sanitizeUserInput(e.target.value);
+                setDescription(sanitizedValue);
+              }}
               className="input-field w-full max-w-none"
             />
           </div>

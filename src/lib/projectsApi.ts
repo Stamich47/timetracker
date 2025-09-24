@@ -1,5 +1,17 @@
 import { supabase } from "./supabase";
 import { getUserIdWithFallback } from "./auth-utils";
+import {
+  ProjectSchema,
+  ProjectCreateSchema,
+  ProjectUpdateSchema,
+  ClientSchema,
+  ClientCreateSchema,
+} from "./validation";
+import {
+  validateApiResponse,
+  validateWithToast,
+  sanitizeUserInput,
+} from "./validationUtils";
 
 // Types for projects
 export interface Project {
@@ -67,10 +79,29 @@ export const projectsApi = {
     try {
       const userId = await getUserIdWithFallback();
 
+      // Sanitize project inputs
+      const sanitizedProject = {
+        ...project,
+        name: sanitizeUserInput(project.name),
+        description: project.description
+          ? sanitizeUserInput(project.description)
+          : undefined,
+      };
+
+      // Validate project creation data
+      const validatedProject = validateWithToast(
+        ProjectCreateSchema,
+        sanitizedProject,
+        "Project Creation"
+      );
+      if (!validatedProject) {
+        throw new Error("Project validation failed");
+      }
+
       const { data, error } = await supabase
         .from("projects")
         .insert({
-          ...project,
+          ...validatedProject,
           user_id: userId,
         })
         .select(
@@ -82,7 +113,18 @@ export const projectsApi = {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Validate response data
+      const validatedResponse = validateApiResponse(
+        ProjectSchema,
+        data,
+        "/projects/create"
+      );
+      if (!validatedResponse.success || !validatedResponse.data) {
+        throw new Error("Invalid response from server");
+      }
+
+      return validatedResponse.data as Project;
     } catch (error) {
       console.error("Error creating project:", error);
       throw error;
@@ -92,10 +134,31 @@ export const projectsApi = {
   // Update project
   async updateProject(id: string, updates: Partial<Project>): Promise<Project> {
     try {
+      // Sanitize project updates
+      const sanitizedUpdates = { ...updates };
+      if (sanitizedUpdates.name) {
+        sanitizedUpdates.name = sanitizeUserInput(sanitizedUpdates.name);
+      }
+      if (sanitizedUpdates.description) {
+        sanitizedUpdates.description = sanitizeUserInput(
+          sanitizedUpdates.description
+        );
+      }
+
+      // Validate project update data
+      const validatedUpdates = validateWithToast(
+        ProjectUpdateSchema,
+        sanitizedUpdates,
+        "Project Update"
+      );
+      if (!validatedUpdates) {
+        throw new Error("Project update validation failed");
+      }
+
       const { data, error } = await supabase
         .from("projects")
         .update({
-          ...updates,
+          ...validatedUpdates,
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
@@ -108,7 +171,18 @@ export const projectsApi = {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Validate response data
+      const validatedResponse = validateApiResponse(
+        ProjectSchema,
+        data,
+        "/projects/update"
+      );
+      if (!validatedResponse.success || !validatedResponse.data) {
+        throw new Error("Invalid response from server");
+      }
+
+      return validatedResponse.data as Project;
     } catch (error) {
       console.error("Error updating project:", error);
       throw error;
@@ -160,17 +234,46 @@ export const projectsApi = {
     try {
       const userId = await getUserIdWithFallback();
 
+      // Sanitize client inputs
+      const sanitizedClient = {
+        ...client,
+        name: sanitizeUserInput(client.name),
+        email: client.email ? sanitizeUserInput(client.email) : undefined,
+        phone: client.phone ? sanitizeUserInput(client.phone) : undefined,
+      };
+
+      // Validate client creation data
+      const validatedClient = validateWithToast(
+        ClientCreateSchema,
+        sanitizedClient,
+        "Client Creation"
+      );
+      if (!validatedClient) {
+        throw new Error("Client validation failed");
+      }
+
       const { data, error } = await supabase
         .from("clients")
         .insert({
-          ...client,
+          ...validatedClient,
           user_id: userId,
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Validate response data
+      const validatedResponse = validateApiResponse(
+        ClientSchema,
+        data,
+        "/clients/create"
+      );
+      if (!validatedResponse.success || !validatedResponse.data) {
+        throw new Error("Invalid response from server");
+      }
+
+      return validatedResponse.data as Client;
     } catch (error) {
       console.error("Error creating client:", error);
       throw error;

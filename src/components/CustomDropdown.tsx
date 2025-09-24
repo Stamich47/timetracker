@@ -109,12 +109,13 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
       {isOpen && (
         <div
-          className="absolute z-50 w-full mt-1 bg-surface border border-theme rounded-lg shadow-xl backdrop-blur-sm max-h-60 overflow-auto scrollbar-thin"
+          className="absolute z-[100] w-full mt-1 bg-surface border border-theme rounded-lg shadow-xl backdrop-blur-sm overflow-auto scrollbar-thin"
           style={{
             backgroundColor: "var(--color-surface)",
             borderColor: "var(--color-border)",
             boxShadow:
               "0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)",
+            maxHeight: options.length > 4 ? "12rem" : "auto", // Show ~4 items before scrolling
           }}
         >
           <div className={sizeClasses.dropdown}>
