@@ -325,7 +325,7 @@ const Timer: React.FC = () => {
   }
 
   return (
-    <div className="card p-3 sm:p-6 sticky top-24 isolate">
+    <div className="card p-3 sm:p-6 sticky top-24 isolate w-full max-w-full overflow-hidden">
       {/* Timer Header with Mode Toggle */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -375,7 +375,10 @@ const Timer: React.FC = () => {
 
       {isManualMode ? (
         /* Manual Entry Form */
-        <form onSubmit={handleManualSubmit} className="space-y-6">
+        <form
+          onSubmit={handleManualSubmit}
+          className="space-y-6 w-full overflow-hidden"
+        >
           {/* Date Selection */}
           <div>
             <label
@@ -392,15 +395,15 @@ const Timer: React.FC = () => {
               onChange={(e) =>
                 setManualEntry({ ...manualEntry, date: e.target.value })
               }
-              className="input-field"
+              className="input-field w-full max-w-none"
               max={new Date().toISOString().split("T")[0]} // Can't select future dates
               required
             />
           </div>
 
           {/* Time Range */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label
                 htmlFor="manual-entry-start-time"
                 className="block text-sm font-medium text-primary mb-2"
@@ -415,11 +418,11 @@ const Timer: React.FC = () => {
                 onChange={(e) =>
                   handleManualTimeChange("startTime", e.target.value)
                 }
-                className="input-field"
+                className="input-field w-full max-w-none"
                 required
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label
                 htmlFor="manual-entry-end-time"
                 className="block text-sm font-medium text-primary mb-2"
@@ -434,7 +437,7 @@ const Timer: React.FC = () => {
                 onChange={(e) =>
                   handleManualTimeChange("endTime", e.target.value)
                 }
-                className="input-field"
+                className="input-field w-full max-w-none"
                 required
               />
             </div>
@@ -472,7 +475,7 @@ const Timer: React.FC = () => {
               placeholder="What did you work on?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="input-field"
+              className="input-field w-full max-w-none"
             />
           </div>
 
@@ -627,7 +630,7 @@ const Timer: React.FC = () => {
               placeholder="What are you working on?"
               value={description}
               onChange={(e) => updateDescription(e.target.value)}
-              className="input-field"
+              className="input-field w-full max-w-none"
               disabled={isSaving}
             />
           </div>

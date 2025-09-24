@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getUserIdWithFallback } from "./auth-utils";
 
 // Types for projects
 export interface Project {
@@ -37,12 +38,7 @@ export const projectsApi = {
   // Get all projects for current user
   async getProjects(): Promise<Project[]> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("projects")
@@ -69,12 +65,7 @@ export const projectsApi = {
     project: Omit<Project, "id" | "user_id" | "created_at" | "updated_at">
   ): Promise<Project> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("projects")
@@ -145,12 +136,7 @@ export const projectsApi = {
   // Get all clients for current user
   async getClients(): Promise<Client[]> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("clients")
@@ -172,12 +158,7 @@ export const projectsApi = {
     client: Omit<Client, "id" | "user_id" | "created_at" | "updated_at">
   ): Promise<Client> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("clients")

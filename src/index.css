@@ -226,6 +226,49 @@ body::-webkit-scrollbar-thumb:hover {
   color: var(--color-textMuted, #6b7280);
 }
 
+/* Consistent height for date and time inputs */
+input[type="date"],
+input[type="time"] {
+  min-height: 2.75rem; /* Same as input-field padding + line-height */
+  height: 2.75rem;
+  box-sizing: border-box;
+  line-height: 1.25rem;
+  display: flex;
+  align-items: center;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: block;
+  background: transparent;
+  color: var(--color-textSecondary, #6b7280);
+  cursor: pointer;
+  margin-left: auto;
+}
+
+/* Mobile-specific fixes for date and time inputs */
+@media (max-width: 640px) {
+  input[type="date"],
+  input[type="time"] {
+    min-width: 0;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 2.75rem;
+    height: 2.75rem;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+  }
+
+  /* Ensure grid containers don't overflow */
+  .grid {
+    min-width: 0;
+  }
+
+  .grid > * {
+    min-width: 0;
+  }
+}
+
 /* Additional utility classes for cleaner design */
 .project-item {
   background: var(--color-surface, #ffffff);

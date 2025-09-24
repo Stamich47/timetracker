@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getUserIdWithFallback } from "./auth-utils";
 
 // Types for time entries
 export interface TimeEntry {
@@ -47,12 +48,7 @@ export const timeEntriesApi = {
   // Get current running timer
   async getActiveTimer(): Promise<ActiveTimer | null> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("time_entries")
@@ -88,12 +84,7 @@ export const timeEntriesApi = {
     projectId?: string
   ): Promise<TimeEntry> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       // First, stop any running timers
       await this.stopActiveTimer();
@@ -132,12 +123,7 @@ export const timeEntriesApi = {
   // Stop the current running timer
   async stopActiveTimer(): Promise<TimeEntry | null> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("time_entries")
@@ -176,12 +162,7 @@ export const timeEntriesApi = {
   // Get recent time entries
   async getRecentTimeEntries(limit: number = 10): Promise<TimeEntry[]> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("time_entries")
@@ -211,12 +192,7 @@ export const timeEntriesApi = {
   // Get all time entries for current user
   async getTimeEntries(): Promise<TimeEntry[]> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("time_entries")
@@ -297,12 +273,7 @@ export const timeEntriesApi = {
     endDate: string
   ): Promise<TimeEntry[]> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("time_entries")
@@ -333,12 +304,7 @@ export const timeEntriesApi = {
   // Get total time for today
   async getTodayTotal(): Promise<number> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const today = new Date().toISOString().split("T")[0];
 
@@ -374,12 +340,7 @@ export const timeEntriesApi = {
     hourly_rate?: number;
   }): Promise<TimeEntry> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      // Use hardcoded test user ID when no authentication for local testing
-      const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f";
+      const userId = await getUserIdWithFallback();
 
       const { data, error } = await supabase
         .from("time_entries")

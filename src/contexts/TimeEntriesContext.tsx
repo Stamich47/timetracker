@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { timeEntriesApi, type TimeEntry } from "../lib/timeEntriesApi";
 import { projectsApi, type Project } from "../lib/projectsApi";
 import { useAuth } from "../hooks/useAuth";
+import { getUserIdWithFallback } from "../lib/auth-utils";
 
 interface TimeEntriesContextType {
   timeEntries: TimeEntry[];
@@ -96,64 +97,83 @@ export const TimeEntriesProvider: React.FC<TimeEntriesProviderProps> = ({
   useEffect(() => {
     if (authLoading) return; // Don't set up subscription until auth is ready
 
-    const userId = user?.id || "8c9c14aa-9be6-460c-b3b4-833a97431c4f"; // Fallback for development
+    const setupSubscription = async () => {
+      try {
+        const userId = await getUserIdWithFallback();
 
-    const subscription = supabase
-      .channel("time_entries_channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "time_entries",
-          filter: `user_id=eq.${userId}`, // Use dynamic user ID
-        },
-        (payload) => {
-          switch (payload.eventType) {
-            case "INSERT":
-              // Fetch the full entry with project details
-              timeEntriesApi.getTimeEntries().then((entries) => {
-                const newEntry = entries.find((e) => e.id === payload.new.id);
-                if (newEntry) {
-                  setTimeEntries((prev) => {
-                    const exists = prev.some((e) => e.id === newEntry.id);
-                    if (!exists) {
-                      return [newEntry, ...prev];
+        const subscription = supabase
+          .channel("time_entries_channel")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "time_entries",
+              filter: `user_id=eq.${userId}`, // Use dynamic user ID
+            },
+            (payload) => {
+              switch (payload.eventType) {
+                case "INSERT":
+                  // Fetch the full entry with project details
+                  timeEntriesApi.getTimeEntries().then((entries) => {
+                    const newEntry = entries.find(
+                      (e) => e.id === payload.new.id
+                    );
+                    if (newEntry) {
+                      setTimeEntries((prev) => {
+                        const exists = prev.some((e) => e.id === newEntry.id);
+                        if (!exists) {
+                          return [newEntry, ...prev];
+                        }
+                        return prev;
+                      });
                     }
-                    return prev;
                   });
-                }
-              });
-              break;
+                  break;
 
-            case "UPDATE":
-              // Fetch the updated entry with project details
-              timeEntriesApi.getTimeEntries().then((entries) => {
-                const updatedEntry = entries.find(
-                  (e) => e.id === payload.new.id
-                );
-                if (updatedEntry) {
+                case "UPDATE":
+                  // Fetch the updated entry with project details
+                  timeEntriesApi.getTimeEntries().then((entries) => {
+                    const updatedEntry = entries.find(
+                      (e) => e.id === payload.new.id
+                    );
+                    if (updatedEntry) {
+                      setTimeEntries((prev) =>
+                        prev.map((entry) =>
+                          entry.id === updatedEntry.id ? updatedEntry : entry
+                        )
+                      );
+                    }
+                  });
+                  break;
+
+                case "DELETE":
                   setTimeEntries((prev) =>
-                    prev.map((entry) =>
-                      entry.id === updatedEntry.id ? updatedEntry : entry
-                    )
+                    prev.filter((entry) => entry.id !== payload.old.id)
                   );
-                }
-              });
-              break;
+                  break;
+              }
+            }
+          )
+          .subscribe();
 
-            case "DELETE":
-              setTimeEntries((prev) =>
-                prev.filter((entry) => entry.id !== payload.old.id)
-              );
-              break;
-          }
-        }
-      )
-      .subscribe();
+        return subscription;
+      } catch (error) {
+        console.error("Error setting up subscription:", error);
+        return null;
+      }
+    };
+
+    let subscription: ReturnType<typeof supabase.channel> | null = null;
+
+    setupSubscription().then((sub) => {
+      subscription = sub;
+    });
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, [authLoading, user?.id]);
 
