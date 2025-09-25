@@ -261,8 +261,12 @@ async function previewTimeTrackerData(csvText: string): Promise<ImportPreview> {
     rawData.forEach((row, index) => {
       try {
         // Process client
-        if (row.Client && row.Client.trim() && row.Client !== "No client") {
-          const clientName = row.Client.trim();
+        if (
+          row["Client"] &&
+          row["Client"].trim() &&
+          row["Client"] !== "No client"
+        ) {
+          const clientName = row["Client"].trim();
           const clientKey = clientName.toLowerCase();
           if (!uniqueClients.has(clientKey)) {
             const existingClientId = existingClientMap.get(clientKey);
@@ -275,12 +279,12 @@ async function previewTimeTrackerData(csvText: string): Promise<ImportPreview> {
           }
         }
         // Process project
-        if (row.Project && row.Project.trim()) {
-          const projectName = row.Project.trim();
+        if (row["Project"] && row["Project"].trim()) {
+          const projectName = row["Project"].trim();
           const projectKey = projectName.toLowerCase();
           if (!uniqueProjects.has(projectKey)) {
             const existingProjectId = existingProjectMap.get(projectKey);
-            const clientName = row.Client?.trim();
+            const clientName = row["Client"]?.trim();
             const clientKey = clientName?.toLowerCase();
             const clientId =
               clientName && clientName !== "No client"
@@ -296,7 +300,7 @@ async function previewTimeTrackerData(csvText: string): Promise<ImportPreview> {
                   ? clientName
                   : undefined,
               color: getRandomProjectColor(),
-              billable: row.Billable === "Yes",
+              billable: row["Billable"] === "Yes",
               isNew: !existingProjectId,
               originalName: projectName,
             });
@@ -319,8 +323,8 @@ async function previewTimeTrackerData(csvText: string): Promise<ImportPreview> {
           row["Date"] ||
           "";
         const endTimePart = row["end time"] || row["End Time"] || "";
-        let startTimeStr = row.start_time || "";
-        let endTimeStr = row.end_time || "";
+        let startTimeStr = row["start_time"] || "";
+        let endTimeStr = row["end_time"] || "";
         // Always combine date and time if both are present, regardless of project
         if (startDate && startTimePart) {
           startTimeStr = `${startDate} ${startTimePart}`;
@@ -378,7 +382,7 @@ async function previewTimeTrackerData(csvText: string): Promise<ImportPreview> {
           (endTime.getTime() - startTime.getTime()) / 1000
         );
         // Allow empty project (treat as undefined or 'No project')
-        const projectName = row.Project?.trim() || undefined;
+        const projectName = row["Project"]?.trim() || undefined;
         const projectKey = projectName?.toLowerCase();
         // Use the real DB project ID if it exists, otherwise the temp one
         const dbProjectId = projectKey
@@ -388,24 +392,25 @@ async function previewTimeTrackerData(csvText: string): Promise<ImportPreview> {
           ? uniqueProjects.get(projectKey)?.id
           : undefined;
         const projectId = dbProjectId || previewProjectId;
-        const tags = row.Tags
-          ? row.Tags.split(",")
+        const tags = row["Tags"]
+          ? row["Tags"]
+              .split(",")
               .map((tag: string) => tag.trim())
               .filter((tag: string) => tag)
           : [];
-        const clientName = row.Client?.trim();
+        const clientName = row["Client"]?.trim();
         // Duplicate check for preview (must use DB project ID if available)
         const key = [
           dbProjectId || previewProjectId || "NoProject",
           normalizeIsoDate(startTime.toISOString()),
           normalizeIsoDate(endTime.toISOString()),
-          row.Description || "",
+          row["Description"] || "",
         ].join("||");
         const isNew = !existingKeys.has(key);
         if (isNew) newTimeEntriesCount++;
         preview.timeEntries.push({
           id: `preview-entry-${index}`,
-          description: row.Description || "",
+          description: row["Description"] || "",
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           duration,
@@ -414,7 +419,7 @@ async function previewTimeTrackerData(csvText: string): Promise<ImportPreview> {
           clientName:
             clientName && clientName !== "No client" ? clientName : undefined,
           tags,
-          billable: row.Billable === "Yes",
+          billable: row["Billable"] === "Yes",
           originalRow: row,
           isNew, // <-- Mark as new/duplicate
         });
