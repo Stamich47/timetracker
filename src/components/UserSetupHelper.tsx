@@ -1,4 +1,5 @@
 import React from "react";
+import { toast } from "../hooks/useToast";
 
 const UserSetupHelper: React.FC = () => {
   const setupUserData = async () => {
@@ -31,7 +32,7 @@ INSERT INTO public.profiles (
 
       // Copy to clipboard
       await navigator.clipboard.writeText(sqlScript);
-      alert(
+      toast.success(
         "SQL script copied to clipboard! Please paste and run in Supabase SQL Editor."
       );
     } catch (error) {

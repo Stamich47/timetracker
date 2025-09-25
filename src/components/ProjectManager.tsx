@@ -13,6 +13,7 @@ import { useTimeEntries } from "../hooks/useTimeEntries";
 import { projectsApi, type Project, type Client } from "../lib/projectsApi";
 import { getRandomProjectColor } from "../utils/colorUtils";
 import CustomDropdown from "./CustomDropdown";
+import { toast } from "../hooks/useToast";
 
 const ProjectManager: React.FC = () => {
   const { setProject } = useTimer();
@@ -89,7 +90,7 @@ const ProjectManager: React.FC = () => {
       setShowAddForm(false);
     } catch (error) {
       console.error("Error creating project:", error);
-      alert("Failed to create project. Please try again.");
+      toast.error("Failed to create project. Please try again.");
     } finally {
       setIsSaving(false);
     }

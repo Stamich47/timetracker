@@ -77,9 +77,7 @@ class ThemeManager {
 
   // Debug function for testing
   public debugThemes() {
-    console.log("Available themes:", Object.keys(themes));
-    console.log("Current theme:", this.currentThemeType);
-    console.log("Current theme colors:", this.getCurrentTheme().colors);
+    // Debug logging removed for production
   }
 }
 

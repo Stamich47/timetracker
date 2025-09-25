@@ -32,6 +32,7 @@ import {
 import ImportPreviewModal from "./ImportPreviewModal";
 import { useTheme } from "../hooks/useTheme";
 import { useTimeEntries } from "../hooks/useTimeEntries";
+import { toast } from "../hooks/useToast";
 
 // Minimalist Theme Selector Component
 const MinimalThemeSelector: React.FC = () => {
@@ -115,7 +116,7 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
         tax_rate: 0,
         theme: "light",
         language: "en",
-        date_format: "MM/dd/yyyy",
+        date_format: "MM/DD/YYYY",
         time_format: "12h",
         // Add missing business fields for type safety
         business_name: "",
@@ -128,20 +129,6 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
     const [settings, setSettings] = useState<UserSettings>(
       props.initialSettings || defaultSettings
     );
-
-    // Always sync settings state with initialSettings prop on mount and when it changes
-    useEffect(() => {
-      if (props.initialSettings) {
-        // Only update if different (prevents false dirty state)
-        if (
-          JSON.stringify(settings) !== JSON.stringify(props.initialSettings)
-        ) {
-          setSettings(props.initialSettings);
-        }
-      } else {
-        setSettings(defaultSettings);
-      }
-    }, [props.initialSettings, defaultSettings, settings]);
 
     // Sync settings state with initialSettings prop after save
     useEffect(() => {
@@ -167,23 +154,25 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
 
     // Load settings on component mount
     useEffect(() => {
-      loadSettings();
-    }, []);
-
-    const loadSettings = async () => {
-      try {
-        setLoading(true);
-        const userSettings = await settingsApi.getSettings();
-        if (userSettings) {
-          setSettings(userSettings);
+      const loadSettings = async () => {
+        try {
+          setLoading(true);
+          const userSettings = await settingsApi.getSettings();
+          if (userSettings) {
+            setSettings(userSettings);
+            props.setInitialSettings?.(userSettings);
+          }
+        } catch (error) {
+          console.error("Error loading settings:", error);
+          toast.error("Error loading settings. Please try again.");
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Error loading settings:", error);
-        alert("Error loading settings. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
+
+      loadSettings();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
 
     const handleSettingChange = (
       key: keyof UserSettings,
@@ -201,11 +190,11 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
         // Update initialSettings after successful save
         props.setInitialSettings?.(settings);
         props.setSettingsDirty?.(false); // Reset dirty state after save
-        alert("Settings saved successfully!");
+        toast.success("Settings saved successfully!");
         return settings; // Return the saved settings
       } catch (error) {
         console.error("Error saving settings:", error);
-        alert("Error saving settings. Please try again.");
+        toast.error("Error saving settings. Please try again.");
         return null;
       } finally {
         setSaving(false);
@@ -220,10 +209,10 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
         } else {
           await settingsApi.exportUserData();
         }
-        alert("Data exported successfully!");
+        toast.success("Data exported successfully!");
       } catch (error) {
         console.error("Error exporting data:", error);
-        alert("Error exporting data. Please try again.");
+        toast.error("Error exporting data. Please try again.");
       }
     };
 

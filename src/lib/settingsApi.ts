@@ -81,7 +81,7 @@ export const settingsApi = {
       weekly_reports: true,
       theme: "light",
       language: "en",
-      date_format: "MM/dd/yyyy",
+      date_format: "MM/DD/YYYY",
       time_format: "12h",
       auto_start: false,
       reminder_interval: 15,
@@ -135,6 +135,14 @@ export const settingsApi = {
         sanitizedSettings.business_address = sanitizeUserInput(
           sanitizedSettings.business_address
         );
+      }
+
+      // Sanitize date_format to ensure it's valid
+      if (sanitizedSettings.date_format) {
+        const validFormats = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
+        if (!validFormats.includes(sanitizedSettings.date_format)) {
+          sanitizedSettings.date_format = "MM/DD/YYYY"; // Default to valid format
+        }
       }
 
       // Validate settings using partial schema

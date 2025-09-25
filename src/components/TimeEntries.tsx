@@ -18,6 +18,7 @@ import { useTimeFormat } from "../hooks/useTimeFormat";
 import CustomDropdown from "./CustomDropdown";
 import { useAuth } from "../hooks/useAuth";
 import { SafeArray } from "../utils/safeArray";
+import { toast } from "../hooks/useToast";
 
 // Custom hook for persistent date range state
 const usePersistentDateRange = (userId: string | null) => {
@@ -172,7 +173,7 @@ const TimeEntries: React.FC = () => {
       const endDateTime = new Date(`${editForm.date}T${editForm.endTime}:00`);
 
       if (endDateTime <= startDateTime) {
-        alert("End time must be after start time");
+        toast.error("End time must be after start time");
         return;
       }
 
@@ -192,7 +193,7 @@ const TimeEntries: React.FC = () => {
       cancelEditing();
     } catch (error) {
       console.error("Error updating entry:", error);
-      alert("Failed to update time entry. Please try again.");
+      toast.error("Failed to update time entry. Please try again.");
     }
   };
 

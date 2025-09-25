@@ -21,6 +21,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useTimer } from "../hooks/useTimer";
 import { secondsToHMS } from "../utils/timeUtils";
 import { sanitizeUserInput } from "../lib/validationUtils";
+import { toast } from "../hooks/useToast";
 
 const Timer: React.FC = () => {
   const { projects, timeEntries } = useTimeEntries();
@@ -196,7 +197,7 @@ const Timer: React.FC = () => {
       // Real-time subscription will handle adding the new entry
     } catch (error) {
       console.error("Error starting timer:", error);
-      alert("Failed to start timer. Please try again.");
+      toast.error("Failed to start timer. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -217,7 +218,7 @@ const Timer: React.FC = () => {
       setSelectedProjectId("");
     } catch (error) {
       console.error("Error stopping timer:", error);
-      alert("Failed to stop timer. Please try again.");
+      toast.error("Failed to stop timer. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -283,7 +284,9 @@ const Timer: React.FC = () => {
       !manualEntry.endTime ||
       manualEntry.duration <= 0
     ) {
-      alert("Please fill in start time, end time, and ensure valid duration.");
+      toast.error(
+        "Please fill in start time, end time, and ensure valid duration."
+      );
       return;
     }
 
@@ -319,7 +322,7 @@ const Timer: React.FC = () => {
       showSuccessState();
     } catch (error) {
       console.error("Error creating manual entry:", error);
-      alert("Failed to create time entry. Please try again.");
+      toast.error("Failed to create time entry. Please try again.");
     } finally {
       setIsSaving(false);
     }

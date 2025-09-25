@@ -158,7 +158,9 @@ export const ClientsResponseSchema = z.array(ClientSchema);
 
 export const UserSettingsSchema = z.object({
   id: UUIDSchema.optional(),
-  user_id: UUIDSchema,
+  user_id: UUIDSchema.optional(), // Made optional for partial updates
+  email: EmailSchema.optional(),
+  full_name: SafeStringSchema(1, 100).optional(),
   timezone: z
     .string()
     .min(1, "Timezone required")
@@ -167,26 +169,39 @@ export const UserSettingsSchema = z.object({
   time_format: z.enum(["12h", "24h"]).default("12h"),
   date_format: z
     .enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"])
+    .optional()
     .default("MM/DD/YYYY"),
   currency: z
     .string()
     .length(3, "Currency must be 3 characters")
     .regex(/^[A-Z]{3}$/, "Invalid currency code")
     .default("USD"),
-  default_hourly_rate: z
+  hourly_rate: z
     .number()
     .min(0, "Rate must be positive")
     .max(10000, "Rate too high")
     .optional(),
-  auto_start_timer: z.boolean().default(false),
-  remind_break: z.boolean().default(false),
-  break_reminder_interval: z
+  tax_rate: z
+    .number()
+    .min(0, "Tax rate must be positive")
+    .max(100, "Tax rate too high")
+    .optional(),
+  auto_start: z.boolean().default(false),
+  reminder_interval: z
     .number()
     .min(15, "Minimum 15 minutes")
     .max(480, "Maximum 8 hours")
     .default(60), // minutes
+  email_notifications: z.boolean().default(true),
+  reminder_notifications: z.boolean().default(true),
+  weekly_reports: z.boolean().default(true),
   theme: z.enum(["light", "dark", "system"]).default("system"),
-  notifications_enabled: z.boolean().default(true),
+  language: z.string().min(1).max(10).default("en"),
+  // Business info fields
+  business_name: SafeStringSchema(0, 100).optional(),
+  business_email: EmailSchema.optional(),
+  business_phone: SafeStringSchema(0, 20).optional(),
+  business_address: SafeStringSchema(0, 500).optional(),
   created_at: DateTimeSchema.optional(),
   updated_at: DateTimeSchema.optional(),
 });
