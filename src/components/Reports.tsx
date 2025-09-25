@@ -21,26 +21,32 @@ import {
   calculateProjectRevenueBreakdown,
   formatCurrency,
 } from "../utils/revenueUtils";
+import { AppStorage } from "../utils/safeStorage";
 
-// Custom hook for persistent date range state
+// Custom hook for persistent date range state with type safety
 const usePersistentDateRange = () => {
   const [dateRange, setDateRange] = useState(() => {
-    const saved = localStorage.getItem("reports-date-range");
-    return saved || "thisWeek";
+    const result = AppStorage.getReportsDateRange();
+    return result.success ? result.data || "thisWeek" : "thisWeek";
   });
 
   const [customStartDate, setCustomStartDate] = useState(() => {
-    const saved = localStorage.getItem("reports-custom-start-date");
-    if (saved) return saved;
+    const result = AppStorage.getCustomDateRange();
+    if (result.success && result.data?.start) {
+      return result.data.start;
+    }
 
     // Default to start of current month
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     return startOfMonth.toISOString().split("T")[0];
   });
+
   const [customEndDate, setCustomEndDate] = useState(() => {
-    const saved = localStorage.getItem("reports-custom-end-date");
-    if (saved) return saved;
+    const result = AppStorage.getCustomDateRange();
+    if (result.success && result.data?.end) {
+      return result.data.end;
+    }
 
     // Default to today
     const now = new Date();
@@ -49,16 +55,12 @@ const usePersistentDateRange = () => {
 
   // Save to localStorage whenever values change
   useEffect(() => {
-    localStorage.setItem("reports-date-range", dateRange);
+    AppStorage.setReportsDateRange(dateRange);
   }, [dateRange]);
 
   useEffect(() => {
-    localStorage.setItem("reports-custom-start-date", customStartDate);
-  }, [customStartDate]);
-
-  useEffect(() => {
-    localStorage.setItem("reports-custom-end-date", customEndDate);
-  }, [customEndDate]);
+    AppStorage.setCustomDateRange(customStartDate, customEndDate);
+  }, [customStartDate, customEndDate]);
 
   return {
     dateRange,
@@ -135,7 +137,8 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
     setCustomEndDate,
   } = usePersistentDateRange();
   const [selectedClientId, setSelectedClientId] = useState<string>(() => {
-    return localStorage.getItem("reports-selected-client") || "";
+    const result = AppStorage.getSelectedClientId();
+    return result.success ? result.data || "" : "";
   }); // Client filter state with persistence
   // Add user settings state
   const [userSettings, setUserSettings] = useState<UserSettings>({
@@ -203,7 +206,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
 
   // Save client selection to localStorage
   useEffect(() => {
-    localStorage.setItem("reports-selected-client", selectedClientId);
+    AppStorage.setSelectedClientId(selectedClientId);
   }, [selectedClientId]);
 
   // Handle export functionality
@@ -239,7 +242,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
         "End Time",
       ],
       ...reportData.filteredEntries.map((entry) => {
-        const project = projects.find((p) => p.id === entry.project_id);
+        const project = projects.find((p) => p.id === entry.project_id) || null;
         let tags = "";
         if (typeof entry === "object" && entry !== null && "tags" in entry) {
           const t = (entry as { tags?: unknown }).tags;

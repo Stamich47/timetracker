@@ -1,26 +1,33 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import { TimerProvider } from "./contexts/TimerContext";
 import { TimeEntriesProvider } from "./contexts/TimeEntriesContext";
 import Navigation from "./components/Navigation";
-import Timer from "./components/Timer";
-import ProjectManager from "./components/ProjectManager";
-import TimeEntries from "./components/TimeEntries";
-import Reports from "./components/Reports";
-import Projects from "./components/Projects";
-import Clients from "./components/Clients";
-import Settings from "./components/Settings";
-import type { SettingsHandle } from "./components/Settings";
 import Auth from "./components/Auth";
 import Footer from "./components/Footer";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ToastContainer from "./components/ToastContainer";
 import { Loader2, LogOut, User } from "lucide-react";
+
+// Lazy load heavy components
+const Timer = lazy(() => import("./components/Timer"));
+const ProjectManager = lazy(() => import("./components/ProjectManager"));
+const TimeEntries = lazy(() => import("./components/TimeEntries"));
+const Reports = lazy(() => import("./components/Reports"));
+const Projects = lazy(() => import("./components/Projects"));
+const Clients = lazy(() => import("./components/Clients"));
+const Settings = lazy(() => import("./components/Settings"));
+const InvoiceGeneratorModal = lazy(
+  () => import("./components/InvoiceGeneratorModal")
+);
+const UnsavedChangesModal = lazy(
+  () => import("./components/UnsavedChangesModal")
+);
+
+import type { SettingsHandle } from "./components/Settings";
 // Import theme manager to ensure it's initialized
 import { themeManager } from "./lib/themeManager";
-import InvoiceGeneratorModal from "./components/InvoiceGeneratorModal";
-import UnsavedChangesModal from "./components/UnsavedChangesModal";
 import type { TimeEntry } from "./lib/timeEntriesApi";
 import type { Project } from "./lib/projectsApi";
 import type { UserSettings } from "./lib/settingsApi";
@@ -30,6 +37,16 @@ const { errorLogger } = ErrorLoggerModule;
 
 // Initialize theme system
 themeManager.getCurrentTheme();
+
+// Loading fallback component for lazy-loaded components
+const LoadingFallback = ({ componentName }: { componentName: string }) => (
+  <div className="card p-6 flex items-center justify-center min-h-[200px]">
+    <div className="flex items-center space-x-3 text-primary">
+      <Loader2 className="h-6 w-6 animate-spin" />
+      <span>Loading {componentName}...</span>
+    </div>
+  </div>
+);
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
@@ -154,7 +171,9 @@ function AppContent() {
                   </div>
                 }
               >
-                <Timer />
+                <Suspense fallback={<LoadingFallback componentName="Timer" />}>
+                  <Timer />
+                </Suspense>
               </ErrorBoundary>
             </div>
             <div className="lg:col-span-3">
@@ -176,7 +195,11 @@ function AppContent() {
                   </div>
                 }
               >
-                <ProjectManager />
+                <Suspense
+                  fallback={<LoadingFallback componentName="Project Manager" />}
+                >
+                  <ProjectManager />
+                </Suspense>
               </ErrorBoundary>
             </div>
             <div className="lg:col-span-5">
@@ -198,32 +221,50 @@ function AppContent() {
                   </div>
                 }
               >
-                <TimeEntries />
+                <Suspense
+                  fallback={<LoadingFallback componentName="Time Entries" />}
+                >
+                  <TimeEntries />
+                </Suspense>
               </ErrorBoundary>
             </div>
           </div>
         );
       case "reports":
-        return <Reports openInvoiceModal={openInvoiceModal} />;
+        return (
+          <Suspense fallback={<LoadingFallback componentName="Reports" />}>
+            <Reports openInvoiceModal={openInvoiceModal} />
+          </Suspense>
+        );
       case "projects":
-        return <Projects />;
+        return (
+          <Suspense fallback={<LoadingFallback componentName="Projects" />}>
+            <Projects />
+          </Suspense>
+        );
       case "clients":
-        return <Clients />;
+        return (
+          <Suspense fallback={<LoadingFallback componentName="Clients" />}>
+            <Clients />
+          </Suspense>
+        );
       case "settings":
         return (
-          <Settings
-            ref={settingsRef}
-            showUnsavedModal={showUnsavedModal}
-            setShowUnsavedModal={setShowUnsavedModal}
-            handleSaveAndLeave={handleSaveAndLeave}
-            handleDiscardAndLeave={handleDiscardAndLeave}
-            setPendingNavigation={setPendingNavigation}
-            initialSettings={initialSettings}
-            setInitialSettings={setInitialSettings}
-            settingsDirty={settingsDirty}
-            setSettingsDirty={setSettingsDirty}
-            // ...other props as needed...
-          />
+          <Suspense fallback={<LoadingFallback componentName="Settings" />}>
+            <Settings
+              ref={settingsRef}
+              showUnsavedModal={showUnsavedModal}
+              setShowUnsavedModal={setShowUnsavedModal}
+              handleSaveAndLeave={handleSaveAndLeave}
+              handleDiscardAndLeave={handleDiscardAndLeave}
+              setPendingNavigation={setPendingNavigation}
+              initialSettings={initialSettings}
+              setInitialSettings={setInitialSettings}
+              settingsDirty={settingsDirty}
+              setSettingsDirty={setSettingsDirty}
+              // ...other props as needed...
+            />
+          </Suspense>
         );
       default:
         return null;
@@ -350,19 +391,35 @@ function AppContent() {
           </div>
           {/* Invoice Modal overlayed at app level */}
           {invoiceModalOpen && invoiceModalData && (
-            <InvoiceGeneratorModal
-              isOpen={invoiceModalOpen}
-              onClose={() => setInvoiceModalOpen(false)}
-              {...invoiceModalData}
-            />
+            <Suspense
+              fallback={
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <LoadingFallback componentName="Invoice Generator" />
+                </div>
+              }
+            >
+              <InvoiceGeneratorModal
+                isOpen={invoiceModalOpen}
+                onClose={() => setInvoiceModalOpen(false)}
+                {...invoiceModalData}
+              />
+            </Suspense>
           )}
           {/* Unsaved Changes Modal at app root */}
-          <UnsavedChangesModal
-            isOpen={showUnsavedModal}
-            onSave={handleSaveAndLeave}
-            onDiscard={handleDiscardAndLeave}
-            onCancel={() => setShowUnsavedModal(false)}
-          />
+          <Suspense
+            fallback={
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <LoadingFallback componentName="Unsaved Changes" />
+              </div>
+            }
+          >
+            <UnsavedChangesModal
+              isOpen={showUnsavedModal}
+              onSave={handleSaveAndLeave}
+              onDiscard={handleDiscardAndLeave}
+              onCancel={() => setShowUnsavedModal(false)}
+            />
+          </Suspense>
 
           {/* Global Toast Container */}
           <ToastContainer />

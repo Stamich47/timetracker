@@ -4,6 +4,8 @@ import React, {
   useRef,
   useImperativeHandle,
   forwardRef,
+  useMemo,
+  useCallback,
 } from "react";
 import {
   Settings as SettingsIcon,
@@ -92,34 +94,37 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
   (props, ref) => {
     // Helper to log differences between two UserSettings objects
     // Exclude backend-only fields from dirty check and diff logger
-    const EXCLUDED_FIELDS: (keyof UserSettings | string)[] = [
-      "updated_at",
-      "created_at",
-    ];
+    const EXCLUDED_FIELDS: (keyof UserSettings | string)[] = useMemo(
+      () => ["updated_at", "created_at"],
+      []
+    );
     // Diff logger removed
 
-    const defaultSettings: UserSettings = {
-      full_name: "",
-      email: "",
-      timezone: "UTC",
-      email_notifications: true,
-      reminder_notifications: true,
-      weekly_reports: true,
-      auto_start: false,
-      reminder_interval: 15,
-      hourly_rate: 0,
-      currency: "USD",
-      tax_rate: 0,
-      theme: "light",
-      language: "en",
-      date_format: "MM/dd/yyyy",
-      time_format: "12h",
-      // Add missing business fields for type safety
-      business_name: "",
-      business_email: "",
-      business_phone: "",
-      business_address: "",
-    };
+    const defaultSettings: UserSettings = useMemo(
+      () => ({
+        full_name: "",
+        email: "",
+        timezone: "UTC",
+        email_notifications: true,
+        reminder_notifications: true,
+        weekly_reports: true,
+        auto_start: false,
+        reminder_interval: 15,
+        hourly_rate: 0,
+        currency: "USD",
+        tax_rate: 0,
+        theme: "light",
+        language: "en",
+        date_format: "MM/dd/yyyy",
+        time_format: "12h",
+        // Add missing business fields for type safety
+        business_name: "",
+        business_email: "",
+        business_phone: "",
+        business_address: "",
+      }),
+      []
+    );
     const [settings, setSettings] = useState<UserSettings>(
       props.initialSettings || defaultSettings
     );
@@ -136,7 +141,7 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
       } else {
         setSettings(defaultSettings);
       }
-    }, [props.initialSettings]);
+    }, [props.initialSettings, defaultSettings, settings]);
 
     // Sync settings state with initialSettings prop after save
     useEffect(() => {
@@ -308,15 +313,18 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
 
     // Check for unsaved changes
     // Compare only user-editable fields for dirty check
-    const getComparableSettings = (obj: UserSettings | null | undefined) => {
-      if (!obj) return obj;
-      // Use Record<string, unknown> to allow deleting arbitrary fields
-      const clone: Record<string, unknown> = { ...obj };
-      EXCLUDED_FIELDS.forEach((field) => {
-        delete clone[field as string];
-      });
-      return clone;
-    };
+    const getComparableSettings = useCallback(
+      (obj: UserSettings | null | undefined) => {
+        if (!obj) return obj;
+        // Use Record<string, unknown> to allow deleting arbitrary fields
+        const clone: Record<string, unknown> = { ...obj };
+        EXCLUDED_FIELDS.forEach((field) => {
+          delete clone[field as string];
+        });
+        return clone;
+      },
+      [EXCLUDED_FIELDS]
+    );
     const hasUnsavedChanges =
       props.initialSettings &&
       JSON.stringify(getComparableSettings(settings)) !==
@@ -362,15 +370,16 @@ const Settings = forwardRef<SettingsHandle, Partial<SettingsProps>>(
 
     // Update dirty state in App when settings change
     useEffect(() => {
-      if (props.setSettingsDirty) {
+      const { setSettingsDirty, initialSettings } = props;
+      if (setSettingsDirty) {
         const dirty =
-          props.initialSettings &&
+          initialSettings &&
           JSON.stringify(getComparableSettings(settings)) !==
-            JSON.stringify(getComparableSettings(props.initialSettings));
+            JSON.stringify(getComparableSettings(initialSettings));
         // Only set dirty if initialSettings is not null
-        props.setSettingsDirty(!!dirty);
+        setSettingsDirty(!!dirty);
       }
-    }, [settings, props.initialSettings, props.setSettingsDirty]);
+    }, [settings, props, getComparableSettings]);
 
     // Expose saveSettings method to parent component
     useImperativeHandle(ref, () => ({

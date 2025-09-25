@@ -27,34 +27,34 @@ const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
 
   // Prevent body scrolling when modal is open
   useEffect(() => {
-    if (isOpen) {
-      // Save current scroll position
-      const scrollY = window.scrollY;
+    if (!isOpen) return;
 
-      // Prevent scrolling without changing position
-      document.body.style.overflow = "hidden";
-      document.body.style.paddingRight = "15px"; // Prevent layout shift from scrollbar
+    // Save current scroll position
+    const scrollY = window.scrollY;
 
-      // Handle escape key
-      const handleEscape = (event: KeyboardEvent) => {
-        if (event.key === "Escape") {
-          onClose();
-        }
-      };
+    // Prevent scrolling without changing position
+    document.body.style.overflow = "hidden";
+    document.body.style.paddingRight = "15px"; // Prevent layout shift from scrollbar
 
-      document.addEventListener("keydown", handleEscape);
+    // Handle escape key
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
 
-      return () => {
-        // Restore original styles when modal closes
-        document.body.style.overflow = "";
-        document.body.style.paddingRight = "";
+    document.addEventListener("keydown", handleEscape);
 
-        // Maintain scroll position
-        window.scrollTo(0, scrollY);
+    return () => {
+      // Restore original styles when modal closes
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
 
-        document.removeEventListener("keydown", handleEscape);
-      };
-    }
+      // Maintain scroll position
+      window.scrollTo(0, scrollY);
+
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [isOpen, onClose]);
 
   const steps = [

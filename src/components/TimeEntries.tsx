@@ -17,6 +17,7 @@ import { useTimeEntries } from "../hooks/useTimeEntries";
 import { useTimeFormat } from "../hooks/useTimeFormat";
 import CustomDropdown from "./CustomDropdown";
 import { useAuth } from "../hooks/useAuth";
+import { SafeArray } from "../utils/safeArray";
 
 // Custom hook for persistent date range state
 const usePersistentDateRange = (userId: string | null) => {
@@ -244,26 +245,23 @@ const TimeEntries: React.FC = () => {
     }
   };
 
-  const getProjectById = (
-    projectId: string | undefined
-  ): Project | undefined => {
-    return projects.find((p) => p.id === projectId);
+  const getProjectById = (projectId: string | undefined): Project | null => {
+    if (!projectId) return null;
+
+    return SafeArray.find(projects, (p: Project) => p.id === projectId) || null;
   };
 
-  const groupEntriesByDate = (entries: TimeEntry[]) => {
-    const groups: { [key: string]: TimeEntry[] } = {};
-
-    entries.forEach((entry) => {
-      const date = formatDate(new Date(entry.start_time));
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(entry);
-    });
+  const groupEntriesByDate = (
+    entries: TimeEntry[]
+  ): [string, TimeEntry[]][] => {
+    // Use type-safe groupBy helper
+    const groups = SafeArray.groupBy(entries, (entry: TimeEntry) =>
+      formatDate(new Date(entry.start_time))
+    );
 
     return Object.entries(groups).sort(
       ([a], [b]) => new Date(b).getTime() - new Date(a).getTime()
-    );
+    ) as [string, TimeEntry[]][];
   };
 
   const calculateDayTotal = (entries: TimeEntry[]): number => {

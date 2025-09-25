@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Play,
   Square,
@@ -98,7 +98,7 @@ const Timer: React.FC = () => {
     }
   }, [timer.selectedProject]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -109,9 +109,17 @@ const Timer: React.FC = () => {
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowProjectDropdown(false);
+      }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
@@ -218,7 +226,6 @@ const Timer: React.FC = () => {
   const updateDescription = async (newDescription: string) => {
     // Sanitize description input
     const sanitizedDescription = sanitizeUserInput(newDescription);
-    setDescription(sanitizedDescription);
 
     if (activeTimer) {
       try {
@@ -320,7 +327,7 @@ const Timer: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="card p-3 sm:p-6 sticky top-24 isolate">
+      <div className="card p-3 sm:p-6 top-24 isolate">
         <div className="flex items-center justify-center py-8 sm:py-12">
           <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-primary" />
           <span className="ml-2 sm:ml-3 text-secondary text-sm sm:text-base">
@@ -332,7 +339,7 @@ const Timer: React.FC = () => {
   }
 
   return (
-    <div className="card p-3 sm:p-6 sticky top-24 isolate w-full max-w-full overflow-hidden">
+    <div className="card p-3 sm:p-6 top-24 isolate w-full max-w-full overflow-hidden">
       {/* Timer Header with Mode Toggle */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -345,7 +352,11 @@ const Timer: React.FC = () => {
         </div>
 
         {/* Mode Toggle */}
-        <div className="relative flex bg-surface rounded-lg p-1 border border-theme">
+        <div
+          className="relative flex bg-surface rounded-lg p-1 border border-theme"
+          role="radiogroup"
+          aria-label="Timer mode selection"
+        >
           {/* Sliding Background Indicator */}
           <div
             className={`absolute top-1 bottom-1 bg-blue-600 rounded-md shadow-sm transition-all duration-300 ease-in-out ${
@@ -353,6 +364,7 @@ const Timer: React.FC = () => {
                 ? "left-1 right-1/2 mr-0.5"
                 : "right-1 left-1/2 ml-0.5"
             }`}
+            aria-hidden="true"
           />
 
           {/* Timer Button */}
@@ -361,8 +373,11 @@ const Timer: React.FC = () => {
             className={`relative z-10 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2 flex-1 justify-center ${
               !isManualMode ? "text-white" : "text-secondary hover:text-primary"
             }`}
+            role="radio"
+            aria-checked={!isManualMode}
+            aria-label="Switch to live timer mode"
           >
-            <TimerIcon className="w-4 h-4" />
+            <TimerIcon className="w-4 h-4" aria-hidden="true" />
             Timer
           </button>
 
@@ -373,8 +388,14 @@ const Timer: React.FC = () => {
               isManualMode ? "text-white" : "text-secondary hover:text-primary"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
             disabled={activeTimer !== null}
+            role="radio"
+            aria-checked={isManualMode}
+            aria-label={`Switch to manual entry mode${
+              activeTimer ? " (disabled while timer is running)" : ""
+            }`}
+            aria-disabled={activeTimer !== null}
           >
-            <Edit3 className="w-4 h-4" />
+            <Edit3 className="w-4 h-4" aria-hidden="true" />
             Manual
           </button>
         </div>
@@ -482,9 +503,8 @@ const Timer: React.FC = () => {
               placeholder="What did you work on?"
               value={description}
               onChange={(e) => {
-                // Sanitize input in real-time to prevent XSS
-                const sanitizedValue = sanitizeUserInput(e.target.value);
-                setDescription(sanitizedValue);
+                // Only sanitize on submit, allow spaces in real-time
+                setDescription(e.target.value);
               }}
               className="input-field w-full max-w-none"
             />
@@ -501,6 +521,15 @@ const Timer: React.FC = () => {
                 type="button"
                 onClick={() => setShowProjectDropdown(!showProjectDropdown)}
                 className="input-field w-full text-left flex items-center justify-between hover:bg-surface-hover transition-colors"
+                aria-haspopup="listbox"
+                aria-expanded={showProjectDropdown}
+                aria-label={`Select project for manual time entry. Currently selected: ${
+                  selectedProjectId
+                    ? projects.find((p) => p.id === selectedProjectId)?.name ||
+                      "Unknown project"
+                    : "No project selected"
+                }`}
+                id="manual-project-select"
               >
                 <div className="flex items-center gap-3">
                   {selectedProjectId ? (
@@ -512,6 +541,7 @@ const Timer: React.FC = () => {
                             projects.find((p) => p.id === selectedProjectId)
                               ?.color || "#3B82F6",
                         }}
+                        aria-hidden="true"
                       />
                       <span className="font-medium">
                         {projects.find((p) => p.id === selectedProjectId)
@@ -520,7 +550,10 @@ const Timer: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <div className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0" />
+                      <div
+                        className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0"
+                        aria-hidden="true"
+                      />
                       <span className="text-muted">No Project</span>
                     </>
                   )}
@@ -529,11 +562,16 @@ const Timer: React.FC = () => {
                   className={`w-5 h-5 text-muted transition-transform duration-200 ${
                     showProjectDropdown ? "rotate-180" : ""
                   }`}
+                  aria-hidden="true"
                 />
               </button>
 
               {showProjectDropdown && (
-                <div className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto scrollbar-thin">
+                <div
+                  className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto scrollbar-thin"
+                  role="listbox"
+                  aria-labelledby="manual-project-select"
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -541,8 +579,14 @@ const Timer: React.FC = () => {
                       setShowProjectDropdown(false);
                     }}
                     className="w-full px-4 py-3 text-left hover:bg-surface-hover flex items-center gap-3 border-b border-theme/10 last:border-b-0"
+                    role="option"
+                    aria-selected={!selectedProjectId}
+                    aria-label="No project selected"
                   >
-                    <div className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0" />
+                    <div
+                      className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0"
+                      aria-hidden="true"
+                    />
                     <span className="text-muted font-medium">No Project</span>
                   </button>
                   {projects.map((project) => (
@@ -554,10 +598,18 @@ const Timer: React.FC = () => {
                         setShowProjectDropdown(false);
                       }}
                       className="w-full px-4 py-3 text-left hover:bg-surface-hover flex items-center gap-3 border-b border-theme/10 last:border-b-0"
+                      role="option"
+                      aria-selected={selectedProjectId === project.id}
+                      aria-label={`Select project: ${project.name}${
+                        project.client?.name
+                          ? `, Client: ${project.client.name}`
+                          : ""
+                      }`}
                     >
                       <div
                         className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm"
                         style={{ backgroundColor: project.color || "#3B82F6" }}
+                        aria-hidden="true"
                       />
                       <div className="flex-1 min-w-0">
                         <span className="truncate text-primary font-medium block">
@@ -590,20 +642,44 @@ const Timer: React.FC = () => {
                 ? "!bg-green-500 hover:!bg-green-600 !text-white !opacity-100"
                 : "disabled:opacity-50"
             }`}
+            aria-label={
+              showSuccess
+                ? "Time entry added successfully"
+                : isSaving
+                ? "Adding time entry, please wait"
+                : manualEntry.duration <= 0
+                ? "Add time entry (disabled: please set valid start and end times)"
+                : `Add time entry for ${secondsToHMS(manualEntry.duration)}${
+                    selectedProjectId
+                      ? ` to project ${
+                          projects.find((p) => p.id === selectedProjectId)?.name
+                        }`
+                      : ""
+                  }`
+            }
           >
             {showSuccess ? (
               <>
-                <CheckCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                <CheckCircle
+                  className="w-5 h-5 mr-2 flex-shrink-0"
+                  aria-hidden="true"
+                />
                 <span>Added Successfully!</span>
               </>
             ) : isSaving ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2 flex-shrink-0" />
+                <Loader2
+                  className="w-5 h-5 animate-spin mr-2 flex-shrink-0"
+                  aria-hidden="true"
+                />
                 <span>Adding Entry...</span>
               </>
             ) : (
               <>
-                <Calendar className="w-5 h-5 mr-2 flex-shrink-0" />
+                <Calendar
+                  className="w-5 h-5 mr-2 flex-shrink-0"
+                  aria-hidden="true"
+                />
                 <span>Add Time Entry</span>
               </>
             )}
@@ -614,12 +690,24 @@ const Timer: React.FC = () => {
         <div>
           {/* Timer Display */}
           <div className="text-center mb-6">
-            <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2 font-mono">
+            <div
+              className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2 font-mono"
+              aria-label={`Elapsed time: ${secondsToHMS(elapsedTime)}`}
+              role="timer"
+              id="timer-status"
+            >
               {secondsToHMS(elapsedTime)}
             </div>
             {activeTimer && (
-              <div className="flex items-center justify-center gap-2 text-green-600">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <div
+                className="flex items-center justify-center gap-2 text-green-600"
+                role="status"
+                aria-label="Timer is currently recording"
+              >
+                <div
+                  className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+                  aria-hidden="true"
+                />
                 <span className="text-sm font-medium">Recording</span>
               </div>
             )}
@@ -640,7 +728,16 @@ const Timer: React.FC = () => {
               name="timerDescription"
               placeholder="What are you working on?"
               value={description}
-              onChange={(e) => updateDescription(e.target.value)}
+              onChange={(e) => {
+                // Update description without sanitizing on every keystroke
+                setDescription(e.target.value);
+              }}
+              onBlur={() => {
+                // Sanitize only when user finishes editing
+                if (activeTimer) {
+                  updateDescription(description);
+                }
+              }}
               className="input-field w-full max-w-none"
               disabled={isSaving}
             />
@@ -658,6 +755,16 @@ const Timer: React.FC = () => {
                 onClick={() => setShowProjectDropdown(!showProjectDropdown)}
                 className="input-field w-full text-left flex items-center justify-between hover:bg-surface-hover transition-colors"
                 disabled={activeTimer !== null || isSaving}
+                aria-haspopup="listbox"
+                aria-expanded={showProjectDropdown}
+                aria-label={`Select project for timer. Currently selected: ${
+                  selectedProjectId
+                    ? projects.find((p) => p.id === selectedProjectId)?.name ||
+                      "Unknown project"
+                    : "No project selected"
+                }${activeTimer ? " (disabled while timer is running)" : ""}`}
+                id="timer-project-select"
+                aria-disabled={activeTimer !== null || isSaving}
               >
                 <div className="flex items-center gap-3">
                   {selectedProjectId ? (
@@ -669,6 +776,7 @@ const Timer: React.FC = () => {
                             projects.find((p) => p.id === selectedProjectId)
                               ?.color || "#3B82F6",
                         }}
+                        aria-hidden="true"
                       />
                       <span className="font-medium">
                         {projects.find((p) => p.id === selectedProjectId)
@@ -677,7 +785,10 @@ const Timer: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <div className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0" />
+                      <div
+                        className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0"
+                        aria-hidden="true"
+                      />
                       <span className="text-muted">No Project</span>
                     </>
                   )}
@@ -686,11 +797,16 @@ const Timer: React.FC = () => {
                   className={`w-5 h-5 text-muted transition-transform duration-200 ${
                     showProjectDropdown ? "rotate-180" : ""
                   }`}
+                  aria-hidden="true"
                 />
               </button>
 
               {showProjectDropdown && !(activeTimer !== null || isSaving) && (
-                <div className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto scrollbar-thin">
+                <div
+                  className="absolute z-[999] w-full mt-2 bg-surface border border-theme rounded-lg shadow-xl max-h-60 overflow-auto scrollbar-thin"
+                  role="listbox"
+                  aria-labelledby="timer-project-select"
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -698,8 +814,14 @@ const Timer: React.FC = () => {
                       setShowProjectDropdown(false);
                     }}
                     className="w-full px-4 py-3 text-left hover:bg-surface-hover flex items-center gap-3 border-b border-theme/10 last:border-b-0"
+                    role="option"
+                    aria-selected={!selectedProjectId}
+                    aria-label="No project selected"
                   >
-                    <div className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0" />
+                    <div
+                      className="w-4 h-4 rounded-full bg-surface-secondary flex-shrink-0"
+                      aria-hidden="true"
+                    />
                     <span className="text-muted font-medium">No Project</span>
                   </button>
                   {projects.map((project) => (
@@ -711,10 +833,18 @@ const Timer: React.FC = () => {
                         setShowProjectDropdown(false);
                       }}
                       className="w-full px-4 py-3 text-left hover:bg-surface-hover flex items-center gap-3 border-b border-theme/10 last:border-b-0"
+                      role="option"
+                      aria-selected={selectedProjectId === project.id}
+                      aria-label={`Select project: ${project.name}${
+                        project.client?.name
+                          ? `, Client: ${project.client.name}`
+                          : ""
+                      }`}
                     >
                       <div
                         className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm"
                         style={{ backgroundColor: project.color || "#3B82F6" }}
+                        aria-hidden="true"
                       />
                       <div className="flex-1 min-w-0">
                         <span className="truncate text-primary font-medium block">
@@ -748,17 +878,38 @@ const Timer: React.FC = () => {
                   ? "bg-red-600 hover:bg-red-700 text-white"
                   : "bg-green-600 hover:bg-green-700 text-white"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
+              aria-label={
+                isSaving
+                  ? "Processing timer action..."
+                  : activeTimer
+                  ? `Stop timer for ${
+                      activeTimer.description || "untitled task"
+                    }${
+                      activeTimer.project
+                        ? ` on project ${activeTimer.project.name}`
+                        : ""
+                    }`
+                  : `Start timer${description ? ` for ${description}` : ""}${
+                      selectedProjectId
+                        ? ` on project ${
+                            projects.find((p) => p.id === selectedProjectId)
+                              ?.name
+                          }`
+                        : ""
+                    }`
+              }
+              aria-describedby={activeTimer ? "timer-status" : undefined}
             >
               {isSaving ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
               ) : activeTimer ? (
                 <>
-                  <Square className="w-5 h-5" />
+                  <Square className="w-5 h-5" aria-hidden="true" />
                   Stop
                 </>
               ) : (
                 <>
-                  <Play className="w-5 h-5" />
+                  <Play className="w-5 h-5" aria-hidden="true" />
                   Start
                 </>
               )}

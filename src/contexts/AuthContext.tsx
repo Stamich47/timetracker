@@ -13,7 +13,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
 
-    const initializeAuth = async () => {
+    const initializeAuth = () => {
       try {
         // Set up auth state listener
         const {
@@ -25,26 +25,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         });
 
-        // Get initial session
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
+        // Get initial session asynchronously
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+          if (error || !mounted) {
+            if (mounted) setLoading(false);
+            return;
+          }
 
-        if (error) {
+          if (session?.user && mounted) {
+            setUser(session.user);
+          }
+
           if (mounted) {
             setLoading(false);
           }
-          return;
-        }
-
-        if (session?.user && mounted) {
-          setUser(session.user);
-        }
-
-        if (mounted) {
-          setLoading(false);
-        }
+        });
 
         // Set failsafe timeout
         timeoutId = setTimeout(() => {
@@ -53,22 +48,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         }, 10000);
 
-        return () => {
-          subscription.unsubscribe();
-        };
+        return subscription;
       } catch {
         if (mounted) {
           setLoading(false);
         }
+        return null;
       }
     };
 
-    initializeAuth();
+    const authSubscription = initializeAuth();
 
     return () => {
       mounted = false;
       if (timeoutId) {
         clearTimeout(timeoutId);
+      }
+      if (authSubscription) {
+        authSubscription.unsubscribe();
       }
     };
   }, [loading]);
