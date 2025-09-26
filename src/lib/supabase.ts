@@ -120,7 +120,6 @@ export const dbHelpers = {
       `
       )
       .eq("user_id", userId)
-      .eq("archived", false)
       .order("name");
 
     if (error) throw error;

@@ -24,7 +24,6 @@ export interface Project {
   billable?: boolean;
   hourly_rate?: number;
   status?: "active" | "completed" | "on_hold" | "cancelled";
-  archived?: boolean;
   created_at?: string;
   updated_at?: string;
   // Joined data
@@ -40,7 +39,6 @@ export interface Client {
   name: string;
   email?: string;
   phone?: string;
-  archived?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -61,7 +59,6 @@ export const projectsApi = {
         `
         )
         .eq("user_id", userId)
-        .eq("archived", false)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -192,13 +189,7 @@ export const projectsApi = {
   // Delete project (soft delete - archive)
   async deleteProject(id: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from("projects")
-        .update({
-          archived: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id);
+      const { error } = await supabase.from("projects").delete().eq("id", id);
 
       if (error) throw error;
     } catch (error) {
@@ -216,7 +207,6 @@ export const projectsApi = {
         .from("clients")
         .select("*")
         .eq("user_id", userId)
-        .eq("archived", false)
         .order("name");
 
       if (error) throw error;
@@ -304,13 +294,7 @@ export const projectsApi = {
   // Delete client (soft delete - archive)
   async deleteClient(id: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from("clients")
-        .update({
-          archived: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id);
+      const { error } = await supabase.from("clients").delete().eq("id", id);
 
       if (error) throw error;
     } catch (error) {
