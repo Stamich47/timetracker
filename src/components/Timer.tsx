@@ -239,6 +239,24 @@ const Timer: React.FC = () => {
     }
   };
 
+  // Listen for timer shortcut (Ctrl + Space)
+  useEffect(() => {
+    const handleTimerShortcut = () => {
+      if (activeTimer) {
+        // Stop the timer
+        handleStop();
+      } else {
+        // Start the timer
+        handleStart();
+      }
+    };
+
+    window.addEventListener("timerShortcut", handleTimerShortcut);
+    return () => {
+      window.removeEventListener("timerShortcut", handleTimerShortcut);
+    };
+  });
+
   // Success notification function
   const showSuccessState = () => {
     setShowSuccess(true);

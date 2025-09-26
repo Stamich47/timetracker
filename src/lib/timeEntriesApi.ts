@@ -1,15 +1,16 @@
 import { supabase } from "./supabase";
 import { getUserIdWithFallback } from "./auth-utils";
-import * as ErrorLoggerModule from "./errorLogger";
+// import * as ErrorLoggerModule from "./errorLogger";
 import { sanitizeUserInput } from "./validationUtils";
 import { validateWithToast, validateApiResponseSoft } from "./validationUtils";
+import { apiCallWithRetry } from "./retryUtils";
 import {
   TimeEntryCreateSchema,
   TimeEntryUpdateSchema,
   TimeEntrySchema,
 } from "./validation";
 
-const { errorLogger } = ErrorLoggerModule;
+// const { errorLogger } = ErrorLoggerModule;
 
 // Keep existing interfaces for compatibility
 export interface TimeEntry {
@@ -83,12 +84,14 @@ export const timeEntriesApi = {
       if (error) throw error;
       return data as ActiveTimer | null;
     } catch (error) {
-      errorLogger.logApiError(
-        error instanceof Error ? error : new Error("Unknown error"),
-        "/time_entries",
-        "GET",
-        { operation: "getActiveTimer" }
-      );
+      console.error("Error in getActiveTimer:", error);
+      // Temporarily disable error logging
+      // errorLogger.logApiError(
+      //   error instanceof Error ? error : new Error("Unknown error"),
+      //   "/time_entries",
+      //   "GET",
+      //   { operation: "getActiveTimer" }
+      // );
       return null;
     }
   },
@@ -230,26 +233,30 @@ export const timeEntriesApi = {
     try {
       const userId = await getUserIdWithFallback();
 
-      const { data, error } = await supabase
-        .from("time_entries")
-        .select(
+      const { data, error } = await apiCallWithRetry(async () => {
+        return await supabase
+          .from("time_entries")
+          .select(
+            `
+            *,
+            project:projects(
+              id,
+              name,
+              color,
+              client:clients(id, name)
+            )
           `
-          *,
-          project:projects(
-            id, 
-            name, 
-            color,
-            client:clients(id, name)
           )
-        `
-        )
-        .eq("user_id", userId)
-        .order("start_time", { ascending: false });
+          .eq("user_id", userId)
+          .order("start_time", { ascending: false });
+      }, "getTimeEntries");
 
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error("Error getting time entries:", error);
+      console.error("Error in getTimeEntries:", error);
+      // Temporarily disable error logging to debug
+      // errorLogger.logApiError(error as Error, "getTimeEntries", "API_ERROR");
       return [];
     }
   },

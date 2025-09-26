@@ -5,6 +5,7 @@ import {
   validateWithToast,
   sanitizeUserInput,
 } from "./validationUtils";
+import { apiCallWithRetry } from "./retryUtils";
 
 // Types for settings
 export interface UserSettings {
@@ -41,11 +42,13 @@ export const settingsApi = {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("No authenticated user");
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const { data, error } = await apiCallWithRetry(async () => {
+        return await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+      }, "getSettings");
 
       if (error) {
         if (error.code === "PGRST116") {

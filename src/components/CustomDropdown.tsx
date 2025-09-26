@@ -25,7 +25,9 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   size = "md",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,6 +37,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
+        setFocusedIndex(-1);
       }
     };
 
@@ -43,6 +46,67 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Reset focused index when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFocusedIndex(-1);
+    } else {
+      // Set focused index to current selected option when opening
+      const selectedIndex = options.findIndex(
+        (option) => option.value === value
+      );
+      setFocusedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    }
+  }, [isOpen, value, options]);
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (!isOpen) {
+      // Handle opening the dropdown
+      if (
+        event.key === "Enter" ||
+        event.key === " " ||
+        event.key === "ArrowDown"
+      ) {
+        event.preventDefault();
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    // Handle navigation within open dropdown
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        setFocusedIndex((prev) => (prev + 1) % options.length);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        setFocusedIndex((prev) => (prev - 1 + options.length) % options.length);
+        break;
+      case "Home":
+        event.preventDefault();
+        setFocusedIndex(0);
+        break;
+      case "End":
+        event.preventDefault();
+        setFocusedIndex(options.length - 1);
+        break;
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        if (focusedIndex >= 0 && focusedIndex < options.length) {
+          onChange(options[focusedIndex].value);
+          setIsOpen(false);
+        }
+        break;
+      case "Escape":
+        event.preventDefault();
+        setIsOpen(false);
+        buttonRef.current?.focus();
+        break;
+    }
+  };
 
   const selectedOption = options.find((option) => option.value === value);
 
@@ -81,8 +145,10 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
         className={`
           w-full ${sizeClasses.button} ${buttonHeightClass}
           bg-surface backdrop-blur-sm
@@ -94,6 +160,14 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
           text-left font-medium text-primary
           shadow-sm hover:shadow-md
         `}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label={
+          selectedOption
+            ? `Selected: ${selectedOption.label}. Click to change selection.`
+            : `Select an option. ${options.length} options available.`
+        }
+        id={`dropdown-button-${Math.random().toString(36).substr(2, 9)}`}
       >
         <span className="truncate">
           {selectedOption ? selectedOption.label : placeholder}
@@ -104,11 +178,17 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
           } text-muted transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
+          aria-hidden="true"
         />
       </button>
 
       {isOpen && (
         <div
+          role="listbox"
+          aria-labelledby={`dropdown-button-${Math.random()
+            .toString(36)
+            .substr(2, 9)}`}
+          onKeyDown={handleKeyDown}
           className="absolute z-[100] w-full mt-1 bg-surface border border-theme rounded-lg shadow-xl backdrop-blur-sm overflow-auto scrollbar-thin"
           style={{
             backgroundColor: "var(--color-surface)",
@@ -119,10 +199,12 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
           }}
         >
           <div className={sizeClasses.dropdown}>
-            {options.map((option) => (
+            {options.map((option, index) => (
               <button
                 key={option.value}
                 type="button"
+                role="option"
+                aria-selected={value === option.value}
                 onClick={() => {
                   onChange(option.value);
                   setIsOpen(false);
@@ -133,11 +215,14 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                   focus:outline-none focus:bg-surface-hover
                   transition-colors duration-150
                   ${value === option.value ? "font-medium" : ""}
+                  ${focusedIndex === index ? "bg-surface-hover" : ""}
                 `}
                 style={{
                   backgroundColor:
                     value === option.value
                       ? "var(--color-blueSelection)"
+                      : focusedIndex === index
+                      ? "var(--color-surface-hover)"
                       : undefined,
                   color:
                     value === option.value

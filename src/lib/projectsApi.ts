@@ -8,10 +8,35 @@ import {
   ClientCreateSchema,
 } from "./validation";
 import {
-  validateApiResponse,
+  validateData,
   validateWithToast,
   sanitizeUserInput,
 } from "./validationUtils";
+import { apiCallWithRetry } from "./retryUtils";
+import { errorLogger } from "./errorLogger";
+
+// Helper function to transform validated data to match Project interface
+function transformProjectData(data: unknown[]): Project[] {
+  return data.map((project: unknown) => {
+    const p = project as Record<string, unknown>;
+    return {
+      ...p,
+      client_id: p["client_id"] || undefined,
+      description: p["description"] || undefined,
+      client: p["client"] || undefined,
+    } as Project;
+  });
+}
+
+// Helper function to transform validated data to match Client interface
+function transformClientData(data: unknown): Client {
+  const d = data as Record<string, unknown>;
+  return {
+    ...d,
+    email: d["email"] || undefined,
+    phone: d["phone"] || undefined,
+  } as Client;
+}
 
 // Types for projects
 export interface Project {
@@ -50,21 +75,40 @@ export const projectsApi = {
     try {
       const userId = await getUserIdWithFallback();
 
-      const { data, error } = await supabase
-        .from("projects")
-        .select(
+      const { data, error } = await apiCallWithRetry(async () => {
+        return await supabase
+          .from("projects")
+          .select(
+            `
+            *,
+            client:clients(id, name)
           `
-          *,
-          client:clients(id, name)
-        `
-        )
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+          )
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+      }, "getProjects");
 
       if (error) throw error;
-      return data || [];
+      const validationResult = validateData(
+        ProjectSchema.array(),
+        data || [],
+        "getProjects"
+      );
+      if (!validationResult.success) {
+        errorLogger.logError(
+          new Error(
+            `Validation failed for getProjects: ${
+              validationResult.message || "Unknown error"
+            }`
+          ),
+          undefined,
+          { errors: validationResult.errors }
+        );
+        return [];
+      }
+      return transformProjectData(validationResult.data || []);
     } catch (error) {
-      console.error("Error getting projects:", error);
+      errorLogger.logApiError(error as Error, "getProjects", "VALIDATION");
       return [];
     }
   },
@@ -112,16 +156,20 @@ export const projectsApi = {
       if (error) throw error;
 
       // Validate response data
-      const validatedResponse = validateApiResponse(
+      const validationResult = validateData(
         ProjectSchema,
         data,
-        "/projects/create"
+        "createProject"
       );
-      if (!validatedResponse.success || !validatedResponse.data) {
-        throw new Error("Invalid response from server");
+      if (!validationResult.success || !validationResult.data) {
+        throw new Error(
+          `Invalid response from server: ${
+            validationResult.message || "Unknown error"
+          }`
+        );
       }
 
-      return validatedResponse.data as Project;
+      return transformProjectData([validationResult.data])[0];
     } catch (error) {
       console.error("Error creating project:", error);
       throw error;
@@ -170,16 +218,20 @@ export const projectsApi = {
       if (error) throw error;
 
       // Validate response data
-      const validatedResponse = validateApiResponse(
+      const validationResult = validateData(
         ProjectSchema,
         data,
-        "/projects/update"
+        "updateProject"
       );
-      if (!validatedResponse.success || !validatedResponse.data) {
-        throw new Error("Invalid response from server");
+      if (!validationResult.success || !validationResult.data) {
+        throw new Error(
+          `Invalid response from server: ${
+            validationResult.message || "Unknown error"
+          }`
+        );
       }
 
-      return validatedResponse.data as Project;
+      return transformProjectData([validationResult.data])[0];
     } catch (error) {
       console.error("Error updating project:", error);
       throw error;
@@ -254,16 +306,16 @@ export const projectsApi = {
       if (error) throw error;
 
       // Validate response data
-      const validatedResponse = validateApiResponse(
-        ClientSchema,
-        data,
-        "/clients/create"
-      );
-      if (!validatedResponse.success || !validatedResponse.data) {
-        throw new Error("Invalid response from server");
+      const validationResult = validateData(ClientSchema, data, "createClient");
+      if (!validationResult.success || !validationResult.data) {
+        throw new Error(
+          `Invalid response from server: ${
+            validationResult.message || "Unknown error"
+          }`
+        );
       }
 
-      return validatedResponse.data as Client;
+      return transformClientData(validationResult.data);
     } catch (error) {
       console.error("Error creating client:", error);
       throw error;

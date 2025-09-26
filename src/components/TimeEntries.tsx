@@ -224,6 +224,23 @@ const TimeEntries: React.FC = () => {
     document.body.style.overflow = "unset";
   };
 
+  // Keyboard handling for delete confirmation modal
+  useEffect(() => {
+    if (!deleteConfirmation.isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelDelete();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [deleteConfirmation.isOpen]);
+
   const handleRestartEntry = async (entry: TimeEntry) => {
     try {
       // Stop any running timer first

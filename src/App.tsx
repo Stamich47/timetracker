@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef, Suspense, lazy } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  Suspense,
+  lazy,
+  useCallback,
+} from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import { TimerProvider } from "./contexts/TimerContext";
@@ -91,30 +98,33 @@ function AppContent() {
   }, []);
 
   // Navigation handler with unsaved changes logic
-  const handleTabChange = (newTab: string) => {
-    if (newTab === activeTab) return;
-    // Only block navigation if on settings and there are unsaved changes
-    if (activeTab === "settings" && settingsDirty) {
-      setShowUnsavedModal(true);
-      setPendingNavigation(() => () => {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          setActiveTab(newTab);
+  const handleTabChange = useCallback(
+    (newTab: string) => {
+      if (newTab === activeTab) return;
+      // Only block navigation if on settings and there are unsaved changes
+      if (activeTab === "settings" && settingsDirty) {
+        setShowUnsavedModal(true);
+        setPendingNavigation(() => () => {
+          setIsTransitioning(true);
           setTimeout(() => {
-            setIsTransitioning(false);
-          }, 50);
-        }, 200);
-      });
-      return;
-    }
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setActiveTab(newTab);
+            setActiveTab(newTab);
+            setTimeout(() => {
+              setIsTransitioning(false);
+            }, 50);
+          }, 200);
+        });
+        return;
+      }
+      setIsTransitioning(true);
       setTimeout(() => {
-        setIsTransitioning(false);
-      }, 50);
-    }, 200);
-  };
+        setActiveTab(newTab);
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 50);
+      }, 200);
+    },
+    [activeTab, settingsDirty]
+  );
 
   // Function to open modal from anywhere
   const openInvoiceModal = (data: {
@@ -128,6 +138,46 @@ function AppContent() {
     setInvoiceModalData(data);
     setInvoiceModalOpen(true);
   };
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when not typing in input fields
+      const target = event.target as HTMLElement;
+      const isInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.contentEditable === "true";
+
+      if (isInput) return;
+
+      // Navigation shortcuts (Alt + number)
+      if (event.altKey && !event.ctrlKey && !event.shiftKey) {
+        const tabs = ["timer", "reports", "projects", "clients", "settings"];
+        const num = parseInt(event.key);
+        if (num >= 1 && num <= 5) {
+          event.preventDefault();
+          handleTabChange(tabs[num - 1]);
+          return;
+        }
+      }
+
+      // Timer shortcuts (Ctrl + Space for start/stop)
+      if (event.ctrlKey && event.code === "Space") {
+        event.preventDefault();
+        // We'll need to access the timer functions here
+        // For now, we'll dispatch a custom event that the Timer component can listen to
+        const timerShortcutEvent = new CustomEvent("timerShortcut");
+        window.dispatchEvent(timerShortcutEvent);
+        return;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleTabChange]);
 
   // Handlers for modal actions
   const handleSaveAndLeave = async () => {
@@ -301,8 +351,9 @@ function AppContent() {
             <header className="fixed top-0 left-0 right-0 bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 py-4 z-50">
               <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between">
                 <button
-                  onClick={() => setActiveTab("timer")}
+                  onClick={() => handleTabChange("timer")}
                   className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity duration-200 cursor-pointer"
+                  aria-label="Go to home page - TimeTracker Pro"
                 >
                   <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
                     <svg
@@ -329,6 +380,11 @@ function AppContent() {
                     <button
                       onClick={() => setShowUserMenu(!showUserMenu)}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-white text-opacity-70 hover:text-white hover:bg-white hover:bg-opacity-10 transition-all duration-200"
+                      aria-expanded={showUserMenu}
+                      aria-haspopup="menu"
+                      aria-label={`User menu for ${
+                        user?.user_metadata?.["full_name"] || user?.email
+                      }. ${showUserMenu ? "Menu is open" : "Menu is closed"}`}
                     >
                       <User className="w-5 h-5" />
                       <span className="hidden sm:block">
@@ -337,7 +393,11 @@ function AppContent() {
                     </button>
 
                     {showUserMenu && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <div
+                        role="menu"
+                        aria-label="User account menu"
+                        className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+                      >
                         <div className="px-4 py-2 border-b border-gray-100">
                           <p className="text-sm font-medium text-gray-900">
                             {user?.user_metadata?.["full_name"] || "User"}
@@ -350,8 +410,10 @@ function AppContent() {
                             signOut();
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                          role="menuitem"
+                          aria-label="Sign out of your account"
                         >
-                          <LogOut className="w-4 h-4" />
+                          <LogOut className="w-4 h-4" aria-hidden="true" />
                           Sign Out
                         </button>
                       </div>

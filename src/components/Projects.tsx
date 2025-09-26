@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Plus,
   FolderOpen,
@@ -18,12 +19,13 @@ import {
 import { useTimeEntries } from "../hooks/useTimeEntries";
 import { getRandomProjectColor } from "../utils/colorUtils";
 import CustomDropdown from "./CustomDropdown";
-import { validateWithToast, sanitizeUserInput } from "../lib/validationUtils";
+import { validateData, sanitizeUserInput } from "../lib/validationUtils";
 import {
   ProjectCreateSchema,
   ProjectUpdateSchema,
   ClientCreateSchema,
 } from "../lib/validation";
+import type { ProjectCreate, ProjectUpdate } from "../lib/validation";
 
 const Projects: React.FC = () => {
   const { projects, refreshTimeEntries } = useTimeEntries();
@@ -34,6 +36,19 @@ const Projects: React.FC = () => {
   const [editingProject, setEditingProject] = useState<ApiProject | null>(null);
   const [showQuickClientForm, setShowQuickClientForm] = useState(false);
   const [quickClientName, setQuickClientName] = useState("");
+
+  // State for delete confirmation
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    projectId: string | null;
+  }>({ isOpen: false, projectId: null });
+
+  // State for form validation errors
+  const [validationErrors, setValidationErrors] = useState<{
+    name?: string;
+    description?: string;
+    hourly_rate?: string;
+  }>({});
 
   const [formData, setFormData] = useState({
     name: "",
@@ -64,60 +79,74 @@ const Projects: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (formData.name.trim()) {
-      try {
-        // Sanitize form inputs
-        const sanitizedData = {
-          name: sanitizeUserInput(formData.name),
-          client_id: formData.client_id || undefined,
-          color: formData.color,
-          description: sanitizeUserInput(formData.description),
-          billable: formData.billable,
-          hourly_rate: formData.hourly_rate,
-        };
+    // Clear previous validation errors
+    setValidationErrors({});
 
-        if (editingProject) {
-          // Validate update data
-          const validatedData = validateWithToast(
-            ProjectUpdateSchema,
-            sanitizedData,
-            "Project Update"
-          );
-          if (!validatedData) return;
+    // Sanitize form inputs
+    const sanitizedData = {
+      name: sanitizeUserInput(formData.name),
+      client_id: formData.client_id || undefined,
+      color: formData.color,
+      description: sanitizeUserInput(formData.description),
+      billable: formData.billable,
+      hourly_rate: formData.hourly_rate,
+    };
 
-          // Update existing project
-          await projectsApi.updateProject(editingProject.id!, validatedData);
-        } else {
-          // Validate creation data
-          const validatedData = validateWithToast(
-            ProjectCreateSchema,
-            sanitizedData,
-            "Project Creation"
-          );
-          if (!validatedData) return;
+    // Validate the data
+    const validationResult = editingProject
+      ? validateData(ProjectUpdateSchema, sanitizedData, "Project Update")
+      : validateData(ProjectCreateSchema, sanitizedData, "Project Creation");
 
-          // Add new project
-          await projectsApi.createProject(validatedData);
-        }
-
-        // Refresh projects in the shared context
-        await refreshTimeEntries();
-
-        // Reset form
-        setFormData({
-          name: "",
-          client_id: "",
-          color: getRandomProjectColor(),
-          description: "",
-          billable: true,
-          hourly_rate: 50,
+    if (!validationResult.success) {
+      // Set field-specific validation errors
+      const fieldErrors: {
+        name?: string;
+        description?: string;
+        hourly_rate?: string;
+      } = {};
+      if (validationResult.errors) {
+        Object.entries(validationResult.errors).forEach(([field, messages]) => {
+          if (messages && messages.length > 0) {
+            fieldErrors[field as keyof typeof fieldErrors] = messages[0];
+          }
         });
-        setShowAddForm(false);
-        setEditingProject(null);
-      } catch (err) {
-        console.error("Error saving project:", err);
-        setError("Failed to save project. Please try again.");
       }
+      setValidationErrors(fieldErrors);
+      return;
+    }
+
+    try {
+      if (editingProject) {
+        // Update existing project
+        await projectsApi.updateProject(
+          editingProject.id!,
+          validationResult.data! as ProjectUpdate
+        );
+      } else {
+        // Add new project
+        await projectsApi.createProject(
+          validationResult.data! as ProjectCreate
+        );
+      }
+
+      // Refresh projects in the shared context
+      await refreshTimeEntries();
+
+      // Reset form
+      setFormData({
+        name: "",
+        client_id: "",
+        color: getRandomProjectColor(),
+        description: "",
+        billable: true,
+        hourly_rate: 50,
+      });
+      setValidationErrors({});
+      setShowAddForm(false);
+      setEditingProject(null);
+    } catch (err) {
+      console.error("Error saving project:", err);
+      setError("Failed to save project. Please try again.");
     }
   };
 
@@ -134,10 +163,16 @@ const Projects: React.FC = () => {
     setShowAddForm(true);
   };
 
-  const handleDelete = async (projectId: string) => {
-    if (window.confirm("Are you sure you want to delete this project?")) {
+  const handleDelete = (projectId: string) => {
+    setDeleteConfirmation({ isOpen: true, projectId });
+    // Prevent background scrolling
+    document.body.style.overflow = "hidden";
+  };
+
+  const confirmDelete = async () => {
+    if (deleteConfirmation.projectId) {
       try {
-        await projectsApi.deleteProject(projectId);
+        await projectsApi.deleteProject(deleteConfirmation.projectId);
         // Refresh projects in the shared context
         await refreshTimeEntries();
       } catch (err) {
@@ -145,7 +180,33 @@ const Projects: React.FC = () => {
         setError("Failed to delete project. Please try again.");
       }
     }
+    setDeleteConfirmation({ isOpen: false, projectId: null });
+    // Restore scrolling
+    document.body.style.overflow = "unset";
   };
+
+  const cancelDelete = () => {
+    setDeleteConfirmation({ isOpen: false, projectId: null });
+    // Restore scrolling
+    document.body.style.overflow = "unset";
+  };
+
+  // Keyboard handling for delete confirmation modal
+  useEffect(() => {
+    if (!deleteConfirmation.isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelDelete();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [deleteConfirmation.isOpen]);
 
   const handleCancel = () => {
     setFormData({
@@ -169,14 +230,21 @@ const Projects: React.FC = () => {
         const sanitizedName = sanitizeUserInput(quickClientName.trim());
         const clientData = { name: sanitizedName };
 
-        const validatedData = validateWithToast(
+        const validationResult = validateData(
           ClientCreateSchema,
           clientData,
           "Client Creation"
         );
-        if (!validatedData) return;
 
-        const newClient = await projectsApi.createClient(validatedData);
+        if (!validationResult.success) {
+          // For quick client creation, show a simple error message
+          setError("Invalid client name. Please try again.");
+          return;
+        }
+
+        const newClient = await projectsApi.createClient(
+          validationResult.data!
+        );
 
         // Refresh clients list
         await loadData();
@@ -255,9 +323,18 @@ const Projects: React.FC = () => {
                     name: e.target.value,
                   })
                 }
-                className="input-field"
+                className={`input-field ${
+                  validationErrors.name
+                    ? "border-red-500 focus:border-red-500"
+                    : ""
+                }`}
                 placeholder="Enter project name"
               />
+              {validationErrors.name && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {validationErrors.name}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-primary mb-1">
@@ -379,11 +456,20 @@ const Projects: React.FC = () => {
                       hourly_rate: Number(e.target.value),
                     })
                   }
-                  className="input-field pl-10"
+                  className={`input-field pl-10 ${
+                    validationErrors.hourly_rate
+                      ? "border-red-500 focus:border-red-500"
+                      : ""
+                  }`}
                   placeholder="50"
                   min="0"
                   step="0.01"
                 />
+                {validationErrors.hourly_rate && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {validationErrors.hourly_rate}
+                  </p>
+                )}
               </div>
             </div>
             <div className="md:col-span-2">
@@ -398,10 +484,19 @@ const Projects: React.FC = () => {
                     description: e.target.value,
                   })
                 }
-                className="input-field"
+                className={`input-field ${
+                  validationErrors.description
+                    ? "border-red-500 focus:border-red-500"
+                    : ""
+                }`}
                 rows={3}
                 placeholder="Project description..."
               />
+              {validationErrors.description && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {validationErrors.description}
+                </p>
+              )}
             </div>
             <div className="md:col-span-2">
               <label className="flex items-center">
@@ -539,6 +634,59 @@ const Projects: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.isOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+            }}
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full shadow-xl transform transition-all">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Delete Project
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                Are you sure you want to delete this project? All associated
+                time entries will remain but will no longer be linked to this
+                project.
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelDelete}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

@@ -16,7 +16,9 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
 
   const tabs = [
     { id: "timer", label: "Timer", icon: Timer },
@@ -34,6 +36,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
         !mobileMenuRef.current.contains(event.target as Node)
       ) {
         setIsMobileMenuOpen(false);
+        setFocusedIndex(-1);
       }
     };
 
@@ -42,6 +45,57 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Reset focused index when menu closes
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      setFocusedIndex(-1);
+    }
+  }, [isMobileMenuOpen]);
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (!isMobileMenuOpen) {
+      // Handle opening the menu
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        setIsMobileMenuOpen(true);
+        setFocusedIndex(0);
+      }
+      return;
+    }
+
+    // Handle navigation within open menu
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        setFocusedIndex((prev) => (prev + 1) % tabs.length);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        setFocusedIndex((prev) => (prev - 1 + tabs.length) % tabs.length);
+        break;
+      case "Home":
+        event.preventDefault();
+        setFocusedIndex(0);
+        break;
+      case "End":
+        event.preventDefault();
+        setFocusedIndex(tabs.length - 1);
+        break;
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        if (focusedIndex >= 0 && focusedIndex < tabs.length) {
+          handleTabClick(tabs[focusedIndex].id);
+        }
+        break;
+      case "Escape":
+        event.preventDefault();
+        setIsMobileMenuOpen(false);
+        hamburgerButtonRef.current?.focus();
+        break;
+    }
+  };
 
   const handleTabClick = (tabId: string) => {
     if (tabId === activeTab) return;
@@ -74,7 +128,11 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   return (
     <>
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex items-center gap-1">
+      <nav
+        className="hidden md:flex items-center gap-1"
+        role="navigation"
+        aria-label="Main navigation"
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -88,8 +146,12 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
                   ? "text-white bg-white bg-opacity-20 font-medium"
                   : "text-white text-opacity-70 hover:text-white hover:bg-white hover:bg-opacity-10"
               }`}
+              aria-current={isActive ? "page" : undefined}
+              aria-label={`Navigate to ${tab.label} ${
+                isActive ? "(current page)" : ""
+              }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-4 h-4" aria-hidden="true" />
               <span>{tab.label}</span>
             </button>
           );
@@ -100,22 +162,35 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
       <div className="md:hidden relative" ref={mobileMenuRef}>
         {/* Hamburger Button */}
         <button
+          ref={hamburgerButtonRef}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onKeyDown={handleKeyDown}
           className="flex items-center justify-center p-2 rounded-lg text-white text-opacity-70 hover:text-white hover:bg-white hover:bg-opacity-10 transition-all duration-200"
+          aria-expanded={isMobileMenuOpen}
+          aria-haspopup="menu"
+          aria-label={
+            isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"
+          }
         >
           {isMobileMenuOpen ? (
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           ) : (
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5" aria-hidden="true" />
           )}
         </button>
 
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
-          <div className="absolute right-0 top-full mt-2 w-48 bg-white bg-opacity-95 backdrop-blur-md rounded-lg shadow-lg border border-white border-opacity-20 py-2 z-50">
-            {tabs.map((tab) => {
+          <div
+            role="menu"
+            aria-label="Mobile navigation menu"
+            onKeyDown={handleKeyDown}
+            className="absolute right-0 top-full mt-2 w-48 bg-white bg-opacity-95 backdrop-blur-md rounded-lg shadow-lg border border-white border-opacity-20 py-2 z-50"
+          >
+            {tabs.map((tab, index) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
+              const isFocused = focusedIndex === index;
 
               return (
                 <button
@@ -124,10 +199,17 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-200 ${
                     isActive
                       ? "bg-blue-600 text-white font-medium"
+                      : isFocused
+                      ? "bg-gray-200 text-gray-900"
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
+                  role="menuitem"
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={`Navigate to ${tab.label} ${
+                    isActive ? "(current page)" : ""
+                  }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4" aria-hidden="true" />
                   <span>{tab.label}</span>
                 </button>
               );

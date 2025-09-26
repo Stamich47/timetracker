@@ -53,6 +53,8 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Form state for invoice setup
   const [formData, setFormData] = useState({
@@ -68,33 +70,72 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
     invoiceStyle: "detailed" as InvoiceStyle,
   });
 
-  // Initialize form data when modal opens (autopopulate business info from userSettings)
+  // Focus management
   useEffect(() => {
     if (isOpen) {
-      let clientName = "";
-      if (selectedClientId) {
-        // Find client info from projects
-        const clientProjects = projects.filter(
-          (p) => p.client_id === selectedClientId
-        );
-        clientName = clientProjects[0]?.client?.name || "";
+      // Store the currently focused element
+      previousFocusRef.current = document.activeElement as HTMLElement;
+
+      // Focus the modal
+      setTimeout(() => {
+        if (modalRef.current) {
+          const focusableElements = modalRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          const firstFocusableElement = focusableElements[0] as HTMLElement;
+          if (firstFocusableElement) {
+            firstFocusableElement.focus();
+          }
+        }
+      }, 100);
+    } else {
+      // Restore focus when modal closes
+      if (previousFocusRef.current) {
+        previousFocusRef.current.focus();
       }
-      setFormData((prev) => ({
-        ...prev,
-        clientName: clientName || prev.clientName,
-        dueDate:
-          prev.dueDate ||
-          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-        businessName: prev.businessName || userSettings.business_name || "",
-        businessEmail: prev.businessEmail || userSettings.business_email || "",
-        businessPhone: prev.businessPhone || userSettings.business_phone || "",
-        businessAddress:
-          prev.businessAddress || userSettings.business_address || "",
-      }));
     }
-  }, [isOpen, selectedClientId, projects, userSettings]);
+  }, [isOpen]);
+
+  // Focus trapping
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (event.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstFocusableElement = focusableElements[0] as HTMLElement;
+        const lastFocusableElement = focusableElements[
+          focusableElements.length - 1
+        ] as HTMLElement;
+
+        if (event.shiftKey) {
+          // Shift + Tab
+          if (document.activeElement === firstFocusableElement) {
+            event.preventDefault();
+            lastFocusableElement.focus();
+          }
+        } else {
+          // Tab
+          if (document.activeElement === lastFocusableElement) {
+            event.preventDefault();
+            firstFocusableElement.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   // Generate invoice when moving to preview
   const handleGenerateInvoice = async () => {
@@ -168,12 +209,8 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
   const handleExportPDF = async () => {
     if (!invoice) return;
     try {
-      const { exportInvoiceAsPDF } = await import("../utils/invoiceUtils");
-      await exportInvoiceAsPDF(
-        invoice,
-        formData.invoiceStyle,
-        logoDataUrl ?? undefined
-      );
+      const { exportInvoiceAsPDF } = await import("../utils/pdfUtils");
+      await exportInvoiceAsPDF(invoice, logoDataUrl ?? undefined);
     } catch (error) {
       console.error("Error exporting PDF:", error);
     }
@@ -220,9 +257,15 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
         <div
           className="fixed inset-0 bg-black bg-opacity-50"
           onClick={onClose}
+          aria-hidden="true"
         />
 
         <div
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invoice-modal-title"
+          aria-describedby="invoice-modal-description"
           className={`relative w-full max-w-4xl rounded-lg border shadow-xl ${themeClasses.modal}`}
         >
           {/* Header */}
@@ -232,8 +275,11 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
             }`}
           >
             <div className="flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-blue-500" />
-              <h2 className={`text-lg font-semibold ${themeClasses.text}`}>
+              <FileText className="h-5 w-5 text-blue-500" aria-hidden="true" />
+              <h2
+                id="invoice-modal-title"
+                className={`text-lg font-semibold ${themeClasses.text}`}
+              >
                 Generate Invoice
               </h2>
             </div>
@@ -242,13 +288,14 @@ const InvoiceGeneratorModal: React.FC<InvoiceGeneratorModalProps> = ({
               className={`rounded-lg p-1 transition-colors ${
                 themeType === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"
               }`}
+              aria-label="Close invoice generator modal"
             >
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-6">
+          <div id="invoice-modal-description" className="p-6">
             {/* Step indicator */}
             <div className="mb-6 flex items-center justify-center space-x-4">
               {["setup", "preview", "export"].map((stepName, index) => (
