@@ -37,11 +37,10 @@ export class ErrorLogger {
   /**
    * Log React component errors (from Error Boundaries)
    */
-  logReactError(
-    /* error: Error,
+  logReactError() /* error: Error,
     errorInfo: ErrorInfo,
     context?: Record<string, unknown> */
-  ) {
+  {
     // const errorDetails: ErrorDetails = {
     //   message: error.message,
     //   stack: error.stack,

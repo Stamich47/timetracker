@@ -38,9 +38,9 @@ import { themeManager } from "./lib/themeManager";
 import type { TimeEntry } from "./lib/timeEntriesApi";
 import type { Project } from "./lib/projectsApi";
 import type { UserSettings } from "./lib/settingsApi";
-import * as ErrorLoggerModule from "./lib/errorLogger";
+// import * as ErrorLoggerModule from "./lib/errorLogger";
 
-const { errorLogger } = ErrorLoggerModule;
+// const { errorLogger } = ErrorLoggerModule;
 
 // Initialize theme system
 themeManager.getCurrentTheme();
@@ -204,10 +204,8 @@ function AppContent() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-8">
             <div className="lg:col-span-2">
               <ErrorBoundary
-                onError={(error, errorInfo) => {
-                  errorLogger.logReactError(error, errorInfo, {
-                    component: "Timer",
-                  });
+                onError={() => {
+                  // Error logging temporarily disabled
                 }}
                 fallback={
                   <div className="card p-6 text-center">
@@ -228,10 +226,8 @@ function AppContent() {
             </div>
             <div className="lg:col-span-3">
               <ErrorBoundary
-                onError={(error, errorInfo) => {
-                  errorLogger.logReactError(error, errorInfo, {
-                    component: "ProjectManager",
-                  });
+                onError={() => {
+                  // Error logging temporarily disabled
                 }}
                 fallback={
                   <div className="card p-6 text-center">
@@ -254,10 +250,8 @@ function AppContent() {
             </div>
             <div className="lg:col-span-5">
               <ErrorBoundary
-                onError={(error, errorInfo) => {
-                  errorLogger.logReactError(error, errorInfo, {
-                    component: "TimeEntries",
-                  });
+                onError={() => {
+                  // Error logging temporarily disabled
                 }}
                 fallback={
                   <div className="card p-6 text-center">
@@ -494,11 +488,8 @@ function AppContent() {
 function App() {
   return (
     <ErrorBoundary
-      onError={(error, errorInfo) => {
-        errorLogger.logReactError(error, errorInfo, {
-          component: "App Root",
-          timestamp: new Date().toISOString(),
-        });
+      onError={() => {
+        // Error logging temporarily disabled
       }}
     >
       <AuthProvider>
