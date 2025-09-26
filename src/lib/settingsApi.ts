@@ -301,7 +301,6 @@ export const settingsApi = {
         "client_id",
         "hourly_rate",
         "color",
-        "is_active",
         "created_at",
         "updated_at",
       ];

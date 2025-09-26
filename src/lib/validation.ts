@@ -99,7 +99,6 @@ export const ProjectCreateSchema = z.object({
     .min(0, "Rate must be positive")
     .max(10000, "Rate too high")
     .optional(),
-  is_active: z.boolean().default(true),
   estimated_hours: z
     .number()
     .min(0, "Estimated hours must be positive")
@@ -109,11 +108,23 @@ export const ProjectCreateSchema = z.object({
 
 export const ProjectUpdateSchema = ProjectCreateSchema.partial();
 
-export const ProjectSchema = ProjectCreateSchema.extend({
+export const ProjectSchema = z.object({
   id: UUIDSchema,
+  name: SafeStringSchema(1, 100),
+  color: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid hex color format"),
+  description: SafeStringSchema(0, 1000).nullable().optional(),
+  client_id: UUIDSchema.nullable().optional(),
   user_id: UUIDSchema,
   created_at: DateTimeSchema,
   updated_at: DateTimeSchema,
+  // Allow nested client data from Supabase joins
+  client: z
+    .object({
+      id: UUIDSchema,
+      name: z.string(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export const ProjectsResponseSchema = z.array(ProjectSchema);
@@ -138,13 +149,23 @@ export const ClientCreateSchema = z.object({
     .min(0, "Rate must be positive")
     .max(10000, "Rate too high")
     .optional(),
-  is_active: z.boolean().default(true),
 });
 
 export const ClientUpdateSchema = ClientCreateSchema.partial();
 
-export const ClientSchema = ClientCreateSchema.extend({
+export const ClientSchema = z.object({
   id: UUIDSchema,
+  name: SafeStringSchema(1, 100),
+  email: EmailSchema.nullable().optional(),
+  company: SafeStringSchema(0, 100).nullable().optional(),
+  phone: z
+    .string()
+    .regex(/^[\d\s\-+()]+$/, "Invalid phone format")
+    .max(20, "Phone too long")
+    .nullable()
+    .optional(),
+  address: SafeStringSchema(0, 500).nullable().optional(),
+  notes: SafeStringSchema(0, 1000).nullable().optional(),
   user_id: UUIDSchema,
   created_at: DateTimeSchema,
   updated_at: DateTimeSchema,

@@ -252,7 +252,7 @@ const Projects: React.FC = () => {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    name: sanitizeUserInput(e.target.value),
+                    name: e.target.value,
                   })
                 }
                 className="input-field"
@@ -331,11 +331,15 @@ const Projects: React.FC = () => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-primary mb-1">
+              <label
+                htmlFor="project-color-picker"
+                className="block text-sm font-medium text-primary mb-1"
+              >
                 Color
               </label>
               <input
                 type="color"
+                id="project-color-picker"
                 value={formData.color}
                 onChange={(e) =>
                   setFormData({ ...formData, color: e.target.value })
@@ -348,7 +352,15 @@ const Projects: React.FC = () => {
                     "var(--color-inputBg, rgba(255, 255, 255, 0.9))",
                   borderRadius: "0.5rem",
                 }}
+                aria-label={`Project color picker. Current color: ${formData.color}`}
+                aria-describedby="color-picker-description"
               />
+              <div
+                id="color-picker-description"
+                className="text-xs text-muted mt-1"
+              >
+                Choose a color to identify this project visually
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-primary mb-1">
@@ -383,7 +395,7 @@ const Projects: React.FC = () => {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    description: sanitizeUserInput(e.target.value),
+                    description: e.target.value,
                   })
                 }
                 className="input-field"
