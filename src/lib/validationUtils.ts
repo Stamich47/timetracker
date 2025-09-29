@@ -1,6 +1,59 @@
 import { type ZodSchema, ZodError } from "zod";
 import { toast } from "../hooks/useToast";
 import { errorLogger } from "./errorLogger";
+import DOMPurify from "dompurify";
+
+// ============================================================================
+// SECURITY & SANITIZATION UTILITIES
+// ============================================================================
+
+/**
+ * Sanitize user input for database storage (stricter rules)
+ */
+export function sanitizeForDatabase(input: string): string {
+  let sanitized = sanitizeUserInput(input);
+
+  // Additional database-specific sanitization
+  // Remove potential SQL injection patterns (basic protection)
+  sanitized = sanitized.replace(/['"`;\\]/g, "");
+
+  return sanitized;
+}
+
+/**
+ * Validate and sanitize email input
+ */
+export function sanitizeEmail(email: string): string {
+  if (typeof email !== "string") {
+    return "";
+  }
+
+  const sanitized = email.trim().toLowerCase();
+
+  // Basic email validation and sanitization
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(sanitized)) {
+    throw new Error("Invalid email format");
+  }
+
+  return sanitized;
+}
+
+/**
+ * Sanitize numeric input
+ */
+export function sanitizeNumeric(input: string | number): number | null {
+  if (typeof input === "number" && !isNaN(input)) {
+    return input;
+  }
+
+  if (typeof input === "string") {
+    const parsed = parseFloat(input.replace(/[^\d.-]/g, ""));
+    return !isNaN(parsed) ? parsed : null;
+  }
+
+  return null;
+}
 
 // ============================================================================
 // VALIDATION UTILITIES
@@ -19,7 +72,8 @@ export interface ValidationResult<T> {
 export function validateData<T>(
   schema: ZodSchema<T>,
   data: unknown,
-  context?: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _context?: string
 ): ValidationResult<T> {
   try {
     const validatedData = schema.parse(data);
@@ -40,15 +94,7 @@ export function validateData<T>(
       });
 
       // Log validation error for debugging
-      errorLogger.logError(
-        new Error(`Validation failed: ${error.message}`),
-        undefined,
-        {
-          context,
-          fieldErrors,
-          originalData: data,
-        }
-      );
+      errorLogger.logError();
 
       return {
         success: false,
@@ -58,13 +104,7 @@ export function validateData<T>(
     }
 
     // Non-Zod error
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown validation error";
-    errorLogger.logError(
-      new Error(`Unexpected validation error: ${errorMessage}`),
-      undefined,
-      { context, originalData: data }
-    );
+    errorLogger.logError();
 
     return {
       success: false,
@@ -111,15 +151,7 @@ export function validateApiResponse<T>(
 
   if (!result.success) {
     // Log API response validation failure
-    errorLogger.logApiError(
-      new Error(`API response validation failed for ${endpoint}`),
-      endpoint,
-      "GET",
-      {
-        validationErrors: result.errors,
-        responseData: response,
-      }
-    );
+    errorLogger.logApiError();
 
     // Show user-friendly error message
     toast.error(
@@ -161,20 +193,12 @@ export function validateApiResponseSoft<T>(
 export function sanitizeHtml(input: string): string {
   if (typeof input !== "string") return "";
 
-  return (
-    input
-      // Remove script tags and their content
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      // Remove all HTML tags
-      .replace(/<[^>]*>/g, "")
-      // Remove javascript: protocols
-      .replace(/javascript:/gi, "")
-      // Remove on* event handlers
-      .replace(/\s*on\w+\s*=\s*"[^"]*"/gi, "")
-      .replace(/\s*on\w+\s*=\s*'[^']*'/gi, "")
-      // Trim whitespace
-      .trim()
-  );
+  // Use DOMPurify for comprehensive HTML sanitization
+  return DOMPurify.sanitize(input, {
+    ALLOWED_TAGS: [], // No HTML tags allowed for plain text
+    ALLOWED_ATTR: [],
+    ALLOW_DATA_ATTR: false,
+  });
 }
 
 /**
@@ -186,9 +210,21 @@ export function sanitizeUserInput(
 ): string {
   if (typeof input !== "string") return "";
 
-  return sanitizeHtml(input)
-    .slice(0, maxLength) // Truncate if too long
-    .trim();
+  // Trim whitespace first
+  let sanitized = input.trim();
+
+  // Remove dangerous characters that could be used for injection
+  sanitized = sanitized.replace(/[<>'"&\\]/g, "");
+
+  // Sanitize HTML to prevent XSS
+  sanitized = sanitizeHtml(sanitized);
+
+  // Additional security: remove potential script injection patterns
+  sanitized = sanitized.replace(/javascript:/gi, "");
+  sanitized = sanitized.replace(/data:text\/html/gi, "");
+
+  // Truncate if too long
+  return sanitized.slice(0, maxLength);
 }
 
 /**

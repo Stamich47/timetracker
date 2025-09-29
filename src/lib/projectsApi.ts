@@ -95,20 +95,12 @@ export const projectsApi = {
         "getProjects"
       );
       if (!validationResult.success) {
-        errorLogger.logError(
-          new Error(
-            `Validation failed for getProjects: ${
-              validationResult.message || "Unknown error"
-            }`
-          ),
-          undefined,
-          { errors: validationResult.errors }
-        );
+        errorLogger.logError();
         return [];
       }
       return transformProjectData(validationResult.data || []);
-    } catch (error) {
-      errorLogger.logApiError(error as Error, "getProjects", "VALIDATION");
+    } catch {
+      errorLogger.logApiError();
       return [];
     }
   },

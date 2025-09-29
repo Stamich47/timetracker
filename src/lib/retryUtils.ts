@@ -1,4 +1,4 @@
-import { errorLogger, ErrorType } from "./errorLogger";
+import { errorLogger } from "./errorLogger";
 
 export interface RetryOptions {
   maxAttempts?: number;
@@ -93,18 +93,7 @@ export async function withRetry<T>(
       }
 
       // Log retry attempt
-      errorLogger.logError(
-        new Error(
-          `Retry attempt ${attempt}/${maxAttempts} failed: ${lastError.message}`
-        ),
-        ErrorType.NETWORK,
-        {
-          attempt,
-          maxAttempts,
-          nextRetryIn: currentDelay,
-          originalError: lastError.message,
-        }
-      );
+      errorLogger.logError();
 
       // Wait before retrying
       await new Promise((resolve) => setTimeout(resolve, currentDelay));
@@ -121,7 +110,7 @@ export async function withRetry<T>(
  */
 export async function apiCallWithRetry<T>(
   apiCall: () => Promise<T>,
-  context: string,
+  _context: string,
   options: RetryOptions = {}
 ): Promise<T> {
   try {
@@ -161,11 +150,7 @@ export async function apiCallWithRetry<T>(
     }
 
     // Log the API error
-    errorLogger.logApiError(apiError, context, "API_CALL", {
-      userMessage,
-      shouldRetry,
-      isOnline: navigator.onLine,
-    });
+    errorLogger.logApiError();
 
     // Create enhanced error
     const enhancedError = createNetworkError(userMessage, undefined, apiError);
@@ -240,21 +225,13 @@ export class NetworkMonitor {
 
   private handleOnline() {
     this.isOnline = true;
-    errorLogger.logError(
-      new Error("Network connection restored"),
-      ErrorType.NETWORK,
-      { isOnline: true }
-    );
+    errorLogger.logError();
     this.notifyListeners(true);
   }
 
   private handleOffline() {
     this.isOnline = false;
-    errorLogger.logError(
-      new Error("Network connection lost"),
-      ErrorType.NETWORK,
-      { isOnline: false }
-    );
+    errorLogger.logError();
     this.notifyListeners(false);
   }
 

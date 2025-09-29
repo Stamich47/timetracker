@@ -16,6 +16,7 @@ import Footer from "./components/Footer";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ToastContainer from "./components/ToastContainer";
 import { Loader2, LogOut, User } from "lucide-react";
+import { initializeCSRFProtection } from "./lib/csrfProtection";
 
 // Lazy load heavy components
 const Timer = lazy(() => import("./components/Timer"));
@@ -79,6 +80,11 @@ function AppContent() {
   const [settingsDirty, setSettingsDirty] = useState(false); // Track unsaved changes
   const userMenuRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<SettingsHandle>(null);
+
+  // Initialize CSRF protection on app start
+  useEffect(() => {
+    initializeCSRFProtection();
+  }, []);
 
   // Close user menu when clicking outside
   useEffect(() => {
