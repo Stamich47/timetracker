@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Users,
   Settings,
+  Target,
   Menu,
   X,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: "timer", label: "Timer", icon: Timer },
     { id: "reports", label: "Reports", icon: BarChart3 },
+    { id: "goals", label: "Goals", icon: Target },
     { id: "projects", label: "Projects", icon: FolderOpen },
     { id: "clients", label: "Clients", icon: Users },
     { id: "settings", label: "Settings", icon: Settings },

@@ -10,6 +10,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import { TimerProvider } from "./contexts/TimerContext";
 import { TimeEntriesProvider } from "./contexts/TimeEntriesContext";
+import { GoalsProvider } from "./contexts/GoalsContext";
 import Navigation from "./components/Navigation";
 import Auth from "./components/Auth";
 import Footer from "./components/Footer";
@@ -23,6 +24,7 @@ const Timer = lazy(() => import("./components/Timer"));
 const ProjectManager = lazy(() => import("./components/ProjectManager"));
 const TimeEntries = lazy(() => import("./components/TimeEntries"));
 const Reports = lazy(() => import("./components/Reports"));
+const Goals = lazy(() => import("./components/Goals"));
 const Projects = lazy(() => import("./components/Projects"));
 const Clients = lazy(() => import("./components/Clients"));
 const Settings = lazy(() => import("./components/Settings"));
@@ -159,9 +161,16 @@ function AppContent() {
 
       // Navigation shortcuts (Alt + number)
       if (event.altKey && !event.ctrlKey && !event.shiftKey) {
-        const tabs = ["timer", "reports", "projects", "clients", "settings"];
+        const tabs = [
+          "timer",
+          "reports",
+          "goals",
+          "projects",
+          "clients",
+          "settings",
+        ];
         const num = parseInt(event.key);
-        if (num >= 1 && num <= 5) {
+        if (num >= 1 && num <= 6) {
           event.preventDefault();
           handleTabChange(tabs[num - 1]);
           return;
@@ -286,6 +295,12 @@ function AppContent() {
             <Reports openInvoiceModal={openInvoiceModal} />
           </Suspense>
         );
+      case "goals":
+        return (
+          <Suspense fallback={<LoadingFallback componentName="Goals" />}>
+            <Goals />
+          </Suspense>
+        );
       case "projects":
         return (
           <Suspense fallback={<LoadingFallback componentName="Projects" />}>
@@ -342,150 +357,154 @@ function AppContent() {
   return (
     <TimerProvider>
       <TimeEntriesProvider>
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-10"></div>
-          </div>
+        <GoalsProvider>
+          <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-10"></div>
+            </div>
 
-          <div className="relative z-10 flex flex-col min-h-screen">
-            <header className="fixed top-0 left-0 right-0 bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 py-4 z-50">
-              <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between">
-                <button
-                  onClick={() => handleTabChange("timer")}
-                  className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity duration-200 cursor-pointer"
-                  aria-label="Go to home page - TimeTracker Pro"
-                >
-                  <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
-                    <svg
-                      className="w-5 h-5 sm:w-6 sm:h-6 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                    </svg>
-                  </div>
-                  <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    TimeTracker Pro
-                  </h1>
-                </button>
-
-                <div className="flex items-center gap-4">
-                  <Navigation
-                    activeTab={activeTab}
-                    onTabChange={handleTabChange}
-                  />
-
-                  {/* User Menu */}
-                  <div className="relative" ref={userMenuRef}>
-                    <button
-                      onClick={() => setShowUserMenu(!showUserMenu)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-white text-opacity-70 hover:text-white hover:bg-white hover:bg-opacity-10 transition-all duration-200"
-                      aria-expanded={showUserMenu}
-                      aria-haspopup="menu"
-                      aria-label={`User menu for ${
-                        user?.user_metadata?.["full_name"] || user?.email
-                      }. ${showUserMenu ? "Menu is open" : "Menu is closed"}`}
-                    >
-                      <User className="w-5 h-5" />
-                      <span className="hidden sm:block">
-                        {user?.user_metadata?.["full_name"] || user?.email}
-                      </span>
-                    </button>
-
-                    {showUserMenu && (
-                      <div
-                        role="menu"
-                        aria-label="User account menu"
-                        className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+            <div className="relative z-10 flex flex-col min-h-screen">
+              <header className="fixed top-0 left-0 right-0 bg-white bg-opacity-10 backdrop-blur-md border-b border-white border-opacity-20 py-4 z-50">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between">
+                  <button
+                    onClick={() => handleTabChange("timer")}
+                    className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity duration-200 cursor-pointer"
+                    aria-label="Go to home page - TimeTracker Pro"
+                  >
+                    <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
+                      <svg
+                        className="w-5 h-5 sm:w-6 sm:h-6 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">
-                            {user?.user_metadata?.["full_name"] || "User"}
-                          </p>
-                          <p className="text-xs text-gray-500">{user?.email}</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setShowUserMenu(false);
-                            signOut();
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                          role="menuitem"
-                          aria-label="Sign out of your account"
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                    </div>
+                    <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                      TimeTracker Pro
+                    </h1>
+                  </button>
+
+                  <div className="flex items-center gap-4">
+                    <Navigation
+                      activeTab={activeTab}
+                      onTabChange={handleTabChange}
+                    />
+
+                    {/* User Menu */}
+                    <div className="relative" ref={userMenuRef}>
+                      <button
+                        onClick={() => setShowUserMenu(!showUserMenu)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-white text-opacity-70 hover:text-white hover:bg-white hover:bg-opacity-10 transition-all duration-200"
+                        aria-expanded={showUserMenu}
+                        aria-haspopup="menu"
+                        aria-label={`User menu for ${
+                          user?.user_metadata?.["full_name"] || user?.email
+                        }. ${showUserMenu ? "Menu is open" : "Menu is closed"}`}
+                      >
+                        <User className="w-5 h-5" />
+                        <span className="hidden sm:block">
+                          {user?.user_metadata?.["full_name"] || user?.email}
+                        </span>
+                      </button>
+
+                      {showUserMenu && (
+                        <div
+                          role="menu"
+                          aria-label="User account menu"
+                          className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
                         >
-                          <LogOut className="w-4 h-4" aria-hidden="true" />
-                          Sign Out
-                        </button>
-                      </div>
-                    )}
+                          <div className="px-4 py-2 border-b border-gray-100">
+                            <p className="text-sm font-medium text-gray-900">
+                              {user?.user_metadata?.["full_name"] || "User"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {user?.email}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              signOut();
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            role="menuitem"
+                            aria-label="Sign out of your account"
+                          >
+                            <LogOut className="w-4 h-4" aria-hidden="true" />
+                            Sign Out
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </header>
+              </header>
 
-            <main className="pt-24 pb-4 sm:pb-6 lg:pb-8 flex-1">
-              <div className="max-w-7xl mx-auto px-3 sm:px-6">
-                <div
-                  className={`transition-all duration-300 ease-in-out transform ${
-                    isTransitioning
-                      ? "opacity-0 translate-y-4 scale-[0.98]"
-                      : "opacity-100 translate-y-0 scale-100"
-                  }`}
-                >
-                  {isTransitioning && (
-                    <div className="absolute inset-0 flex items-center justify-center z-10">
-                      <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  )}
+              <main className="pt-24 pb-4 sm:pb-6 lg:pb-8 flex-1">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6">
                   <div
-                    className={`tab-content ${
-                      isTransitioning ? "loading-shimmer" : ""
+                    className={`transition-all duration-300 ease-in-out transform ${
+                      isTransitioning
+                        ? "opacity-0 translate-y-4 scale-[0.98]"
+                        : "opacity-100 translate-y-0 scale-100"
                     }`}
                   >
-                    {renderContent()}
+                    {isTransitioning && (
+                      <div className="absolute inset-0 flex items-center justify-center z-10">
+                        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                    <div
+                      className={`tab-content ${
+                        isTransitioning ? "loading-shimmer" : ""
+                      }`}
+                    >
+                      {renderContent()}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </main>
+              </main>
 
-            {/* Footer */}
-            <Footer />
-          </div>
-          {/* Invoice Modal overlayed at app level */}
-          {invoiceModalOpen && invoiceModalData && (
+              {/* Footer */}
+              <Footer />
+            </div>
+            {/* Invoice Modal overlayed at app level */}
+            {invoiceModalOpen && invoiceModalData && (
+              <Suspense
+                fallback={
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <LoadingFallback componentName="Invoice Generator" />
+                  </div>
+                }
+              >
+                <InvoiceGeneratorModal
+                  isOpen={invoiceModalOpen}
+                  onClose={() => setInvoiceModalOpen(false)}
+                  {...invoiceModalData}
+                />
+              </Suspense>
+            )}
+            {/* Unsaved Changes Modal at app root */}
             <Suspense
               fallback={
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <LoadingFallback componentName="Invoice Generator" />
+                  <LoadingFallback componentName="Unsaved Changes" />
                 </div>
               }
             >
-              <InvoiceGeneratorModal
-                isOpen={invoiceModalOpen}
-                onClose={() => setInvoiceModalOpen(false)}
-                {...invoiceModalData}
+              <UnsavedChangesModal
+                isOpen={showUnsavedModal}
+                onSave={handleSaveAndLeave}
+                onDiscard={handleDiscardAndLeave}
+                onCancel={() => setShowUnsavedModal(false)}
               />
             </Suspense>
-          )}
-          {/* Unsaved Changes Modal at app root */}
-          <Suspense
-            fallback={
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <LoadingFallback componentName="Unsaved Changes" />
-              </div>
-            }
-          >
-            <UnsavedChangesModal
-              isOpen={showUnsavedModal}
-              onSave={handleSaveAndLeave}
-              onDiscard={handleDiscardAndLeave}
-              onCancel={() => setShowUnsavedModal(false)}
-            />
-          </Suspense>
 
-          {/* Global Toast Container */}
-          <ToastContainer />
-        </div>
+            {/* Global Toast Container */}
+            <ToastContainer />
+          </div>
+        </GoalsProvider>
       </TimeEntriesProvider>
     </TimerProvider>
   );

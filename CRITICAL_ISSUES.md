@@ -75,7 +75,7 @@ This document tracks the critical issues and upgrade - **User notifications for 
   - [x] Password policies handled by Supabase (bcrypt hashing, secure storage)
 - [x] **Status**: **COMPLETED** - Comprehensive security implementation including:
   - DOMPurify-based input sanitization for all user inputs
-  - CSP headers configured for development (vite.config.ts) and production (_headers file)
+  - CSP headers configured for development (vite.config.ts) and production (\_headers file)
   - CSRF protection with secure token generation and session management
   - Supabase handles authentication security (JWT, OAuth, rate limiting, password hashing)
 - [x] **Priority**: Critical
