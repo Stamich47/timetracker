@@ -5,7 +5,15 @@
  */
 
 import { supabase } from "./supabase";
-import type { Goal, GoalProgress, TimeGoalPeriod } from "./goals";
+import { getUserIdWithFallback } from "./auth-utils";
+import type {
+  Goal,
+  GoalProgress,
+  TimeGoalPeriod,
+  TimeGoal,
+  ProjectGoal,
+  RevenueGoal,
+} from "./goals";
 import { calculateGoalProgress } from "./goals";
 
 export interface CreateGoalData {
@@ -22,10 +30,14 @@ export interface CreateGoalData {
   targetAmount?: number;
   currency?: string;
   targetDate?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface UpdateGoalData extends Partial<CreateGoalData> {
   status?: Goal["status"];
+  currentHours?: number;
+  currentAmount?: number;
 }
 
 // Database table structure (for reference)
@@ -173,15 +185,176 @@ class GoalsApi {
   }
 
   /**
-   * Get goals with progress calculations
+   * Get goals with real-time progress calculations from time entries
    */
   async getGoalsWithProgress(): Promise<(Goal & { progress: GoalProgress })[]> {
     const goals = await this.getGoals();
 
-    return goals.map((goal) => ({
-      ...goal,
-      progress: calculateGoalProgress(goal),
-    }));
+    // Calculate real progress for each goal
+    const goalsWithProgress = await Promise.all(
+      goals.map(async (goal) => {
+        const realProgress = await this.calculateRealGoalProgress(goal);
+        return {
+          ...goal,
+          progress: realProgress,
+        };
+      })
+    );
+
+    return goalsWithProgress;
+  }
+
+  /**
+   * Calculate real-time progress for a goal by querying time entries
+   */
+  private async calculateRealGoalProgress(goal: Goal): Promise<GoalProgress> {
+    const userId = await getUserIdWithFallback();
+
+    switch (goal.type) {
+      case "time":
+        return await this.calculateTimeGoalProgress(goal as TimeGoal, userId);
+
+      case "project":
+        return await this.calculateProjectGoalProgress(
+          goal as ProjectGoal,
+          userId
+        );
+
+      case "revenue":
+        return await this.calculateRevenueGoalProgress(
+          goal as RevenueGoal,
+          userId
+        );
+
+      default:
+        return calculateGoalProgress(goal);
+    }
+  }
+
+  /**
+   * Calculate real progress for time goals by summing time entries
+   */
+  private async calculateTimeGoalProgress(
+    goal: TimeGoal,
+    userId: string
+  ): Promise<GoalProgress> {
+    try {
+      // Query time entries within the goal period
+      const { data: timeEntries, error } = await supabase
+        .from("time_entries")
+        .select("duration")
+        .eq("user_id", userId)
+        .gte("start_time", goal.startDate)
+        .lte("start_time", goal.endDate)
+        .not("duration", "is", null);
+
+      if (error) throw error;
+
+      // Sum up all durations (in seconds) and convert to hours
+      const totalSeconds = (timeEntries || []).reduce(
+        (sum, entry) => sum + (entry.duration || 0),
+        0
+      );
+      const currentHours = totalSeconds / 3600; // Convert seconds to hours
+
+      // Update the goal's current hours in database if different
+      if (Math.abs(currentHours - (goal.currentHours || 0)) > 0.01) {
+        await this.updateGoal(goal.id, { currentHours });
+      }
+
+      // Calculate progress using the real current hours
+      const realGoal = { ...goal, currentHours };
+      return calculateGoalProgress(realGoal);
+    } catch (error) {
+      console.error("Error calculating time goal progress:", error);
+      // Fallback to stored progress
+      return calculateGoalProgress(goal);
+    }
+  }
+
+  /**
+   * Calculate real progress for project goals by summing time entries for the project
+   */
+  private async calculateProjectGoalProgress(
+    goal: ProjectGoal,
+    userId: string
+  ): Promise<GoalProgress> {
+    try {
+      // Query time entries for this project
+      const { data: timeEntries, error } = await supabase
+        .from("time_entries")
+        .select("duration")
+        .eq("user_id", userId)
+        .eq("project_id", goal.projectId)
+        .not("duration", "is", null);
+
+      if (error) throw error;
+
+      // Sum up all durations (in seconds) and convert to hours
+      const totalSeconds = (timeEntries || []).reduce(
+        (sum, entry) => sum + (entry.duration || 0),
+        0
+      );
+      const currentHours = totalSeconds / 3600; // Convert seconds to hours
+
+      // Update the goal's current hours in database if different
+      if (Math.abs(currentHours - (goal.currentHours || 0)) > 0.01) {
+        await this.updateGoal(goal.id, { currentHours });
+      }
+
+      // Calculate progress using the real current hours
+      const realGoal = { ...goal, currentHours };
+      return calculateGoalProgress(realGoal);
+    } catch (error) {
+      console.error("Error calculating project goal progress:", error);
+      // Fallback to stored progress
+      return calculateGoalProgress(goal);
+    }
+  }
+
+  /**
+   * Calculate real progress for revenue goals by summing billable amounts
+   */
+  private async calculateRevenueGoalProgress(
+    goal: RevenueGoal,
+    userId: string
+  ): Promise<GoalProgress> {
+    try {
+      // Query time entries within the goal period with hourly rates
+      const { data: timeEntries, error } = await supabase
+        .from("time_entries")
+        .select("duration, hourly_rate, billable")
+        .eq("user_id", userId)
+        .eq("billable", true)
+        .gte("start_time", goal.startDate)
+        .lte("start_time", goal.endDate)
+        .not("duration", "is", null)
+        .not("hourly_rate", "is", null);
+
+      if (error) throw error;
+
+      // Calculate revenue: (duration in hours) * hourly_rate
+      const currentAmount = (timeEntries || []).reduce((sum, entry) => {
+        if (entry.duration && entry.hourly_rate) {
+          const hours = entry.duration / 3600; // Convert seconds to hours
+          return sum + hours * entry.hourly_rate;
+        }
+        return sum;
+      }, 0);
+
+      // Update the goal's current amount in database if different
+      if (Math.abs(currentAmount - (goal.currentAmount || 0)) > 0.01) {
+        await this.updateGoal(goal.id, { currentAmount });
+      }
+
+      // Calculate progress using the real current amount
+      const realGoal = { ...goal, currentAmount };
+      return calculateGoalProgress(realGoal);
+    } catch (error) {
+      console.error("Error calculating revenue goal progress:", error);
+      // Fallback to stored progress
+      return calculateGoalProgress(goal);
+    }
   }
 
   /**
@@ -273,7 +446,22 @@ class GoalsApi {
     if (goal.type === "time") {
       dbData.period = goal.period;
       dbData.target_hours = goal.targetHours;
-      // start_date and end_date will be calculated based on period
+
+      // Calculate start_date and end_date based on period, or use provided dates for custom
+      if (goal.period === "custom") {
+        if (goal.startDate && goal.endDate) {
+          dbData.start_date = goal.startDate;
+          dbData.end_date = goal.endDate;
+        } else {
+          throw new Error(
+            "Custom period goals must provide startDate and endDate"
+          );
+        }
+      } else if (goal.period) {
+        const { startDate, endDate } = this.calculatePeriodDates(goal.period);
+        dbData.start_date = startDate;
+        dbData.end_date = endDate;
+      }
     }
 
     if (goal.type === "project") {
@@ -286,7 +474,22 @@ class GoalsApi {
       dbData.period = goal.period;
       dbData.target_amount = goal.targetAmount;
       dbData.currency = goal.currency || "USD";
-      // start_date and end_date will be calculated based on period
+
+      // Calculate start_date and end_date based on period, or use provided dates for custom
+      if (goal.period === "custom") {
+        if (goal.startDate && goal.endDate) {
+          dbData.start_date = goal.startDate;
+          dbData.end_date = goal.endDate;
+        } else {
+          throw new Error(
+            "Custom period goals must provide startDate and endDate"
+          );
+        }
+      } else if (goal.period) {
+        const { startDate, endDate } = this.calculatePeriodDates(goal.period);
+        dbData.start_date = startDate;
+        dbData.end_date = endDate;
+      }
     }
 
     if (goal.targetDate) {
@@ -294,6 +497,98 @@ class GoalsApi {
     }
 
     return dbData;
+  }
+
+  /**
+   * Calculate start and end dates for a given period
+   */
+  private calculatePeriodDates(period: TimeGoalPeriod): {
+    startDate: string;
+    endDate: string;
+  } {
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (period) {
+      case "daily":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+          999
+        );
+        break;
+
+      case "weekly": {
+        // Start of week (Sunday)
+        const dayOfWeek = now.getDay();
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - dayOfWeek);
+        startDate.setHours(0, 0, 0, 0);
+
+        // End of week (Saturday)
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      }
+
+      case "monthly":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+        break;
+
+      case "quarterly": {
+        const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+        startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+        endDate = new Date(
+          now.getFullYear(),
+          quarterStartMonth + 3,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+        break;
+      }
+
+      case "yearly":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+
+      default:
+        // Fallback to current month
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+    }
+
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    };
   }
 }
 

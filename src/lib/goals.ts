@@ -12,7 +12,8 @@ export type TimeGoalPeriod =
   | "weekly"
   | "monthly"
   | "quarterly"
-  | "yearly";
+  | "yearly"
+  | "custom";
 
 export type GoalStatus = "active" | "completed" | "paused" | "overdue";
 
@@ -97,27 +98,27 @@ export interface GoalTemplate {
 // Predefined templates
 export const GOAL_TEMPLATES: GoalTemplate[] = [
   {
-    id: "monthly-billable-hours",
-    name: "Monthly Billable Hours",
-    description: "Track billable hours for the current month",
+    id: "productivity-goal",
+    name: "Productivity Goal",
+    description: "Track billable hours with flexible time periods",
     type: "time",
     category: "Time Tracking",
-    defaultConfig: {
-      period: "monthly",
-      targetHours: 160,
-      priority: "high",
-    },
-  },
-  {
-    id: "weekly-productivity",
-    name: "Weekly Productivity Goal",
-    description: "Maintain high productivity throughout the week",
-    type: "time",
-    category: "Productivity",
     defaultConfig: {
       period: "weekly",
       targetHours: 40,
       priority: "medium",
+    },
+  },
+  {
+    id: "revenue-target",
+    name: "Revenue Target",
+    description: "Achieve revenue goals with flexible time periods",
+    type: "revenue",
+    category: "Revenue",
+    defaultConfig: {
+      period: "monthly",
+      targetAmount: 10000,
+      priority: "high",
     },
   },
   {
@@ -127,18 +128,6 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     type: "project",
     category: "Projects",
     defaultConfig: {
-      priority: "high",
-    },
-  },
-  {
-    id: "quarterly-revenue",
-    name: "Quarterly Revenue Target",
-    description: "Achieve revenue goal for the quarter",
-    type: "revenue",
-    category: "Revenue",
-    defaultConfig: {
-      period: "quarterly",
-      targetAmount: 50000, // $500
       priority: "high",
     },
   },
@@ -343,6 +332,11 @@ export function createTimeGoal(
     case "yearly": {
       end = new Date(start.getFullYear(), 11, 31);
       break;
+    }
+    case "custom": {
+      throw new Error(
+        "Custom period goals should provide explicit start and end dates"
+      );
     }
   }
 

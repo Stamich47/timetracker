@@ -11,7 +11,7 @@ import type { Goal } from "../lib/goals";
 import type { CreateGoalData, UpdateGoalData } from "../lib/goalsApi";
 import { calculateGoalProgress } from "../lib/goals";
 import type { GoalProgress } from "../lib/goals";
-import { loadMockGoals, saveMockGoals } from "../test-data/mockGoals";
+import { goalsApi } from "../lib/goalsApi";
 
 interface GoalsContextType {
   goals: Goal[];
@@ -34,32 +34,17 @@ interface GoalsProviderProps {
 
 export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
   const { user } = useAuth();
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goalsWithProgress, setGoalsWithProgress] = useState<
+    (Goal & { progress: GoalProgress })[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Calculate goals with progress and dynamic status
-  const goalsWithProgress = goals.map((goal) => {
-    const progress = calculateGoalProgress(goal);
-    // Calculate dynamic status based on progress
-    let dynamicStatus: Goal["status"] = goal.status; // Default to stored status
-
-    // Only override status for active goals - don't change paused goals
-    if (goal.status === "active") {
-      if (progress.status === "completed") {
-        dynamicStatus = "completed";
-      } else if (progress.status === "overdue") {
-        dynamicStatus = "overdue";
-      } else {
-        dynamicStatus = "active";
-      }
-    }
-
-    return {
-      ...goal,
-      status: dynamicStatus,
-      progress,
-    };
+  // Extract goals from goalsWithProgress for backward compatibility
+  const goals = goalsWithProgress.map((goalWithProgress) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { progress, ...goal } = goalWithProgress;
+    return goal;
   });
 
   const refreshGoals = useCallback(async () => {
@@ -69,13 +54,8 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      // TEMPORARY: Use mock data for testing until database is set up
-      const mockGoals = loadMockGoals();
-      setGoals(mockGoals);
-
-      // TODO: Replace with actual API call when database is ready
-      // const fetchedGoals = await goalsApi.getGoals();
-      // setGoals(fetchedGoals);
+      const goalsWithRealProgress = await goalsApi.getGoalsWithProgress();
+      setGoalsWithProgress(goalsWithRealProgress);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load goals");
     } finally {
@@ -85,68 +65,12 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
 
   const createGoal = async (goalData: CreateGoalData): Promise<Goal> => {
     try {
-      // TEMPORARY: Mock goal creation for testing
-      const baseGoal = {
-        id: `goal-${Date.now()}`,
-        name: goalData.name,
-        description: goalData.description,
-        type: goalData.type,
-        status: "active" as const,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        priority: goalData.priority || "medium",
-        color: goalData.color,
-      };
-
-      let newGoal: Goal;
-
-      if (goalData.type === "time") {
-        newGoal = {
-          ...baseGoal,
-          type: "time",
-          period: goalData.period!,
-          targetHours: goalData.targetHours!,
-          currentHours: 0,
-          startDate: new Date().toISOString(),
-          endDate: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-        };
-      } else if (goalData.type === "project") {
-        newGoal = {
-          ...baseGoal,
-          type: "project",
-          projectId: goalData.projectId!,
-          targetHours: goalData.targetHours,
-          targetCompletionDate: goalData.targetCompletionDate,
-          currentHours: 0,
-          completionPercentage: 0,
-        };
-      } else {
-        newGoal = {
-          ...baseGoal,
-          type: "revenue",
-          period: goalData.period!,
-          targetAmount: goalData.targetAmount!,
-          currentAmount: 0,
-          currency: goalData.currency || "USD",
-          startDate: new Date().toISOString(),
-          endDate: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-        };
-      }
-
-      const updatedGoals = [...goals, newGoal];
-      setGoals(updatedGoals);
-      saveMockGoals(updatedGoals);
-
+      const newGoal = await goalsApi.createGoal(goalData);
+      // Add the new goal with calculated progress
+      const progress = calculateGoalProgress(newGoal);
+      const newGoalWithProgress = { ...newGoal, progress };
+      setGoalsWithProgress((prev) => [newGoalWithProgress, ...prev]);
       return newGoal;
-
-      // TODO: Replace with actual API call when database is ready
-      // const newGoal = await goalsApi.createGoal(goalData);
-      // setGoals(prev => [newGoal, ...prev]);
-      // return newGoal;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to create goal";
@@ -160,29 +84,18 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
     updates: UpdateGoalData
   ): Promise<Goal> => {
     try {
-      // TEMPORARY: Mock goal update for testing
-      const existingGoal = goals.find((g) => g.id === id);
-      if (!existingGoal) throw new Error("Goal not found");
-
-      const updatedGoal = {
-        ...existingGoal,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      } as Goal;
-      const updatedGoals = goals.map((goal) =>
-        goal.id === id ? updatedGoal : goal
+      const updatedGoal = await goalsApi.updateGoal(id, updates);
+      // Update the goal with recalculated progress
+      const progress = calculateGoalProgress(updatedGoal);
+      const updatedGoalWithProgress = { ...updatedGoal, progress };
+      setGoalsWithProgress((prev) =>
+        prev.map((goalWithProgress) =>
+          goalWithProgress.id === id
+            ? updatedGoalWithProgress
+            : goalWithProgress
+        )
       );
-      setGoals(updatedGoals);
-      saveMockGoals(updatedGoals);
-
       return updatedGoal;
-
-      // TODO: Replace with actual API call when database is ready
-      // const updatedGoal = await goalsApi.updateGoal(id, updates);
-      // setGoals(prev => prev.map(goal =>
-      //   goal.id === id ? updatedGoal : goal
-      // ));
-      // return updatedGoal;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to update goal";
@@ -193,14 +106,10 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
 
   const deleteGoal = async (id: string): Promise<void> => {
     try {
-      // TEMPORARY: Mock goal deletion for testing
-      const updatedGoals = goals.filter((goal) => goal.id !== id);
-      setGoals(updatedGoals);
-      saveMockGoals(updatedGoals);
-
-      // TODO: Replace with actual API call when database is ready
-      // await goalsApi.deleteGoal(id);
-      // setGoals(prev => prev.filter(goal => goal.id !== id));
+      await goalsApi.deleteGoal(id);
+      setGoalsWithProgress((prev) =>
+        prev.filter((goalWithProgress) => goalWithProgress.id !== id)
+      );
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to delete goal";
@@ -214,7 +123,7 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
     if (user) {
       refreshGoals();
     } else {
-      setGoals([]);
+      setGoalsWithProgress([]);
       setError(null);
     }
   }, [user, refreshGoals]);

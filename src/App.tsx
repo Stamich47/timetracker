@@ -34,6 +34,7 @@ const InvoiceGeneratorModal = lazy(
 const UnsavedChangesModal = lazy(
   () => import("./components/UnsavedChangesModal")
 );
+const GoalCreationModal = lazy(() => import("./components/GoalCreationModal"));
 
 import type { SettingsHandle } from "./components/Settings";
 // Import theme manager to ensure it's initialized
@@ -73,6 +74,7 @@ function AppContent() {
     periodEnd: string;
   } | null>(null);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<
     null | (() => void)
   >(null);
@@ -298,7 +300,7 @@ function AppContent() {
       case "goals":
         return (
           <Suspense fallback={<LoadingFallback componentName="Goals" />}>
-            <Goals />
+            <Goals onShowCreateModal={setShowGoalModal} />
           </Suspense>
         );
       case "projects":
@@ -498,6 +500,20 @@ function AppContent() {
                 onSave={handleSaveAndLeave}
                 onDiscard={handleDiscardAndLeave}
                 onCancel={() => setShowUnsavedModal(false)}
+              />
+            </Suspense>
+
+            {/* Goal Creation Modal at app root */}
+            <Suspense
+              fallback={
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <LoadingFallback componentName="Goal Creation" />
+                </div>
+              }
+            >
+              <GoalCreationModal
+                isOpen={showGoalModal}
+                onClose={() => setShowGoalModal(false)}
               />
             </Suspense>
 

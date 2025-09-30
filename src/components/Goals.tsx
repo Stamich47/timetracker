@@ -22,13 +22,15 @@ import {
 } from "lucide-react";
 import { useGoals } from "../hooks/useGoals";
 import type { TimeGoal, RevenueGoal, ProjectGoal } from "../lib/goals";
-import GoalCreationModal from "./GoalCreationModal";
 
-const Goals: React.FC = () => {
+interface GoalsProps {
+  onShowCreateModal: (show: boolean) => void;
+}
+
+const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
   const { goalsWithProgress, loading, error } = useGoals();
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Filter goals based on active filters
   const filteredGoals = useMemo(() => {
@@ -224,7 +226,7 @@ const Goals: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => onShowCreateModal(true)}
           className="btn-primary flex items-center"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -814,12 +816,6 @@ const Goals: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Goal Creation Modal */}
-      <GoalCreationModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-      />
     </div>
   );
 };

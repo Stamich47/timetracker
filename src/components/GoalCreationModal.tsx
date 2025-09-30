@@ -31,7 +31,9 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
   const [isCreating, setIsCreating] = useState(false);
 
   // Form state
-  const [goalData, setGoalData] = useState<Partial<CreateGoalData>>({
+  const [goalData, setGoalData] = useState<
+    Partial<CreateGoalData & { templateId?: string }>
+  >({
     type: "time",
     priority: "medium",
   });
@@ -45,6 +47,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
         ...template.defaultConfig,
         name: template.name,
         description: template.description,
+        templateId,
       });
       setStep("customize");
     }
@@ -54,6 +57,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
     setGoalData({
       type: "time",
       priority: "medium",
+      templateId: undefined,
     });
     setStep("customize");
   };
@@ -222,7 +226,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       Period
                     </label>
                     <select
-                      value={goalData.period || "monthly"}
+                      value={goalData.period || "weekly"}
                       onChange={(e) =>
                         updateGoalData(
                           "period",
@@ -231,13 +235,57 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       }
                       className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="quarterly">Quarterly</option>
-                      <option value="yearly">Yearly</option>
+                      {goalData.templateId === "productivity-goal" ? (
+                        <>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="yearly">Yearly</option>
+                          <option value="custom">Custom Range</option>
+                        </>
+                      )}
                     </select>
                   </div>
+                  {goalData.period === "custom" && (
+                    <div className="col-span-2 grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          Start Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={goalData.startDate || ""}
+                          onChange={(e) =>
+                            updateGoalData("startDate", e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          End Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={goalData.endDate || ""}
+                          onChange={(e) =>
+                            updateGoalData("endDate", e.target.value)
+                          }
+                          min={goalData.startDate}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-primary mb-2">
                       Target Hours
@@ -276,9 +324,22 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       }
                       className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
-                      <option value="monthly">Monthly</option>
-                      <option value="quarterly">Quarterly</option>
-                      <option value="yearly">Yearly</option>
+                      {goalData.templateId === "revenue-target" ? (
+                        <>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="yearly">Annually</option>
+                          <option value="custom">Custom Range</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="yearly">Yearly</option>
+                          <option value="custom">Custom Range</option>
+                        </>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -300,6 +361,39 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       required
                     />
                   </div>
+                  {goalData.period === "custom" && (
+                    <div className="col-span-2 grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          Start Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={goalData.startDate || ""}
+                          onChange={(e) =>
+                            updateGoalData("startDate", e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          End Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={goalData.endDate || ""}
+                          onChange={(e) =>
+                            updateGoalData("endDate", e.target.value)
+                          }
+                          min={goalData.startDate}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
