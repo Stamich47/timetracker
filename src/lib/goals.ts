@@ -45,7 +45,7 @@ export interface ProjectGoal extends BaseGoal {
   targetCompletionDate?: string; // Deadline
   currentHours: number; // Hours logged so far
   estimatedHoursRemaining?: number; // User estimate or calculated
-  completionPercentage: number; // 0-100
+  completionPercentage?: number; // 0-100 - optional manual override
 }
 
 export interface RevenueGoal extends BaseGoal {
@@ -180,11 +180,20 @@ export function calculateGoalProgress(goal: Goal): GoalProgress {
 
     case "project": {
       const projectGoal = goal as ProjectGoal;
+      // Calculate percentage based on hours if targetHours is available, otherwise use completionPercentage
+      const calculatedPercentage =
+        projectGoal.targetHours && projectGoal.targetHours > 0
+          ? Math.min(
+              (projectGoal.currentHours / projectGoal.targetHours) * 100,
+              100
+            )
+          : projectGoal.completionPercentage ?? 0; // Default to 0 if not set
+
       return {
         ...baseProgress,
         currentValue: projectGoal.currentHours,
         targetValue: projectGoal.targetHours || 0,
-        percentage: projectGoal.completionPercentage,
+        percentage: calculatedPercentage,
         status: calculateProjectGoalStatus(projectGoal),
         daysRemaining: projectGoal.targetCompletionDate
           ? calculateDaysRemaining(projectGoal.targetCompletionDate)
@@ -237,7 +246,13 @@ function calculateTimeGoalStatus(goal: TimeGoal): GoalProgress["status"] {
 }
 
 function calculateProjectGoalStatus(goal: ProjectGoal): GoalProgress["status"] {
-  if (goal.completionPercentage >= 100) return "completed";
+  // Calculate percentage consistently with the progress calculation
+  const calculatedPercentage =
+    goal.targetHours && goal.targetHours > 0
+      ? Math.min((goal.currentHours / goal.targetHours) * 100, 100)
+      : goal.completionPercentage ?? 0; // Default to 0 if not set
+
+  if (calculatedPercentage >= 100) return "completed";
   if (
     goal.targetCompletionDate &&
     new Date() > new Date(goal.targetCompletionDate)
@@ -253,9 +268,8 @@ function calculateProjectGoalStatus(goal: ProjectGoal): GoalProgress["status"] {
   const expectedProgress = Math.min((daysElapsed / totalDays) * 100, 100);
   const tolerance = 10; // 10% tolerance window
 
-  if (goal.completionPercentage >= expectedProgress + tolerance) return "ahead";
-  if (goal.completionPercentage <= expectedProgress - tolerance)
-    return "behind";
+  if (calculatedPercentage >= expectedProgress + tolerance) return "ahead";
+  if (calculatedPercentage <= expectedProgress - tolerance) return "behind";
   return "on-track";
 }
 

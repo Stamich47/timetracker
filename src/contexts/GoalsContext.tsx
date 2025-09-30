@@ -38,11 +38,29 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Calculate goals with progress
-  const goalsWithProgress = goals.map((goal) => ({
-    ...goal,
-    progress: calculateGoalProgress(goal),
-  }));
+  // Calculate goals with progress and dynamic status
+  const goalsWithProgress = goals.map((goal) => {
+    const progress = calculateGoalProgress(goal);
+    // Calculate dynamic status based on progress
+    let dynamicStatus: Goal["status"] = goal.status; // Default to stored status
+
+    // Only override status for active goals - don't change paused goals
+    if (goal.status === "active") {
+      if (progress.status === "completed") {
+        dynamicStatus = "completed";
+      } else if (progress.status === "overdue") {
+        dynamicStatus = "overdue";
+      } else {
+        dynamicStatus = "active";
+      }
+    }
+
+    return {
+      ...goal,
+      status: dynamicStatus,
+      progress,
+    };
+  });
 
   const refreshGoals = useCallback(async () => {
     if (!user) return;

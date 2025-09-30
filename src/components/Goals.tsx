@@ -85,6 +85,14 @@ const Goals: React.FC = () => {
     });
   }, [goalsWithProgress, activeFilter, typeFilter]);
 
+  // Separate goals into active and completed
+  const activeGoals = filteredGoals.filter(
+    (goal) => goal.progress.status !== "completed"
+  );
+  const completedGoals = filteredGoals.filter(
+    (goal) => goal.progress.status === "completed"
+  );
+
   // Ring Chart Component
   const RingChart: React.FC<{
     percentage: number;
@@ -151,8 +159,11 @@ const Goals: React.FC = () => {
       if (status === "ahead") {
         return <TrendingUp className="h-4 w-4 text-green-500" />;
       }
-      if (status === "behind" || status === "overdue") {
-        return <TrendingDown className="h-4 w-4 text-red-500" />;
+      if (status === "behind") {
+        return <TrendingDown className="h-4 w-4 text-orange-500" />;
+      }
+      if (status === "overdue") {
+        return <AlertTriangle className="h-4 w-4 text-red-500" />;
       }
       return <TrendingUp className="h-4 w-4 text-blue-500" />;
     };
@@ -465,150 +476,342 @@ const Goals: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredGoals.map((goalWithProgress) => {
-            const { progress, ...goal } = goalWithProgress;
-            return (
-              <div
-                key={goal.id}
-                className="card p-6 hover:shadow-lg transition-shadow duration-200"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-primary text-lg leading-tight">
-                      {goal.name}
-                    </h3>
-                    {goal.description && (
-                      <p className="text-secondary text-sm mt-1 line-clamp-2">
-                        {goal.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <TrendIndicator status={progress.status} />
-                  </div>
-                </div>
+        <div className="space-y-8">
+          {/* Active Goals Section */}
+          <div>
+            <h2 className="text-xl font-semibold text-primary mb-4 flex items-center">
+              <Target className="h-6 w-6 mr-2" />
+              Active Goals ({activeGoals.length})
+            </h2>
+            {activeGoals.length === 0 ? (
+              <div className="card p-8 text-center">
+                <Target className="h-12 w-12 text-secondary mx-auto mb-3" />
+                <p className="text-secondary">No active goals</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {activeGoals.map((goalWithProgress) => {
+                  const { progress, ...goal } = goalWithProgress;
+                  return (
+                    <div
+                      key={goal.id}
+                      className="card p-6 hover:shadow-lg transition-shadow duration-200"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-primary text-lg leading-tight">
+                            {goal.name}
+                          </h3>
+                          {goal.description && (
+                            <p className="text-secondary text-sm mt-1 line-clamp-2">
+                              {goal.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <TrendIndicator status={progress.status} />
+                        </div>
+                      </div>
 
-                {/* Ring Chart and Key Metrics */}
-                <div className="flex items-center justify-between mb-4">
-                  <RingChart
-                    percentage={progress.percentage}
-                    status={progress.status}
-                  />
-                  <div className="flex-1 ml-4">
-                    <div className="text-sm text-secondary mb-1">
-                      {goal.type === "time" && (
-                        <>
-                          <Timer className="h-3 w-3 inline mr-1" />
-                          Hours
-                        </>
-                      )}
-                      {goal.type === "revenue" && (
-                        <>
-                          <DollarSign className="h-3 w-3 inline mr-1" />
-                          Revenue
-                        </>
-                      )}
-                      {goal.type === "project" && (
-                        <>
-                          <Target className="h-3 w-3 inline mr-1" />
-                          Project
-                        </>
-                      )}
-                    </div>
-                    <div className="text-lg font-bold text-primary">
-                      {goal.type === "time" && (
-                        <>
-                          {(goal as TimeGoal).currentHours.toFixed(1)}h /{" "}
-                          {(goal as TimeGoal).targetHours}h
-                        </>
-                      )}
-                      {goal.type === "revenue" && (
-                        <>
-                          ${(goal as RevenueGoal).currentAmount} / $
-                          {(goal as RevenueGoal).targetAmount}
-                        </>
-                      )}
-                      {goal.type === "project" && (
-                        <>
-                          {(goal as ProjectGoal).currentHours.toFixed(1)}h /{" "}
-                          {(goal as ProjectGoal).targetHours || "N/A"}
-                        </>
-                      )}
-                    </div>
-                    {/* Progress Bar */}
-                    <div className="mt-2">
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      {/* Ring Chart and Key Metrics */}
+                      <div className="flex items-center justify-between mb-4">
+                        <RingChart
+                          percentage={progress.percentage}
+                          status={progress.status}
+                        />
+                        <div className="flex-1 ml-4">
+                          <div className="text-sm text-secondary mb-1">
+                            {goal.type === "time" && (
+                              <>
+                                <Timer className="h-3 w-3 inline mr-1" />
+                                Hours
+                              </>
+                            )}
+                            {goal.type === "revenue" && (
+                              <>
+                                <DollarSign className="h-3 w-3 inline mr-1" />
+                                Revenue
+                              </>
+                            )}
+                            {goal.type === "project" && (
+                              <>
+                                <Target className="h-3 w-3 inline mr-1" />
+                                Project
+                              </>
+                            )}
+                          </div>
+                          <div className="text-lg font-bold text-primary">
+                            {goal.type === "time" && (
+                              <>
+                                {(goal as TimeGoal).currentHours.toFixed(1)}h /{" "}
+                                {(goal as TimeGoal).targetHours}h
+                              </>
+                            )}
+                            {goal.type === "revenue" && (
+                              <>
+                                ${(goal as RevenueGoal).currentAmount} / $
+                                {(goal as RevenueGoal).targetAmount}
+                              </>
+                            )}
+                            {goal.type === "project" && (
+                              <>
+                                {(goal as ProjectGoal).currentHours.toFixed(1)}h
+                                / {(goal as ProjectGoal).targetHours || "N/A"}
+                              </>
+                            )}
+                          </div>
+                          {/* Progress Bar */}
+                          <div className="mt-2">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-1000 ${
+                                  progress.status === "overdue"
+                                    ? "bg-red-500"
+                                    : progress.status === "completed"
+                                    ? "bg-green-500"
+                                    : progress.status === "ahead"
+                                    ? "bg-emerald-500"
+                                    : progress.status === "on-track"
+                                    ? "bg-blue-500"
+                                    : "bg-yellow-500"
+                                }`}
+                                style={{
+                                  width: `${Math.min(
+                                    progress.percentage,
+                                    100
+                                  )}%`,
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Period/Deadline Info */}
+                      <div className="flex items-center justify-between text-xs text-secondary mb-3">
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {goal.type === "time" && (goal as TimeGoal).period}
+                          {goal.type === "revenue" &&
+                            (goal as RevenueGoal).period}
+                          {goal.type === "project" &&
+                            (goal as ProjectGoal).targetCompletionDate &&
+                            `Due: ${new Date(
+                              (goal as ProjectGoal).targetCompletionDate!
+                            ).toLocaleDateString()}`}
+                        </div>
+                        <div>
+                          {progress.daysRemaining &&
+                            progress.daysRemaining > 0 && (
+                              <span
+                                className={
+                                  progress.daysRemaining <= 7
+                                    ? "text-orange-600 font-medium"
+                                    : ""
+                                }
+                              >
+                                {progress.daysRemaining} days left
+                              </span>
+                            )}
+                          {progress.daysRemaining &&
+                            progress.daysRemaining <= 0 && (
+                              <span className="text-red-600 font-medium">
+                                Overdue
+                              </span>
+                            )}
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="flex items-center justify-between">
                         <div
-                          className={`h-2 rounded-full transition-all duration-1000 ${
-                            progress.status === "overdue"
-                              ? "bg-red-500"
-                              : progress.status === "completed"
-                              ? "bg-green-500"
-                              : progress.status === "ahead"
-                              ? "bg-emerald-500"
-                              : progress.status === "on-track"
-                              ? "bg-blue-500"
-                              : "bg-yellow-500"
-                          }`}
-                          style={{
-                            width: `${Math.min(progress.percentage, 100)}%`,
-                          }}
-                        ></div>
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                            goal.status
+                          )}`}
+                        >
+                          {goal.status.replace("-", " ").toUpperCase()}
+                        </div>
+                        <div className="text-xs text-secondary">
+                          Priority:{" "}
+                          <span className="capitalize font-medium">
+                            {goal.priority}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Period/Deadline Info */}
-                <div className="flex items-center justify-between text-xs text-secondary mb-3">
-                  <div className="flex items-center">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {goal.type === "time" && (goal as TimeGoal).period}
-                    {goal.type === "revenue" && (goal as RevenueGoal).period}
-                    {goal.type === "project" &&
-                      (goal as ProjectGoal).targetCompletionDate &&
-                      `Due: ${new Date(
-                        (goal as ProjectGoal).targetCompletionDate!
-                      ).toLocaleDateString()}`}
-                  </div>
-                  <div>
-                    {progress.daysRemaining && progress.daysRemaining > 0 && (
-                      <span
-                        className={
-                          progress.daysRemaining <= 7
-                            ? "text-orange-600 font-medium"
-                            : ""
-                        }
-                      >
-                        {progress.daysRemaining} days left
-                      </span>
-                    )}
-                    {progress.daysRemaining && progress.daysRemaining <= 0 && (
-                      <span className="text-red-600 font-medium">Overdue</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Status Badge */}
-                <div className="flex items-center justify-between">
-                  <div
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                      goal.status
-                    )}`}
-                  >
-                    {goal.status.replace("-", " ").toUpperCase()}
-                  </div>
-                  <div className="text-xs text-secondary">
-                    Priority:{" "}
-                    <span className="capitalize font-medium">
-                      {goal.priority}
-                    </span>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            )}
+          </div>
+
+          {/* Completed Goals Section */}
+          <div>
+            <h2 className="text-xl font-semibold text-primary mb-4 flex items-center">
+              <CheckCircle className="h-6 w-6 mr-2 text-green-500" />
+              Completed Goals ({completedGoals.length})
+            </h2>
+            {completedGoals.length === 0 ? (
+              <div className="card p-8 text-center">
+                <CheckCircle className="h-12 w-12 text-secondary mx-auto mb-3" />
+                <p className="text-secondary">No completed goals yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {completedGoals.map((goalWithProgress) => {
+                  const { progress, ...goal } = goalWithProgress;
+                  return (
+                    <div
+                      key={goal.id}
+                      className="card p-6 hover:shadow-lg transition-shadow duration-200 opacity-75"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-primary text-lg leading-tight">
+                            {goal.name}
+                          </h3>
+                          {goal.description && (
+                            <p className="text-secondary text-sm mt-1 line-clamp-2">
+                              {goal.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <TrendIndicator status={progress.status} />
+                        </div>
+                      </div>
+
+                      {/* Ring Chart and Key Metrics */}
+                      <div className="flex items-center justify-between mb-4">
+                        <RingChart
+                          percentage={progress.percentage}
+                          status={progress.status}
+                        />
+                        <div className="flex-1 ml-4">
+                          <div className="text-sm text-secondary mb-1">
+                            {goal.type === "time" && (
+                              <>
+                                <Timer className="h-3 w-3 inline mr-1" />
+                                Hours
+                              </>
+                            )}
+                            {goal.type === "revenue" && (
+                              <>
+                                <DollarSign className="h-3 w-3 inline mr-1" />
+                                Revenue
+                              </>
+                            )}
+                            {goal.type === "project" && (
+                              <>
+                                <Target className="h-3 w-3 inline mr-1" />
+                                Project
+                              </>
+                            )}
+                          </div>
+                          <div className="text-lg font-bold text-primary">
+                            {goal.type === "time" && (
+                              <>
+                                {(goal as TimeGoal).currentHours.toFixed(1)}h /{" "}
+                                {(goal as TimeGoal).targetHours}h
+                              </>
+                            )}
+                            {goal.type === "revenue" && (
+                              <>
+                                ${(goal as RevenueGoal).currentAmount} / $
+                                {(goal as RevenueGoal).targetAmount}
+                              </>
+                            )}
+                            {goal.type === "project" && (
+                              <>
+                                {(goal as ProjectGoal).currentHours.toFixed(1)}h
+                                / {(goal as ProjectGoal).targetHours || "N/A"}
+                              </>
+                            )}
+                          </div>
+                          {/* Progress Bar */}
+                          <div className="mt-2">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-1000 ${
+                                  progress.status === "overdue"
+                                    ? "bg-red-500"
+                                    : progress.status === "completed"
+                                    ? "bg-green-500"
+                                    : progress.status === "ahead"
+                                    ? "bg-emerald-500"
+                                    : progress.status === "on-track"
+                                    ? "bg-blue-500"
+                                    : "bg-yellow-500"
+                                }`}
+                                style={{
+                                  width: `${Math.min(
+                                    progress.percentage,
+                                    100
+                                  )}%`,
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Period/Deadline Info */}
+                      <div className="flex items-center justify-between text-xs text-secondary mb-3">
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {goal.type === "time" && (goal as TimeGoal).period}
+                          {goal.type === "revenue" &&
+                            (goal as RevenueGoal).period}
+                          {goal.type === "project" &&
+                            (goal as ProjectGoal).targetCompletionDate &&
+                            `Due: ${new Date(
+                              (goal as ProjectGoal).targetCompletionDate!
+                            ).toLocaleDateString()}`}
+                        </div>
+                        <div>
+                          {progress.daysRemaining &&
+                            progress.daysRemaining > 0 && (
+                              <span
+                                className={
+                                  progress.daysRemaining <= 7
+                                    ? "text-orange-600 font-medium"
+                                    : ""
+                                }
+                              >
+                                {progress.daysRemaining} days left
+                              </span>
+                            )}
+                          {progress.daysRemaining &&
+                            progress.daysRemaining <= 0 && (
+                              <span className="text-red-600 font-medium">
+                                Overdue
+                              </span>
+                            )}
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="flex items-center justify-between">
+                        <div
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                            goal.status
+                          )}`}
+                        >
+                          {goal.status.replace("-", " ").toUpperCase()}
+                        </div>
+                        <div className="text-xs text-secondary">
+                          Priority:{" "}
+                          <span className="capitalize font-medium">
+                            {goal.priority}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
