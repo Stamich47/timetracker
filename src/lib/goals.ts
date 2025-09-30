@@ -157,6 +157,12 @@ export function calculateGoalProgress(goal: Goal): GoalProgress {
   switch (goal.type) {
     case "time": {
       const timeGoal = goal as TimeGoal;
+      const daysRemaining = calculateDaysRemaining(timeGoal.endDate);
+      const paceRequired =
+        daysRemaining && daysRemaining > 0
+          ? (timeGoal.targetHours - timeGoal.currentHours) / daysRemaining
+          : undefined;
+
       return {
         ...baseProgress,
         currentValue: timeGoal.currentHours,
@@ -166,7 +172,9 @@ export function calculateGoalProgress(goal: Goal): GoalProgress {
           100
         ),
         status: calculateTimeGoalStatus(timeGoal),
-        daysRemaining: calculateDaysRemaining(timeGoal.endDate),
+        daysRemaining,
+        paceRequired:
+          paceRequired && paceRequired > 0 ? paceRequired : undefined,
       };
     }
 
@@ -186,6 +194,13 @@ export function calculateGoalProgress(goal: Goal): GoalProgress {
 
     case "revenue": {
       const revenueGoal = goal as RevenueGoal;
+      const daysRemaining = calculateDaysRemaining(revenueGoal.endDate);
+      const paceRequired =
+        daysRemaining && daysRemaining > 0
+          ? (revenueGoal.targetAmount - revenueGoal.currentAmount) /
+            daysRemaining
+          : undefined;
+
       return {
         ...baseProgress,
         currentValue: revenueGoal.currentAmount,
@@ -195,7 +210,9 @@ export function calculateGoalProgress(goal: Goal): GoalProgress {
           100
         ),
         status: calculateRevenueGoalStatus(revenueGoal),
-        daysRemaining: calculateDaysRemaining(revenueGoal.endDate),
+        daysRemaining,
+        paceRequired:
+          paceRequired && paceRequired > 0 ? paceRequired : undefined,
       };
     }
 
@@ -208,14 +225,14 @@ function calculateTimeGoalStatus(goal: TimeGoal): GoalProgress["status"] {
   if (goal.currentHours >= goal.targetHours) return "completed";
   if (new Date() > new Date(goal.endDate)) return "overdue";
 
-  const daysRemaining = calculateDaysRemaining(goal.endDate);
-  if (daysRemaining && daysRemaining > 0) {
-    const requiredPace = (goal.targetHours - goal.currentHours) / daysRemaining;
-    const currentPace =
-      goal.currentHours / Math.max(1, calculateDaysElapsed(goal.startDate));
-    return requiredPace <= currentPace ? "ahead" : "behind";
-  }
+  const daysElapsed = calculateDaysElapsed(goal.startDate);
+  const totalDays = calculateDaysBetween(goal.startDate, goal.endDate);
+  const expectedProgress = Math.min((daysElapsed / totalDays) * 100, 100);
+  const actualProgress = (goal.currentHours / goal.targetHours) * 100;
 
+  const tolerance = 10; // 10% tolerance window
+  if (actualProgress >= expectedProgress + tolerance) return "ahead";
+  if (actualProgress <= expectedProgress - tolerance) return "behind";
   return "on-track";
 }
 
@@ -227,29 +244,33 @@ function calculateProjectGoalStatus(goal: ProjectGoal): GoalProgress["status"] {
   )
     return "overdue";
 
-  // Simple heuristic: if completion % > days elapsed %, consider ahead
+  // Calculate expected progress based on time elapsed
   const daysElapsed = calculateDaysElapsed(goal.createdAt);
   const totalDays = goal.targetCompletionDate
     ? calculateDaysBetween(goal.createdAt, goal.targetCompletionDate)
     : 30; // Default 30 days
 
   const expectedProgress = Math.min((daysElapsed / totalDays) * 100, 100);
-  return goal.completionPercentage > expectedProgress ? "ahead" : "behind";
+  const tolerance = 10; // 10% tolerance window
+
+  if (goal.completionPercentage >= expectedProgress + tolerance) return "ahead";
+  if (goal.completionPercentage <= expectedProgress - tolerance)
+    return "behind";
+  return "on-track";
 }
 
 function calculateRevenueGoalStatus(goal: RevenueGoal): GoalProgress["status"] {
   if (goal.currentAmount >= goal.targetAmount) return "completed";
   if (new Date() > new Date(goal.endDate)) return "overdue";
 
-  const daysRemaining = calculateDaysRemaining(goal.endDate);
-  if (daysRemaining && daysRemaining > 0) {
-    const requiredPace =
-      (goal.targetAmount - goal.currentAmount) / daysRemaining;
-    const currentPace =
-      goal.currentAmount / Math.max(1, calculateDaysElapsed(goal.startDate));
-    return requiredPace <= currentPace ? "ahead" : "behind";
-  }
+  const daysElapsed = calculateDaysElapsed(goal.startDate);
+  const totalDays = calculateDaysBetween(goal.startDate, goal.endDate);
+  const expectedProgress = Math.min((daysElapsed / totalDays) * 100, 100);
+  const actualProgress = (goal.currentAmount / goal.targetAmount) * 100;
 
+  const tolerance = 10; // 10% tolerance window
+  if (actualProgress >= expectedProgress + tolerance) return "ahead";
+  if (actualProgress <= expectedProgress - tolerance) return "behind";
   return "on-track";
 }
 
