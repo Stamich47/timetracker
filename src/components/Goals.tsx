@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Goals Component
  *
  * Main goals management interface with list view and creation modal.
@@ -21,6 +21,8 @@ import {
   LineChart,
   Edit,
   Trash2,
+  Building,
+  Globe,
 } from "lucide-react";
 import { useGoals } from "../hooks/useGoals";
 import { projectsApi } from "../lib/projectsApi";
@@ -31,6 +33,7 @@ import type {
   BaseGoal,
 } from "../lib/goals";
 import type { Project } from "../lib/projectsApi";
+import type { Client } from "../lib/projectsApi";
 
 interface GoalsProps {
   onShowCreateModal: (show: boolean, editingGoal?: BaseGoal | null) => void;
@@ -41,6 +44,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
 
   const { deleteGoal } = useGoals();
 
@@ -54,13 +58,30 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
         console.error("Failed to fetch projects:", error);
       }
     };
+
+    const fetchClients = async () => {
+      try {
+        const clientsData = await projectsApi.getClients();
+        setClients(clientsData);
+      } catch (error) {
+        console.error("Failed to fetch clients:", error);
+      }
+    };
+
     fetchProjects();
+    fetchClients();
   }, []);
 
   // Helper function to get project name by ID
   const getProjectName = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
     return project?.name || "Unknown Project";
+  };
+
+  // Helper function to get client name by ID
+  const getClientName = (clientId: string) => {
+    const client = clients.find((c) => c.id === clientId);
+    return client?.name || "Unknown Client";
   };
 
   const handleEditGoal = (goal: BaseGoal) => {
@@ -554,13 +575,36 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           <h3 className="font-semibold text-primary text-lg leading-tight">
                             {goal.name}
                           </h3>
-                          {/* Show project name and date range for productivity goals */}
-                          {goal.type === "time" &&
-                          (goal as TimeGoal).projectId ? (
+                          {/* Show scope information for productivity goals */}
+                          {goal.type === "time" ? (
                             <div className="text-secondary text-sm mt-1 space-y-1">
                               <p className="flex items-center">
-                                <Target className="h-3 w-3 mr-1" />
-                                {getProjectName((goal as TimeGoal).projectId!)}
+                                {(goal as TimeGoal).scope === "client" &&
+                                  (goal as TimeGoal).scopeId && (
+                                    <>
+                                      <Building className="h-3 w-3 mr-1" />
+                                      Client:{" "}
+                                      {getClientName(
+                                        (goal as TimeGoal).scopeId!
+                                      )}
+                                    </>
+                                  )}
+                                {(goal as TimeGoal).scope === "project" &&
+                                  (goal as TimeGoal).scopeId && (
+                                    <>
+                                      <Target className="h-3 w-3 mr-1" />
+                                      {getProjectName(
+                                        (goal as TimeGoal).scopeId!
+                                      )}
+                                    </>
+                                  )}
+                                {((goal as TimeGoal).scope === "general" ||
+                                  !(goal as TimeGoal).scope) && (
+                                  <>
+                                    <Globe className="h-3 w-3 mr-1" />
+                                    All Hours
+                                  </>
+                                )}
                               </p>
                               <p className="flex items-center text-xs">
                                 <Calendar className="h-3 w-3 mr-1" />
@@ -757,13 +801,36 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           <h3 className="font-semibold text-primary text-lg leading-tight">
                             {goal.name}
                           </h3>
-                          {/* Show project name and date range for productivity goals */}
-                          {goal.type === "time" &&
-                          (goal as TimeGoal).projectId ? (
+                          {/* Show scope information for productivity goals */}
+                          {goal.type === "time" ? (
                             <div className="text-secondary text-sm mt-1 space-y-1">
                               <p className="flex items-center">
-                                <Target className="h-3 w-3 mr-1" />
-                                {getProjectName((goal as TimeGoal).projectId!)}
+                                {(goal as TimeGoal).scope === "client" &&
+                                  (goal as TimeGoal).scopeId && (
+                                    <>
+                                      <Building className="h-3 w-3 mr-1" />
+                                      Client:{" "}
+                                      {getClientName(
+                                        (goal as TimeGoal).scopeId!
+                                      )}
+                                    </>
+                                  )}
+                                {(goal as TimeGoal).scope === "project" &&
+                                  (goal as TimeGoal).scopeId && (
+                                    <>
+                                      <Target className="h-3 w-3 mr-1" />
+                                      {getProjectName(
+                                        (goal as TimeGoal).scopeId!
+                                      )}
+                                    </>
+                                  )}
+                                {((goal as TimeGoal).scope === "general" ||
+                                  !(goal as TimeGoal).scope) && (
+                                  <>
+                                    <Globe className="h-3 w-3 mr-1" />
+                                    All Hours
+                                  </>
+                                )}
                               </p>
                               <p className="flex items-center text-xs">
                                 <Calendar className="h-3 w-3 mr-1" />

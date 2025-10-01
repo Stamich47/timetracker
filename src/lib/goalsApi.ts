@@ -32,6 +32,9 @@ export interface CreateGoalData {
   targetDate?: string;
   startDate?: string;
   endDate?: string;
+  // New scope fields for time goals
+  scope?: "client" | "project" | "general";
+  scopeId?: string;
 }
 
 export interface UpdateGoalData extends Partial<CreateGoalData> {
@@ -56,11 +59,13 @@ CREATE TABLE goals (
   color TEXT,
 
   -- Time goal fields
-  period TEXT CHECK (period IN ('daily', 'weekly', 'monthly', 'quarterly', 'yearly')),
+  period TEXT CHECK (period IN ('daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom')),
   target_hours DECIMAL,
   current_hours DECIMAL DEFAULT 0,
   start_date TIMESTAMP WITH TIME ZONE,
   end_date TIMESTAMP WITH TIME ZONE,
+  scope TEXT CHECK (scope IN ('client', 'project', 'general')),
+  scope_id UUID,
 
   -- Project goal fields
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
@@ -242,16 +247,37 @@ class GoalsApi {
       // Build query for time entries within the goal period
       let query = supabase
         .from("time_entries")
-        .select("duration")
+        .select("duration, project_id")
         .eq("user_id", userId)
         .gte("start_time", goal.startDate)
         .lte("start_time", goal.endDate)
         .not("duration", "is", null);
 
-      // If project-specific goal, filter by project
-      if (goal.projectId) {
-        query = query.eq("project_id", goal.projectId);
+      // Apply scope filtering
+      if (goal.scope === "project" && goal.scopeId) {
+        // Filter by specific project
+        query = query.eq("project_id", goal.scopeId);
+      } else if (goal.scope === "client" && goal.scopeId) {
+        // Filter by projects belonging to specific client
+        // First get all projects for this client
+        const { data: clientProjects, error: projectsError } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("client_id", goal.scopeId);
+
+        if (projectsError) throw projectsError;
+
+        const projectIds = clientProjects?.map((p) => p.id) || [];
+        if (projectIds.length > 0) {
+          query = query.in("project_id", projectIds);
+        } else {
+          // No projects for this client, return zero progress
+          const realGoal = { ...goal, currentHours: 0 };
+          return calculateGoalProgress(realGoal);
+        }
       }
+      // For "general" scope or legacy goals, no additional filtering needed
 
       const { data: timeEntries, error } = await query;
 
@@ -404,6 +430,8 @@ class GoalsApi {
           startDate: dbRow.start_date,
           endDate: dbRow.end_date,
           projectId: dbRow.project_id,
+          scope: dbRow.scope,
+          scopeId: dbRow.scope_id,
         } as Goal;
 
       case "project":
@@ -455,12 +483,20 @@ class GoalsApi {
       dbData.period = goal.period;
       dbData.target_hours = goal.targetHours;
       dbData.project_id = goal.projectId; // Optional project restriction
+      dbData.scope = goal.scope || "general"; // Default to general if not set (for backward compatibility)
+      dbData.scope_id =
+        dbData.scope === "general" || !goal.scopeId || goal.scopeId === ""
+          ? null
+          : goal.scopeId;
 
       // Calculate start_date and end_date based on period, or use provided dates for custom
       if (goal.period === "custom") {
         if (goal.startDate && goal.endDate) {
-          dbData.start_date = goal.startDate;
-          dbData.end_date = goal.endDate;
+          // Convert date strings to full ISO timestamps
+          dbData.start_date = new Date(goal.startDate).toISOString();
+          dbData.end_date = new Date(
+            goal.endDate + "T23:59:59.999Z"
+          ).toISOString(); // End of day
         } else {
           throw new Error(
             "Custom period goals must provide startDate and endDate"
@@ -487,8 +523,11 @@ class GoalsApi {
       // Calculate start_date and end_date based on period, or use provided dates for custom
       if (goal.period === "custom") {
         if (goal.startDate && goal.endDate) {
-          dbData.start_date = goal.startDate;
-          dbData.end_date = goal.endDate;
+          // Convert date strings to full ISO timestamps
+          dbData.start_date = new Date(goal.startDate).toISOString();
+          dbData.end_date = new Date(
+            goal.endDate + "T23:59:59.999Z"
+          ).toISOString(); // End of day
         } else {
           throw new Error(
             "Custom period goals must provide startDate and endDate"
@@ -622,6 +661,8 @@ interface GoalDbRow {
   start_date?: string;
   end_date?: string;
   project_id?: string;
+  scope?: "client" | "project" | "general";
+  scope_id?: string | null;
   target_completion_date?: string;
   estimated_hours_remaining?: number;
   completion_percentage?: number;
@@ -647,6 +688,8 @@ interface GoalDbData {
   start_date?: string;
   end_date?: string;
   project_id?: string;
+  scope?: "client" | "project" | "general";
+  scope_id?: string | null;
   target_completion_date?: string;
   estimated_hours_remaining?: number;
   completion_percentage?: number;

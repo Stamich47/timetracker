@@ -8,6 +8,8 @@ import {
   Zap,
   Check,
   Lightbulb,
+  Building,
+  Globe,
 } from "lucide-react";
 import { useGoals } from "../hooks/useGoals";
 import { projectsApi } from "../lib/projectsApi";
@@ -19,6 +21,7 @@ import {
 } from "../lib/goals";
 import type { CreateGoalData, UpdateGoalData } from "../lib/goalsApi";
 import type { Project } from "../lib/projectsApi";
+import type { Client } from "../lib/projectsApi";
 import type {
   BaseGoal,
   TimeGoal,
@@ -41,6 +44,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
   const [step, setStep] = useState<"template" | "customize">("template");
   const [isCreating, setIsCreating] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
 
   // Form state
   const [goalData, setGoalData] = useState<
@@ -48,6 +52,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
   >({
     type: "time",
     priority: "medium",
+    scope: "project",
   });
 
   // Reset modal state when it opens
@@ -68,6 +73,8 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
             startDate: (editingGoal as TimeGoal).startDate,
             endDate: (editingGoal as TimeGoal).endDate,
             projectId: (editingGoal as TimeGoal).projectId,
+            scope: (editingGoal as TimeGoal).scope || "general", // Default to general for legacy goals
+            scopeId: (editingGoal as TimeGoal).scopeId,
           }),
           ...(editingGoal.type === "revenue" && {
             period: (editingGoal as RevenueGoal).period,
@@ -88,11 +95,13 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
         setGoalData({
           type: "time",
           priority: "medium",
+          scope: "project", // Default to project scope for productivity goals
         });
       }
       setIsCreating(false);
-      // Fetch projects when modal opens
+      // Fetch projects and clients when modal opens
       fetchProjects();
+      fetchClients();
     }
   }, [isOpen, editingGoal]);
 
@@ -102,6 +111,15 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
       setProjects(userProjects);
     } catch (error) {
       console.error("Failed to fetch projects:", error);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const userClients = await projectsApi.getClients();
+      setClients(userClients);
+    } catch (error) {
+      console.error("Failed to fetch clients:", error);
     }
   };
 
@@ -125,6 +143,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
     setGoalData({
       type: "time",
       priority: "medium",
+      scope: "project", // Default to project scope for custom goals
       templateId: undefined,
     });
     setStep("customize");
@@ -146,7 +165,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
       onClose();
       // Reset form
       setStep("template");
-      setGoalData({ type: "time", priority: "medium" });
+      setGoalData({ type: "time", priority: "medium", scope: "project" });
     } catch (error) {
       console.error("Failed to save goal:", error);
     } finally {
@@ -356,36 +375,143 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                     />
                   </div>
 
-                  {/* Project selection for productivity goals */}
+                  {/* Scope selection for productivity goals */}
                   {goalData.templateId === "productivity-goal" && (
-                    <div>
-                      <label className="block text-sm font-medium text-primary mb-2">
-                        Project *
-                      </label>
-                      <CustomDropdown
-                        value={goalData.projectId || ""}
-                        onChange={(value) => updateGoalData("projectId", value)}
-                        options={[
-                          { value: "", label: "Select a project..." },
-                          ...projects.map((project) => ({
-                            value: project.id!,
-                            label: project.name,
-                            element: (
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-3 h-3 rounded-full flex-shrink-0"
-                                  style={{
-                                    backgroundColor: project.color || "#3B82F6",
-                                  }}
-                                />
-                                <span className="truncate">{project.name}</span>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-3">
+                          What would you like to track?
+                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="scope"
+                              value="client"
+                              checked={goalData.scope === "client"}
+                              onChange={(e) => {
+                                updateGoalData("scope", e.target.value);
+                                updateGoalData("scopeId", ""); // Clear scopeId when changing scope
+                              }}
+                              className="mr-3"
+                            />
+                            <div className="flex items-center">
+                              <Building className="h-4 w-4 mr-2 text-secondary" />
+                              <div>
+                                <div className="font-medium">
+                                  Client Specific
+                                </div>
+                                <div className="text-xs text-secondary">
+                                  Track all hours for projects under a specific
+                                  client
+                                </div>
                               </div>
-                            ),
-                          })),
-                        ]}
-                        placeholder="Select a project..."
-                        variant="input"
-                      />
+                            </div>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="scope"
+                              value="project"
+                              checked={goalData.scope === "project"}
+                              onChange={(e) => {
+                                updateGoalData("scope", e.target.value);
+                                updateGoalData("scopeId", ""); // Clear scopeId when changing scope
+                              }}
+                              className="mr-3"
+                            />
+                            <div className="flex items-center">
+                              <FolderOpen className="h-4 w-4 mr-2 text-secondary" />
+                              <div>
+                                <div className="font-medium">
+                                  Project Specific
+                                </div>
+                                <div className="text-xs text-secondary">
+                                  Track hours for a specific project
+                                </div>
+                              </div>
+                            </div>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="scope"
+                              value="general"
+                              checked={goalData.scope === "general"}
+                              onChange={(e) => {
+                                updateGoalData("scope", e.target.value);
+                                updateGoalData("scopeId", undefined); // Clear scopeId for general scope
+                              }}
+                              className="mr-3"
+                            />
+                            <div className="flex items-center">
+                              <Globe className="h-4 w-4 mr-2 text-secondary" />
+                              <div>
+                                <div className="font-medium">All Hours</div>
+                                <div className="text-xs text-secondary">
+                                  Track total hours worked across all projects
+                                </div>
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Conditional dropdown based on scope */}
+                      {(goalData.scope === "client" ||
+                        goalData.scope === "project") && (
+                        <div>
+                          <label className="block text-sm font-medium text-primary mb-2">
+                            {goalData.scope === "client"
+                              ? "Client *"
+                              : "Project *"}
+                          </label>
+                          <CustomDropdown
+                            value={goalData.scopeId || ""}
+                            onChange={(value) =>
+                              updateGoalData("scopeId", value)
+                            }
+                            options={[
+                              {
+                                value: "",
+                                label:
+                                  goalData.scope === "client"
+                                    ? "Select a client..."
+                                    : "Select a project...",
+                              },
+                              ...(goalData.scope === "client"
+                                ? clients.map((client) => ({
+                                    value: client.id!,
+                                    label: client.name,
+                                  }))
+                                : projects.map((project) => ({
+                                    value: project.id!,
+                                    label: project.name,
+                                    element: (
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          className="w-3 h-3 rounded-full flex-shrink-0"
+                                          style={{
+                                            backgroundColor:
+                                              project.color || "#3B82F6",
+                                          }}
+                                        />
+                                        <span className="truncate">
+                                          {project.name}
+                                        </span>
+                                      </div>
+                                    ),
+                                  }))),
+                            ]}
+                            placeholder={
+                              goalData.scope === "client"
+                                ? "Select a client..."
+                                : "Select a project..."
+                            }
+                            variant="input"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 

@@ -37,7 +37,9 @@ export interface TimeGoal extends BaseGoal {
   currentHours: number; // Calculated from time entries
   startDate: string; // When this goal period started
   endDate: string; // When this goal period ends
-  projectId?: string; // Optional: restrict to specific project
+  projectId?: string; // Optional: restrict to specific project (legacy)
+  scope?: "client" | "project" | "general"; // New scope system
+  scopeId?: string; // clientId or projectId, null for general
 }
 
 export interface ProjectGoal extends BaseGoal {
@@ -109,6 +111,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
       period: "custom",
       targetHours: 40,
       priority: "medium",
+      scope: "project",
     },
   },
   {

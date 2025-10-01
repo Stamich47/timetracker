@@ -13,11 +13,13 @@ CREATE TABLE goals (
   color TEXT,
 
   -- Time goal fields
-  period TEXT CHECK (period IN ('daily', 'weekly', 'monthly', 'quarterly', 'yearly')),
+  period TEXT CHECK (period IN ('daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom')),
   target_hours DECIMAL,
   current_hours DECIMAL DEFAULT 0,
   start_date TIMESTAMP WITH TIME ZONE,
   end_date TIMESTAMP WITH TIME ZONE,
+  scope TEXT CHECK (scope IN ('client', 'project', 'general')),
+  scope_id UUID,
 
   -- Project goal fields
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
