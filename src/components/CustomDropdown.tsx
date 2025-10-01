@@ -14,6 +14,7 @@ interface CustomDropdownProps {
   placeholder?: string;
   className?: string;
   size?: "sm" | "md" | "lg";
+  variant?: "default" | "input";
 }
 
 const CustomDropdown: React.FC<CustomDropdownProps> = ({
@@ -23,6 +24,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   placeholder = "Select option",
   className = "",
   size = "md",
+  variant = "default",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -151,14 +153,14 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
         onKeyDown={handleKeyDown}
         className={`
           w-full ${sizeClasses.button} ${buttonHeightClass}
-          bg-surface backdrop-blur-sm
-          border border-theme rounded-lg
-          hover:bg-surface-hover hover:border-theme
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-          transition-all duration-200
+          ${
+            variant === "input"
+              ? "h-10 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+              : "bg-surface backdrop-blur-sm border border-theme rounded-lg hover:bg-surface-hover hover:border-theme focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+          }
           flex items-center justify-between gap-2
-          text-left font-medium text-primary
-          shadow-sm hover:shadow-md
+          text-left
+          ${variant === "input" ? "font-normal" : "font-medium"}
         `}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -211,18 +213,18 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 }}
                 className={`
                   w-full ${sizeClasses.option} text-left
-                  hover:bg-surface-hover
-                  focus:outline-none focus:bg-surface-hover
+                  hover:bg-gray-100 dark:hover:bg-gray-700
+                  focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700
                   transition-colors duration-150
                   ${value === option.value ? "font-medium" : ""}
-                  ${focusedIndex === index ? "bg-surface-hover" : ""}
+                  ${
+                    focusedIndex === index ? "bg-gray-100 dark:bg-gray-700" : ""
+                  }
                 `}
                 style={{
                   backgroundColor:
                     value === option.value
                       ? "var(--color-blueSelection)"
-                      : focusedIndex === index
-                      ? "var(--color-surface-hover)"
                       : undefined,
                   color:
                     value === option.value

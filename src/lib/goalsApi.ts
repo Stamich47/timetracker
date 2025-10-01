@@ -239,14 +239,21 @@ class GoalsApi {
     userId: string
   ): Promise<GoalProgress> {
     try {
-      // Query time entries within the goal period
-      const { data: timeEntries, error } = await supabase
+      // Build query for time entries within the goal period
+      let query = supabase
         .from("time_entries")
         .select("duration")
         .eq("user_id", userId)
         .gte("start_time", goal.startDate)
         .lte("start_time", goal.endDate)
         .not("duration", "is", null);
+
+      // If project-specific goal, filter by project
+      if (goal.projectId) {
+        query = query.eq("project_id", goal.projectId);
+      }
+
+      const { data: timeEntries, error } = await query;
 
       if (error) throw error;
 
@@ -396,6 +403,7 @@ class GoalsApi {
           currentHours: dbRow.current_hours || 0,
           startDate: dbRow.start_date,
           endDate: dbRow.end_date,
+          projectId: dbRow.project_id,
         } as Goal;
 
       case "project":
@@ -446,6 +454,7 @@ class GoalsApi {
     if (goal.type === "time") {
       dbData.period = goal.period;
       dbData.target_hours = goal.targetHours;
+      dbData.project_id = goal.projectId; // Optional project restriction
 
       // Calculate start_date and end_date based on period, or use provided dates for custom
       if (goal.period === "custom") {

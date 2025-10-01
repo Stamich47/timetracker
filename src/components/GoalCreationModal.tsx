@@ -10,25 +10,37 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { useGoals } from "../hooks/useGoals";
+import { projectsApi } from "../lib/projectsApi";
+import CustomDropdown from "./CustomDropdown";
 import {
   GOAL_TEMPLATES,
   type GoalType,
   type TimeGoalPeriod,
 } from "../lib/goals";
-import type { CreateGoalData } from "../lib/goalsApi";
+import type { CreateGoalData, UpdateGoalData } from "../lib/goalsApi";
+import type { Project } from "../lib/projectsApi";
+import type {
+  BaseGoal,
+  TimeGoal,
+  RevenueGoal,
+  ProjectGoal,
+} from "../lib/goals";
 
 interface GoalCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editingGoal?: BaseGoal | null;
 }
 
 const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
   isOpen,
   onClose,
+  editingGoal = null,
 }) => {
-  const { createGoal } = useGoals();
+  const { createGoal, updateGoal } = useGoals();
   const [step, setStep] = useState<"template" | "customize">("template");
   const [isCreating, setIsCreating] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // Form state
   const [goalData, setGoalData] = useState<
@@ -41,14 +53,57 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
   // Reset modal state when it opens
   useEffect(() => {
     if (isOpen) {
-      setStep("template");
-      setGoalData({
-        type: "time",
-        priority: "medium",
-      });
+      if (editingGoal) {
+        // Editing mode: skip template selection and populate form
+        setStep("customize");
+        setGoalData({
+          name: editingGoal.name,
+          description: editingGoal.description,
+          type: editingGoal.type,
+          priority: editingGoal.priority,
+          // Add other fields based on goal type
+          ...(editingGoal.type === "time" && {
+            period: (editingGoal as TimeGoal).period,
+            targetHours: (editingGoal as TimeGoal).targetHours,
+            startDate: (editingGoal as TimeGoal).startDate,
+            endDate: (editingGoal as TimeGoal).endDate,
+            projectId: (editingGoal as TimeGoal).projectId,
+          }),
+          ...(editingGoal.type === "revenue" && {
+            period: (editingGoal as RevenueGoal).period,
+            targetAmount: (editingGoal as RevenueGoal).targetAmount,
+            startDate: (editingGoal as RevenueGoal).startDate,
+            endDate: (editingGoal as RevenueGoal).endDate,
+          }),
+          ...(editingGoal.type === "project" && {
+            projectId: (editingGoal as ProjectGoal).projectId,
+            targetHours: (editingGoal as ProjectGoal).targetHours,
+            targetCompletionDate: (editingGoal as ProjectGoal)
+              .targetCompletionDate,
+          }),
+        });
+      } else {
+        // Creating mode: start with template selection
+        setStep("template");
+        setGoalData({
+          type: "time",
+          priority: "medium",
+        });
+      }
       setIsCreating(false);
+      // Fetch projects when modal opens
+      fetchProjects();
     }
-  }, [isOpen]);
+  }, [isOpen, editingGoal]);
+
+  const fetchProjects = async () => {
+    try {
+      const userProjects = await projectsApi.getProjects();
+      setProjects(userProjects);
+    } catch (error) {
+      console.error("Failed to fetch projects:", error);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -81,13 +136,19 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
 
     setIsCreating(true);
     try {
-      await createGoal(goalData as CreateGoalData);
+      if (editingGoal) {
+        // Update existing goal
+        await updateGoal(editingGoal.id, goalData as UpdateGoalData);
+      } else {
+        // Create new goal
+        await createGoal(goalData as CreateGoalData);
+      }
       onClose();
       // Reset form
       setStep("template");
       setGoalData({ type: "time", priority: "medium" });
     } catch (error) {
-      console.error("Failed to create goal:", error);
+      console.error("Failed to save goal:", error);
     } finally {
       setIsCreating(false);
     }
@@ -268,34 +329,66 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                     <label className="block text-sm font-medium text-primary mb-2">
                       Period
                     </label>
-                    <select
+                    <CustomDropdown
                       value={goalData.period || "weekly"}
-                      onChange={(e) =>
-                        updateGoalData(
-                          "period",
-                          e.target.value as TimeGoalPeriod
-                        )
+                      onChange={(value) =>
+                        updateGoalData("period", value as TimeGoalPeriod)
                       }
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      {goalData.templateId === "productivity-goal" ? (
-                        <>
-                          <option value="daily">Daily</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="daily">Daily</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Quarterly</option>
-                          <option value="yearly">Yearly</option>
-                          <option value="custom">Custom Range</option>
-                        </>
-                      )}
-                    </select>
+                      options={
+                        goalData.templateId === "productivity-goal"
+                          ? [
+                              { value: "daily", label: "Daily" },
+                              { value: "weekly", label: "Weekly" },
+                              { value: "monthly", label: "Monthly" },
+                              { value: "custom", label: "Custom Range" },
+                            ]
+                          : [
+                              { value: "daily", label: "Daily" },
+                              { value: "weekly", label: "Weekly" },
+                              { value: "monthly", label: "Monthly" },
+                              { value: "quarterly", label: "Quarterly" },
+                              { value: "yearly", label: "Yearly" },
+                              { value: "custom", label: "Custom Range" },
+                            ]
+                      }
+                      placeholder="Select period"
+                      variant="input"
+                    />
                   </div>
+
+                  {/* Project selection for productivity goals */}
+                  {goalData.templateId === "productivity-goal" && (
+                    <div>
+                      <label className="block text-sm font-medium text-primary mb-2">
+                        Project *
+                      </label>
+                      <CustomDropdown
+                        value={goalData.projectId || ""}
+                        onChange={(value) => updateGoalData("projectId", value)}
+                        options={[
+                          { value: "", label: "Select a project..." },
+                          ...projects.map((project) => ({
+                            value: project.id!,
+                            label: project.name,
+                            element: (
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full flex-shrink-0"
+                                  style={{
+                                    backgroundColor: project.color || "#3B82F6",
+                                  }}
+                                />
+                                <span className="truncate">{project.name}</span>
+                              </div>
+                            ),
+                          })),
+                        ]}
+                        placeholder="Select a project..."
+                        variant="input"
+                      />
+                    </div>
+                  )}
+
                   {goalData.period === "custom" && (
                     <div className="col-span-2 grid grid-cols-2 gap-4 mt-4">
                       <div>

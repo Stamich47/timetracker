@@ -204,6 +204,28 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
     loadSettings();
   }, []);
 
+  // Clear corrupted date data on component mount
+  useEffect(() => {
+    const result = AppStorage.getCustomDateRange();
+    if (result.success && result.data) {
+      const start = new Date(result.data.start);
+      const end = new Date(result.data.end);
+      const daysDifference = Math.ceil(
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysDifference > 366) {
+        // More than 1 year
+        console.warn(
+          `Clearing corrupted date range data (${daysDifference} days)`
+        );
+        AppStorage.remove("reports-custom-start-date");
+        AppStorage.remove("reports-custom-end-date");
+        AppStorage.setReportsDateRange("thisMonth");
+      }
+    }
+  }, []); // Empty dependency array - runs once on mount
+
   // Save client selection to localStorage
   useEffect(() => {
     AppStorage.setSelectedClientId(selectedClientId);
@@ -383,6 +405,28 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
 
     const { start, end } = getDateRangeLocal();
 
+    // Add safety check for date ranges that are too large (prevent freezing with future dates)
+    let safeStart = start;
+    let safeEnd = end;
+    const maxDays = 366; // Maximum 1 year range
+    const daysDifference = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (daysDifference > maxDays) {
+      // If range is too large, reset to safe defaults and clear corrupted data
+      console.warn(
+        `Date range too large (${daysDifference} days), resetting to safe defaults`
+      );
+      AppStorage.remove("reports-custom-start-date");
+      AppStorage.remove("reports-custom-end-date");
+      AppStorage.setReportsDateRange("thisMonth");
+
+      // Reset to current month
+      const now = new Date();
+      safeStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      safeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+
     // Filter time entries by date range and client - use date string comparison for proper filtering
     const filteredEntries = timeEntries.filter((entry) => {
       const entryDateStr = entry.start_time.split("T")[0]; // "YYYY-MM-DD"
@@ -395,7 +439,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
         const [entryYear, entryMonth, entryDay] = entryDateStr
           .split("-")
           .map(Number);
-        const startDateStr = start.toISOString().split("T")[0];
+        const startDateStr = safeStart.toISOString().split("T")[0];
         const [startYear, startMonth, startDay] = startDateStr
           .split("-")
           .map(Number);
@@ -454,10 +498,10 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
       formattedDate: string;
       totalSeconds: number;
     }[] = [];
-    const currentDate = new Date(start);
+    const currentDate = new Date(safeStart);
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-    while (currentDate <= end) {
+    while (currentDate <= safeEnd) {
       // Use local date formatting to avoid timezone shifts
       const year = currentDate.getFullYear();
       const month = String(currentDate.getMonth() + 1).padStart(2, "0");

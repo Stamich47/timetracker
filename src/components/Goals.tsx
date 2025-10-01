@@ -1,10 +1,10 @@
-﻿/**
+/**
  * Goals Component
  *
  * Main goals management interface with list view and creation modal.
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Target,
   Plus,
@@ -19,18 +19,68 @@ import {
   BarChart3,
   PieChart,
   LineChart,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { useGoals } from "../hooks/useGoals";
-import type { TimeGoal, RevenueGoal, ProjectGoal } from "../lib/goals";
+import { projectsApi } from "../lib/projectsApi";
+import type {
+  TimeGoal,
+  RevenueGoal,
+  ProjectGoal,
+  BaseGoal,
+} from "../lib/goals";
+import type { Project } from "../lib/projectsApi";
 
 interface GoalsProps {
-  onShowCreateModal: (show: boolean) => void;
+  onShowCreateModal: (show: boolean, editingGoal?: BaseGoal | null) => void;
 }
 
 const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
   const { goalsWithProgress, loading, error } = useGoals();
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  const { deleteGoal } = useGoals();
+
+  // Fetch projects for displaying project names
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const projectsData = await projectsApi.getProjects();
+        setProjects(projectsData);
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+      }
+    };
+    fetchProjects();
+  }, []);
+
+  // Helper function to get project name by ID
+  const getProjectName = (projectId: string) => {
+    const project = projects.find((p) => p.id === projectId);
+    return project?.name || "Unknown Project";
+  };
+
+  const handleEditGoal = (goal: BaseGoal) => {
+    onShowCreateModal(true, goal);
+  };
+
+  const handleDeleteGoal = async (goal: BaseGoal) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${goal.name}"? This action cannot be undone.`
+      )
+    ) {
+      try {
+        await deleteGoal(goal.id);
+      } catch (error) {
+        console.error("Failed to delete goal:", error);
+        // You might want to show a toast notification here
+      }
+    }
+  };
 
   // Filter goals based on active filters
   const filteredGoals = useMemo(() => {
@@ -504,13 +554,48 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           <h3 className="font-semibold text-primary text-lg leading-tight">
                             {goal.name}
                           </h3>
-                          {goal.description && (
-                            <p className="text-secondary text-sm mt-1 line-clamp-2">
-                              {goal.description}
-                            </p>
+                          {/* Show project name and date range for productivity goals */}
+                          {goal.type === "time" &&
+                          (goal as TimeGoal).projectId ? (
+                            <div className="text-secondary text-sm mt-1 space-y-1">
+                              <p className="flex items-center">
+                                <Target className="h-3 w-3 mr-1" />
+                                {getProjectName((goal as TimeGoal).projectId!)}
+                              </p>
+                              <p className="flex items-center text-xs">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {new Date(
+                                  (goal as TimeGoal).startDate
+                                ).toLocaleDateString()}{" "}
+                                -{" "}
+                                {new Date(
+                                  (goal as TimeGoal).endDate
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ) : (
+                            goal.description && (
+                              <p className="text-secondary text-sm mt-1 line-clamp-2">
+                                {goal.description}
+                              </p>
+                            )
                           )}
                         </div>
                         <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleEditGoal(goal)}
+                            className="p-1 text-secondary hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Edit goal"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGoal(goal)}
+                            className="p-1 text-secondary hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Delete goal"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                           <TrendIndicator status={progress.status} />
                         </div>
                       </div>
@@ -545,7 +630,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           <div className="text-lg font-bold text-primary">
                             {goal.type === "time" && (
                               <>
-                                {(goal as TimeGoal).currentHours.toFixed(1)}h /{" "}
+                                {progress.currentValue.toFixed(1)}h /{" "}
                                 {(goal as TimeGoal).targetHours}h
                               </>
                             )}
@@ -672,13 +757,48 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           <h3 className="font-semibold text-primary text-lg leading-tight">
                             {goal.name}
                           </h3>
-                          {goal.description && (
-                            <p className="text-secondary text-sm mt-1 line-clamp-2">
-                              {goal.description}
-                            </p>
+                          {/* Show project name and date range for productivity goals */}
+                          {goal.type === "time" &&
+                          (goal as TimeGoal).projectId ? (
+                            <div className="text-secondary text-sm mt-1 space-y-1">
+                              <p className="flex items-center">
+                                <Target className="h-3 w-3 mr-1" />
+                                {getProjectName((goal as TimeGoal).projectId!)}
+                              </p>
+                              <p className="flex items-center text-xs">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {new Date(
+                                  (goal as TimeGoal).startDate
+                                ).toLocaleDateString()}{" "}
+                                -{" "}
+                                {new Date(
+                                  (goal as TimeGoal).endDate
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ) : (
+                            goal.description && (
+                              <p className="text-secondary text-sm mt-1 line-clamp-2">
+                                {goal.description}
+                              </p>
+                            )
                           )}
                         </div>
                         <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleEditGoal(goal)}
+                            className="p-1 text-secondary hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Edit goal"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGoal(goal)}
+                            className="p-1 text-secondary hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Delete goal"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                           <TrendIndicator status={progress.status} />
                         </div>
                       </div>
@@ -713,7 +833,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           <div className="text-lg font-bold text-primary">
                             {goal.type === "time" && (
                               <>
-                                {(goal as TimeGoal).currentHours.toFixed(1)}h /{" "}
+                                {progress.currentValue.toFixed(1)}h /{" "}
                                 {(goal as TimeGoal).targetHours}h
                               </>
                             )}

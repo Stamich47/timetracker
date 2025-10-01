@@ -66,10 +66,8 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
   const createGoal = async (goalData: CreateGoalData): Promise<Goal> => {
     try {
       const newGoal = await goalsApi.createGoal(goalData);
-      // Add the new goal with calculated progress
-      const progress = calculateGoalProgress(newGoal);
-      const newGoalWithProgress = { ...newGoal, progress };
-      setGoalsWithProgress((prev) => [newGoalWithProgress, ...prev]);
+      // Refresh goals to get real-time progress calculations for the new goal
+      await refreshGoals();
       return newGoal;
     } catch (err) {
       const errorMessage =

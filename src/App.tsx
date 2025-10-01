@@ -42,6 +42,7 @@ import { themeManager } from "./lib/themeManager";
 import type { TimeEntry } from "./lib/timeEntriesApi";
 import type { Project } from "./lib/projectsApi";
 import type { UserSettings } from "./lib/settingsApi";
+import type { BaseGoal } from "./lib/goals";
 // import * as ErrorLoggerModule from "./lib/errorLogger";
 
 // const { errorLogger } = ErrorLoggerModule;
@@ -75,6 +76,7 @@ function AppContent() {
   } | null>(null);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<BaseGoal | null>(null);
   const [pendingNavigation, setPendingNavigation] = useState<
     null | (() => void)
   >(null);
@@ -136,7 +138,16 @@ function AppContent() {
     [activeTab, settingsDirty]
   );
 
-  // Function to open modal from anywhere
+  // Function to show goal creation modal
+  const showGoalModalWithEditing = (
+    show: boolean,
+    editingGoal?: BaseGoal | null
+  ) => {
+    setShowGoalModal(show);
+    setEditingGoal(editingGoal || null);
+  };
+
+  // Function to open invoice modal from anywhere
   const openInvoiceModal = (data: {
     timeEntries: TimeEntry[];
     projects: Project[];
@@ -300,7 +311,7 @@ function AppContent() {
       case "goals":
         return (
           <Suspense fallback={<LoadingFallback componentName="Goals" />}>
-            <Goals onShowCreateModal={setShowGoalModal} />
+            <Goals onShowCreateModal={showGoalModalWithEditing} />
           </Suspense>
         );
       case "projects":
@@ -513,7 +524,11 @@ function AppContent() {
             >
               <GoalCreationModal
                 isOpen={showGoalModal}
-                onClose={() => setShowGoalModal(false)}
+                onClose={() => {
+                  setShowGoalModal(false);
+                  setEditingGoal(null);
+                }}
+                editingGoal={editingGoal}
               />
             </Suspense>
 

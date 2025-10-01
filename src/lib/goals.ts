@@ -37,6 +37,7 @@ export interface TimeGoal extends BaseGoal {
   currentHours: number; // Calculated from time entries
   startDate: string; // When this goal period started
   endDate: string; // When this goal period ends
+  projectId?: string; // Optional: restrict to specific project
 }
 
 export interface ProjectGoal extends BaseGoal {
@@ -101,11 +102,11 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     id: "productivity-goal",
     name: "Productivity Goal",
     description:
-      "Track and achieve billable hours targets with flexible time periods",
+      "Track billable hours for a specific project within a custom date range",
     type: "time",
     category: "Time Tracking",
     defaultConfig: {
-      period: "weekly",
+      period: "custom",
       targetHours: 40,
       priority: "medium",
     },
