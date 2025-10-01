@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Target,
@@ -38,6 +38,18 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
     priority: "medium",
   });
 
+  // Reset modal state when it opens
+  useEffect(() => {
+    if (isOpen) {
+      setStep("template");
+      setGoalData({
+        type: "time",
+        priority: "medium",
+      });
+      setIsCreating(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleTemplateSelect = (templateId: string) => {
@@ -45,6 +57,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
     if (template) {
       setGoalData({
         ...template.defaultConfig,
+        type: template.type,
         name: template.name,
         description: template.description,
         templateId,
@@ -190,33 +203,63 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                 />
               </div>
 
-              {/* Goal Type */}
-              <div>
-                <label className="block text-sm font-medium text-primary mb-2">
-                  Goal Type *
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { value: "time", label: "Time", icon: Clock },
-                    { value: "revenue", label: "Revenue", icon: DollarSign },
-                    { value: "project", label: "Project", icon: FolderOpen },
-                  ].map(({ value, label, icon: Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => updateGoalData("type", value as GoalType)}
-                      className={`p-3 border rounded-lg text-center transition-colors ${
-                        goalData.type === value
-                          ? "border-primary bg-primary bg-opacity-10 text-primary"
-                          : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
-                      }`}
-                    >
-                      <Icon className="h-5 w-5 mx-auto mb-1" />
-                      <span className="text-sm font-medium">{label}</span>
-                    </button>
-                  ))}
+              {/* Goal Type - Only show for custom goals */}
+              {!goalData.templateId && (
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Goal Type *
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: "time", label: "Time", icon: Clock },
+                      { value: "revenue", label: "Revenue", icon: DollarSign },
+                      { value: "project", label: "Project", icon: FolderOpen },
+                    ].map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          updateGoalData("type", value as GoalType)
+                        }
+                        className={`p-3 border rounded-lg text-center transition-colors ${
+                          goalData.type === value
+                            ? "border-primary bg-primary bg-opacity-10 text-primary"
+                            : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5 mx-auto mb-1" />
+                        <span className="text-sm font-medium">{label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Show selected template type for template-based goals */}
+              {goalData.templateId && (
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Goal Type
+                  </label>
+                  <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                    {goalData.type === "time" && (
+                      <Clock className="h-5 w-5 mr-2 text-primary" />
+                    )}
+                    {goalData.type === "revenue" && (
+                      <DollarSign className="h-5 w-5 mr-2 text-primary" />
+                    )}
+                    {goalData.type === "project" && (
+                      <FolderOpen className="h-5 w-5 mr-2 text-primary" />
+                    )}
+                    <span className="text-sm font-medium text-primary capitalize">
+                      {goalData.type} Goal
+                    </span>
+                    <span className="text-xs text-secondary ml-2">
+                      (set by template)
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Type-specific fields */}
               {goalData.type === "time" && (

@@ -100,7 +100,8 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
   {
     id: "productivity-goal",
     name: "Productivity Goal",
-    description: "Track billable hours with flexible time periods",
+    description:
+      "Track and achieve billable hours targets with flexible time periods",
     type: "time",
     category: "Time Tracking",
     defaultConfig: {
@@ -112,7 +113,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
   {
     id: "revenue-target",
     name: "Revenue Target",
-    description: "Achieve revenue goals with flexible time periods",
+    description: "Set and achieve revenue goals with flexible time periods",
     type: "revenue",
     category: "Revenue",
     defaultConfig: {
@@ -124,7 +125,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
   {
     id: "project-completion",
     name: "Project Completion",
-    description: "Complete project by target date",
+    description: "Complete projects by target dates with milestone tracking",
     type: "project",
     category: "Projects",
     defaultConfig: {
