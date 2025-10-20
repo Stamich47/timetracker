@@ -1,9 +1,4 @@
-/**
- * Goal Tracking System
- *
- * Comprehensive goal management for time tracking, projects, and revenue targets.
- * Supports predictive analytics and progress visualization.
- */
+import type { TimerState } from "../types";
 
 export type GoalType = "time" | "project" | "revenue";
 
@@ -139,7 +134,10 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
 ];
 
 // Utility functions
-export function calculateGoalProgress(goal: Goal): GoalProgress {
+export function calculateGoalProgress(
+  goal: Goal,
+  timerState?: TimerState
+): GoalProgress {
   const baseProgress: Omit<GoalProgress, "status"> = {
     goalId: goal.id,
     currentValue: 0,
@@ -151,21 +149,39 @@ export function calculateGoalProgress(goal: Goal): GoalProgress {
   switch (goal.type) {
     case "time": {
       const timeGoal = goal as TimeGoal;
+      let currentHours = timeGoal.currentHours;
+
+      // Add running timer time if it matches the goal's scope
+      if (timerState?.isRunning && timerState.elapsedTime > 0) {
+        const timerMatchesScope = (() => {
+          if (timeGoal.scope === "general") {
+            return true; // General scope matches any timer
+          } else if (timeGoal.scope === "project" && timeGoal.scopeId) {
+            return timerState.selectedProject?.id === timeGoal.scopeId;
+          } else if (timeGoal.scope === "client" && timeGoal.scopeId) {
+            return timerState.selectedProject?.client?.id === timeGoal.scopeId;
+          }
+          return false;
+        })();
+
+        if (timerMatchesScope) {
+          // Convert elapsed seconds to hours
+          currentHours += timerState.elapsedTime / 3600;
+        }
+      }
+
       const daysRemaining = calculateDaysRemaining(timeGoal.endDate);
       const paceRequired =
         daysRemaining && daysRemaining > 0
-          ? (timeGoal.targetHours - timeGoal.currentHours) / daysRemaining
+          ? (timeGoal.targetHours - currentHours) / daysRemaining
           : undefined;
 
       return {
         ...baseProgress,
-        currentValue: timeGoal.currentHours,
+        currentValue: currentHours,
         targetValue: timeGoal.targetHours,
-        percentage: Math.min(
-          (timeGoal.currentHours / timeGoal.targetHours) * 100,
-          100
-        ),
-        status: calculateTimeGoalStatus(timeGoal),
+        percentage: Math.min((currentHours / timeGoal.targetHours) * 100, 100),
+        status: calculateTimeGoalStatus({ ...timeGoal, currentHours }),
         daysRemaining,
         paceRequired:
           paceRequired && paceRequired > 0 ? paceRequired : undefined,

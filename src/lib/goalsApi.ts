@@ -6,6 +6,7 @@
 
 import { supabase } from "./supabase";
 import { getUserIdWithFallback } from "./auth-utils";
+import type { TimerState } from "../types";
 import type {
   Goal,
   GoalProgress,
@@ -192,13 +193,18 @@ class GoalsApi {
   /**
    * Get goals with real-time progress calculations from time entries
    */
-  async getGoalsWithProgress(): Promise<(Goal & { progress: GoalProgress })[]> {
+  async getGoalsWithProgress(
+    timerState?: TimerState
+  ): Promise<(Goal & { progress: GoalProgress })[]> {
     const goals = await this.getGoals();
 
     // Calculate real progress for each goal
     const goalsWithProgress = await Promise.all(
       goals.map(async (goal) => {
-        const realProgress = await this.calculateRealGoalProgress(goal);
+        const realProgress = await this.calculateRealGoalProgress(
+          goal,
+          timerState
+        );
         return {
           ...goal,
           progress: realProgress,
@@ -212,12 +218,19 @@ class GoalsApi {
   /**
    * Calculate real-time progress for a goal by querying time entries
    */
-  private async calculateRealGoalProgress(goal: Goal): Promise<GoalProgress> {
+  private async calculateRealGoalProgress(
+    goal: Goal,
+    timerState?: TimerState
+  ): Promise<GoalProgress> {
     const userId = await getUserIdWithFallback();
 
     switch (goal.type) {
       case "time":
-        return await this.calculateTimeGoalProgress(goal as TimeGoal, userId);
+        return await this.calculateTimeGoalProgress(
+          goal as TimeGoal,
+          userId,
+          timerState
+        );
 
       case "project":
         return await this.calculateProjectGoalProgress(
@@ -232,7 +245,7 @@ class GoalsApi {
         );
 
       default:
-        return calculateGoalProgress(goal);
+        return calculateGoalProgress(goal, timerState);
     }
   }
 
@@ -241,7 +254,8 @@ class GoalsApi {
    */
   private async calculateTimeGoalProgress(
     goal: TimeGoal,
-    userId: string
+    userId: string,
+    timerState?: TimerState
   ): Promise<GoalProgress> {
     try {
       // Build query for time entries within the goal period
@@ -297,11 +311,11 @@ class GoalsApi {
 
       // Calculate progress using the real current hours
       const realGoal = { ...goal, currentHours };
-      return calculateGoalProgress(realGoal);
+      return calculateGoalProgress(realGoal, timerState);
     } catch (error) {
       console.error("Error calculating time goal progress:", error);
       // Fallback to stored progress
-      return calculateGoalProgress(goal);
+      return calculateGoalProgress(goal, timerState);
     }
   }
 

@@ -173,6 +173,19 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
     }
   };
 
+  const getGoalTypeDisplayName = (type: GoalType) => {
+    switch (type) {
+      case "time":
+        return "Productivity";
+      case "revenue":
+        return "Revenue";
+      case "project":
+        return "Project";
+      default:
+        return "";
+    }
+  };
+
   const updateGoalData = (
     field: keyof CreateGoalData,
     value: string | number | boolean | undefined
@@ -182,13 +195,14 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+      <div className="bg-surface rounded-lg shadow-xl max-w-4xl w-full flex flex-col border border-gray-200 dark:border-gray-700">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-primary flex items-center">
               <Target className="h-6 w-6 mr-2" />
-              Create New Goal
+              Create New{" "}
+              {goalData.type ? getGoalTypeDisplayName(goalData.type) : ""} Goal
             </h2>
             <p className="text-secondary mt-1">
               {step === "template"
@@ -282,62 +296,6 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                   required
                 />
               </div>
-              {/* Goal Type - Only show for custom goals */}
-              {!goalData.templateId && (
-                <div>
-                  <label className="block text-sm font-medium text-primary mb-2">
-                    Goal Type *
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { value: "time", label: "Time", icon: Clock },
-                      { value: "revenue", label: "Revenue", icon: DollarSign },
-                      { value: "project", label: "Project", icon: FolderOpen },
-                    ].map(({ value, label, icon: Icon }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() =>
-                          updateGoalData("type", value as GoalType)
-                        }
-                        className={`p-3 border rounded-lg text-center transition-colors ${
-                          goalData.type === value
-                            ? "border-primary bg-primary bg-opacity-10 text-primary"
-                            : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
-                        }`}
-                      >
-                        <Icon className="h-5 w-5 mx-auto mb-1" />
-                        <span className="text-sm font-medium">{label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Show selected template type for template-based goals */}
-              {goalData.templateId && (
-                <div>
-                  <label className="block text-sm font-medium text-primary mb-2">
-                    Goal Type
-                  </label>
-                  <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-                    {goalData.type === "time" && (
-                      <Clock className="h-5 w-5 mr-2 text-primary" />
-                    )}
-                    {goalData.type === "revenue" && (
-                      <DollarSign className="h-5 w-5 mr-2 text-primary" />
-                    )}
-                    {goalData.type === "project" && (
-                      <FolderOpen className="h-5 w-5 mr-2 text-primary" />
-                    )}
-                    <span className="text-sm font-medium text-primary capitalize">
-                      {goalData.type} Goal
-                    </span>
-                    <span className="text-xs text-secondary ml-2">
-                      (set by template)
-                    </span>
-                  </div>
-                </div>
-              )}
               {/* Type-specific fields */}
               {goalData.type === "time" && (
                 <div className="grid grid-cols-2 gap-6">
@@ -431,33 +389,35 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       />
                     </div>
 
-                    {/* Priority */}
-                    <div>
-                      <label className="block text-sm font-medium text-primary mb-2">
-                        Priority
-                      </label>
-                      <div className="flex gap-3">
-                        {["low", "medium", "high"].map((priority) => (
-                          <button
-                            key={priority}
-                            type="button"
-                            onClick={() =>
-                              updateGoalData(
-                                "priority",
-                                priority as "low" | "medium" | "high"
-                              )
-                            }
-                            className={`px-4 py-2 rounded-lg border text-sm font-medium capitalize transition-colors ${
-                              goalData.priority === priority
-                                ? "border-primary bg-primary bg-opacity-10 text-primary"
-                                : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
-                            }`}
-                          >
-                            {priority}
-                          </button>
-                        ))}
+                    {/* Priority - Show in left column when not custom range */}
+                    {goalData.period !== "custom" && (
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          Priority
+                        </label>
+                        <div className="flex gap-3">
+                          {["low", "medium", "high"].map((priority) => (
+                            <button
+                              key={priority}
+                              type="button"
+                              onClick={() =>
+                                updateGoalData(
+                                  "priority",
+                                  priority as "low" | "medium" | "high"
+                                )
+                              }
+                              className={`px-4 py-2 rounded-lg border text-sm font-medium capitalize transition-colors ${
+                                goalData.priority === priority
+                                  ? "border-primary bg-primary bg-opacity-10 text-primary"
+                                  : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
+                              }`}
+                            >
+                              {priority}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Right Column */}
@@ -600,6 +560,36 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                           </div>
                         )}
                       </>
+                    )}
+
+                    {/* Priority - Only show when custom range is selected */}
+                    {goalData.period === "custom" && (
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          Priority
+                        </label>
+                        <div className="flex gap-3">
+                          {["low", "medium", "high"].map((priority) => (
+                            <button
+                              key={priority}
+                              type="button"
+                              onClick={() =>
+                                updateGoalData(
+                                  "priority",
+                                  priority as "low" | "medium" | "high"
+                                )
+                              }
+                              className={`px-4 py-2 rounded-lg border text-sm font-medium capitalize transition-colors ${
+                                goalData.priority === priority
+                                  ? "border-primary bg-primary bg-opacity-10 text-primary"
+                                  : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
+                              }`}
+                            >
+                              {priority}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -774,8 +764,8 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+        {/* Footer - Fixed */}
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           {step === "customize" && (
             <button
               onClick={() => setStep("template")}
