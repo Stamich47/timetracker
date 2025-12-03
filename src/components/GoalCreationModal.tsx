@@ -10,8 +10,11 @@ import {
   Lightbulb,
   Building,
   Globe,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useGoals } from "../hooks/useGoals";
+import { useMobile } from "../hooks/useMobile";
 import { projectsApi } from "../lib/projectsApi";
 import CustomDropdown from "./CustomDropdown";
 import {
@@ -41,14 +44,16 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
   editingGoal = null,
 }) => {
   const { createGoal, updateGoal } = useGoals();
+  const isMobile = useMobile();
   const [step, setStep] = useState<"template" | "customize">("template");
+  const [wizardStep, setWizardStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
 
   // Form state
   const [goalData, setGoalData] = useState<
-    Partial<CreateGoalData & { templateId?: string }>
+    Partial<CreateGoalData & { templateId?: string; isRecurring?: boolean }>
   >({
     type: "time",
     priority: "medium",
@@ -61,6 +66,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
       if (editingGoal) {
         // Editing mode: skip template selection and populate form
         setStep("customize");
+        setWizardStep(1);
         setGoalData({
           name: editingGoal.name,
           description: editingGoal.description,
@@ -92,6 +98,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
       } else {
         // Creating mode: start with template selection
         setStep("template");
+        setWizardStep(1);
         setGoalData({
           type: "time",
           priority: "medium",
@@ -187,15 +194,28 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
   };
 
   const updateGoalData = (
-    field: keyof CreateGoalData,
+    field: keyof (CreateGoalData & {
+      templateId?: string;
+      isRecurring?: boolean;
+    }),
     value: string | number | boolean | undefined
   ) => {
     setGoalData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-lg shadow-xl max-w-4xl w-full flex flex-col border border-gray-200 dark:border-gray-700">
+    <div
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
+        isMobile && step === "customize" ? "p-0" : "p-4"
+      }`}
+    >
+      <div
+        className={`bg-surface rounded-lg shadow-xl w-full flex flex-col border border-gray-200 dark:border-gray-700 ${
+          isMobile && step === "customize"
+            ? "h-full max-w-none rounded-none"
+            : "max-w-4xl"
+        }`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div>
@@ -278,6 +298,798 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                     </div>
                   </div>
                 </button>
+              </div>
+            </div>
+          ) : isMobile ? (
+            // Mobile Wizard
+            <div className="flex flex-col h-full">
+              {/* Step Indicator */}
+              <div className="flex items-center justify-center py-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-2">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      wizardStep >= 1
+                        ? "bg-primary text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    1
+                  </div>
+                  <div
+                    className={`w-4 h-0.5 ${
+                      wizardStep >= 2 ? "bg-primary" : "bg-gray-200"
+                    }`}
+                  ></div>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      wizardStep >= 2
+                        ? "bg-primary text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    2
+                  </div>
+                </div>
+              </div>
+
+              {/* Wizard Content */}
+              <div className="flex-1 p-6 overflow-y-auto">
+                {wizardStep === 1 ? (
+                  // Step 1: Core Details
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-primary mb-4">
+                        Core Details
+                      </h3>
+                      {/* Goal Name */}
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          Goal Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={goalData.name || ""}
+                          onChange={(e) =>
+                            updateGoalData("name", e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                          placeholder="e.g., Monthly Billable Hours"
+                          required
+                        />
+                      </div>
+                      {goalData.type === "time" && (
+                        <>
+                          {/* Period */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              Period
+                            </label>
+                            <CustomDropdown
+                              value={goalData.period || "weekly"}
+                              onChange={(value) =>
+                                updateGoalData(
+                                  "period",
+                                  value as TimeGoalPeriod
+                                )
+                              }
+                              options={
+                                goalData.templateId === "productivity-goal"
+                                  ? [
+                                      { value: "daily", label: "Daily" },
+                                      { value: "weekly", label: "Weekly" },
+                                      { value: "monthly", label: "Monthly" },
+                                      {
+                                        value: "custom",
+                                        label: "Custom Range",
+                                      },
+                                    ]
+                                  : [
+                                      { value: "daily", label: "Daily" },
+                                      { value: "weekly", label: "Weekly" },
+                                      { value: "monthly", label: "Monthly" },
+                                      {
+                                        value: "quarterly",
+                                        label: "Quarterly",
+                                      },
+                                      { value: "yearly", label: "Yearly" },
+                                      {
+                                        value: "custom",
+                                        label: "Custom Range",
+                                      },
+                                    ]
+                              }
+                              placeholder="Select period"
+                              variant="input"
+                            />
+                          </div>
+
+                          {/* Custom Range Dates */}
+                          {goalData.period === "custom" && (
+                            <div className="space-y-4 mb-4">
+                              <div>
+                                <label className="block text-sm font-medium text-primary mb-2">
+                                  Start Date *
+                                </label>
+                                <input
+                                  type="date"
+                                  value={goalData.startDate || ""}
+                                  onChange={(e) =>
+                                    updateGoalData("startDate", e.target.value)
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-primary mb-2">
+                                  End Date *
+                                </label>
+                                <input
+                                  type="date"
+                                  value={goalData.endDate || ""}
+                                  onChange={(e) =>
+                                    updateGoalData("endDate", e.target.value)
+                                  }
+                                  min={goalData.startDate}
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                                  required
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Target Hours */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              Target Hours
+                            </label>
+                            <input
+                              type="number"
+                              value={goalData.targetHours || ""}
+                              onChange={(e) =>
+                                updateGoalData(
+                                  "targetHours",
+                                  parseFloat(e.target.value)
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="160"
+                              min="1"
+                              required
+                            />
+                          </div>
+
+                          {/* Scope selection for productivity goals */}
+                          {goalData.templateId === "productivity-goal" && (
+                            <>
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-primary mb-3">
+                                  What would you like to track?
+                                </label>
+                                <div className="space-y-2">
+                                  <label className="flex items-center">
+                                    <input
+                                      type="radio"
+                                      name="scope"
+                                      value="client"
+                                      checked={goalData.scope === "client"}
+                                      onChange={(e) => {
+                                        updateGoalData("scope", e.target.value);
+                                        updateGoalData("scopeId", ""); // Clear scopeId when changing scope
+                                      }}
+                                      className="mr-3"
+                                    />
+                                    <div className="flex items-center">
+                                      <Building className="h-4 w-4 mr-2 text-secondary" />
+                                      <div>
+                                        <div className="font-medium">
+                                          Client Specific
+                                        </div>
+                                        <div className="text-xs text-secondary">
+                                          Track all hours for projects under a
+                                          specific client
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </label>
+                                  <label className="flex items-center">
+                                    <input
+                                      type="radio"
+                                      name="scope"
+                                      value="project"
+                                      checked={goalData.scope === "project"}
+                                      onChange={(e) => {
+                                        updateGoalData("scope", e.target.value);
+                                        updateGoalData("scopeId", ""); // Clear scopeId when changing scope
+                                      }}
+                                      className="mr-3"
+                                    />
+                                    <div className="flex items-center">
+                                      <FolderOpen className="h-4 w-4 mr-2 text-secondary" />
+                                      <div>
+                                        <div className="font-medium">
+                                          Project Specific
+                                        </div>
+                                        <div className="text-xs text-secondary">
+                                          Track hours for a specific project
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </label>
+                                  <label className="flex items-center">
+                                    <input
+                                      type="radio"
+                                      name="scope"
+                                      value="general"
+                                      checked={goalData.scope === "general"}
+                                      onChange={(e) => {
+                                        updateGoalData("scope", e.target.value);
+                                        updateGoalData("scopeId", undefined); // Clear scopeId for general scope
+                                      }}
+                                      className="mr-3"
+                                    />
+                                    <div className="flex items-center">
+                                      <Globe className="h-4 w-4 mr-2 text-secondary" />
+                                      <div>
+                                        <div className="font-medium">
+                                          All Hours
+                                        </div>
+                                        <div className="text-xs text-secondary">
+                                          Track total hours worked across all
+                                          projects
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Conditional dropdown based on scope */}
+                              {(goalData.scope === "client" ||
+                                goalData.scope === "project") && (
+                                <div>
+                                  <label className="block text-sm font-medium text-primary mb-2">
+                                    {goalData.scope === "client"
+                                      ? "Client *"
+                                      : "Project *"}
+                                  </label>
+                                  <CustomDropdown
+                                    value={goalData.scopeId || ""}
+                                    onChange={(value) =>
+                                      updateGoalData("scopeId", value)
+                                    }
+                                    options={[
+                                      {
+                                        value: "",
+                                        label:
+                                          goalData.scope === "client"
+                                            ? "Select a client..."
+                                            : "Select a project...",
+                                      },
+                                      ...(goalData.scope === "client"
+                                        ? clients.map((client) => ({
+                                            value: client.id!,
+                                            label: client.name,
+                                          }))
+                                        : projects.map((project) => ({
+                                            value: project.id!,
+                                            label: project.name,
+                                            element: (
+                                              <div className="flex items-center gap-2">
+                                                <div
+                                                  className="w-3 h-3 rounded-full flex-shrink-0"
+                                                  style={{
+                                                    backgroundColor:
+                                                      project.color ||
+                                                      "#3B82F6",
+                                                  }}
+                                                />
+                                                <span className="truncate">
+                                                  {project.name}
+                                                </span>
+                                              </div>
+                                            ),
+                                          }))),
+                                    ]}
+                                  />
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </>
+                      )}
+                      {goalData.type === "revenue" && (
+                        <>
+                          {/* Period */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              Period
+                            </label>
+                            <CustomDropdown
+                              value={goalData.period || "monthly"}
+                              onChange={(value) =>
+                                updateGoalData(
+                                  "period",
+                                  value as TimeGoalPeriod
+                                )
+                              }
+                              options={
+                                goalData.templateId === "revenue-target"
+                                  ? [
+                                      { value: "weekly", label: "Weekly" },
+                                      { value: "monthly", label: "Monthly" },
+                                      {
+                                        value: "quarterly",
+                                        label: "Quarterly",
+                                      },
+                                      { value: "yearly", label: "Yearly" },
+                                      {
+                                        value: "custom",
+                                        label: "Custom Range",
+                                      },
+                                    ]
+                                  : [
+                                      { value: "monthly", label: "Monthly" },
+                                      {
+                                        value: "quarterly",
+                                        label: "Quarterly",
+                                      },
+                                      { value: "yearly", label: "Yearly" },
+                                      {
+                                        value: "custom",
+                                        label: "Custom Range",
+                                      },
+                                    ]
+                              }
+                              placeholder="Select period"
+                              variant="input"
+                            />
+                          </div>
+
+                          {/* Custom Range Dates */}
+                          {goalData.period === "custom" && (
+                            <div className="space-y-4 mb-4">
+                              <div>
+                                <label className="block text-sm font-medium text-primary mb-2">
+                                  Start Date *
+                                </label>
+                                <input
+                                  type="date"
+                                  value={goalData.startDate || ""}
+                                  onChange={(e) =>
+                                    updateGoalData("startDate", e.target.value)
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-primary mb-2">
+                                  End Date *
+                                </label>
+                                <input
+                                  type="date"
+                                  value={goalData.endDate || ""}
+                                  onChange={(e) =>
+                                    updateGoalData("endDate", e.target.value)
+                                  }
+                                  min={goalData.startDate}
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                                  required
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Scope selection for revenue goals */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-primary mb-3">
+                              What revenue would you like to track?
+                            </label>
+                            <div className="space-y-2">
+                              <label className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="scope"
+                                  value="client"
+                                  checked={goalData.scope === "client"}
+                                  onChange={(e) => {
+                                    updateGoalData("scope", e.target.value);
+                                    updateGoalData("scopeId", "");
+                                  }}
+                                  className="mr-3"
+                                />
+                                <div className="flex items-center">
+                                  <Building className="h-4 w-4 mr-2 text-secondary" />
+                                  <div>
+                                    <div className="font-medium">
+                                      Client Specific
+                                    </div>
+                                    <div className="text-xs text-secondary">
+                                      Revenue from specific client only
+                                    </div>
+                                  </div>
+                                </div>
+                              </label>
+                              <label className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="scope"
+                                  value="project"
+                                  checked={goalData.scope === "project"}
+                                  onChange={(e) => {
+                                    updateGoalData("scope", e.target.value);
+                                    updateGoalData("scopeId", "");
+                                  }}
+                                  className="mr-3"
+                                />
+                                <div className="flex items-center">
+                                  <FolderOpen className="h-4 w-4 mr-2 text-secondary" />
+                                  <div>
+                                    <div className="font-medium">
+                                      Project Specific
+                                    </div>
+                                    <div className="text-xs text-secondary">
+                                      Revenue from specific project only
+                                    </div>
+                                  </div>
+                                </div>
+                              </label>
+                              <label className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="scope"
+                                  value="general"
+                                  checked={goalData.scope === "general"}
+                                  onChange={(e) => {
+                                    updateGoalData("scope", e.target.value);
+                                    updateGoalData("scopeId", undefined);
+                                  }}
+                                  className="mr-3"
+                                />
+                                <div className="flex items-center">
+                                  <Globe className="h-4 w-4 mr-2 text-secondary" />
+                                  <div>
+                                    <div className="font-medium">
+                                      All Revenue
+                                    </div>
+                                    <div className="text-xs text-secondary">
+                                      All billable revenue across all projects
+                                    </div>
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Conditional client/project selector */}
+                          {(goalData.scope === "client" ||
+                            goalData.scope === "project") && (
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-primary mb-2">
+                                {goalData.scope === "client"
+                                  ? "Client *"
+                                  : "Project *"}
+                              </label>
+                              <CustomDropdown
+                                value={goalData.scopeId || ""}
+                                onChange={(value) =>
+                                  updateGoalData("scopeId", value)
+                                }
+                                options={[
+                                  {
+                                    value: "",
+                                    label:
+                                      goalData.scope === "client"
+                                        ? "Select a client..."
+                                        : "Select a project...",
+                                  },
+                                  ...(goalData.scope === "client"
+                                    ? clients.map((client) => ({
+                                        value: client.id!,
+                                        label: client.name,
+                                      }))
+                                    : projects.map((project) => ({
+                                        value: project.id!,
+                                        label: project.name,
+                                        element: (
+                                          <div className="flex items-center gap-2">
+                                            <div
+                                              className="w-3 h-3 rounded-full flex-shrink-0"
+                                              style={{
+                                                backgroundColor:
+                                                  project.color || "#3B82F6",
+                                              }}
+                                            />
+                                            <span className="truncate">
+                                              {project.name}
+                                            </span>
+                                          </div>
+                                        ),
+                                      }))),
+                                ]}
+                              />
+                            </div>
+                          )}
+
+                          {/* Target Amount */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              Target Amount ($) *
+                            </label>
+                            <input
+                              type="number"
+                              value={goalData.targetAmount || ""}
+                              onChange={(e) =>
+                                updateGoalData(
+                                  "targetAmount",
+                                  parseFloat(e.target.value)
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="5000"
+                              min="1"
+                              required
+                            />
+                          </div>
+                        </>
+                      )}
+                      {goalData.type === "project" && (
+                        <>
+                          {/* Project Selection */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              Project *
+                            </label>
+                            <CustomDropdown
+                              value={goalData.projectId || ""}
+                              onChange={(value) =>
+                                updateGoalData("projectId", value)
+                              }
+                              options={[
+                                {
+                                  value: "",
+                                  label: "Select a project...",
+                                },
+                                ...projects.map((project) => ({
+                                  value: project.id!,
+                                  label: project.name,
+                                  element: (
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-3 h-3 rounded-full flex-shrink-0"
+                                        style={{
+                                          backgroundColor:
+                                            project.color || "#3B82F6",
+                                        }}
+                                      />
+                                      <span className="truncate">
+                                        {project.name}
+                                      </span>
+                                    </div>
+                                  ),
+                                })),
+                              ]}
+                            />
+                          </div>
+
+                          {/* Target Hours */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              Target Hours (Optional)
+                            </label>
+                            <input
+                              type="number"
+                              value={goalData.targetHours || ""}
+                              onChange={(e) =>
+                                updateGoalData(
+                                  "targetHours",
+                                  parseFloat(e.target.value) || undefined
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="80"
+                              min="1"
+                            />
+                          </div>
+
+                          {/* Due Date */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              Due Date (Optional)
+                            </label>
+                            <input
+                              type="date"
+                              value={goalData.targetCompletionDate || ""}
+                              onChange={(e) =>
+                                updateGoalData(
+                                  "targetCompletionDate",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // Step 2: Settings & Create
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-primary mb-4">
+                        Settings & Review
+                      </h3>
+                      {/* Priority */}
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          Priority
+                        </label>
+                        <div className="flex gap-3">
+                          {["low", "medium", "high"].map((priority) => (
+                            <button
+                              key={priority}
+                              type="button"
+                              onClick={() =>
+                                updateGoalData(
+                                  "priority",
+                                  priority as "low" | "medium" | "high"
+                                )
+                              }
+                              className={`px-4 py-2 rounded-lg border text-sm font-medium capitalize transition-colors ${
+                                goalData.priority === priority
+                                  ? "border-primary bg-primary bg-opacity-10 text-primary"
+                                  : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
+                              }`}
+                            >
+                              {priority}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Make Recurring */}
+                      {(goalData.period === "weekly" ||
+                        goalData.period === "monthly") && (
+                        <div className="mb-4">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={goalData.isRecurring || false}
+                              onChange={(e) =>
+                                updateGoalData("isRecurring", e.target.checked)
+                              }
+                              className="mr-3"
+                            />
+                            <div>
+                              <div className="font-medium">Make Recurring</div>
+                              <div className="text-xs text-secondary">
+                                Automatically create this goal at the start of
+                                each{" "}
+                                {goalData.period === "weekly"
+                                  ? "week"
+                                  : "month"}
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Description */}
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          Description (Optional)
+                        </label>
+                        <textarea
+                          value={goalData.description || ""}
+                          onChange={(e) =>
+                            updateGoalData("description", e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                          rows={3}
+                          placeholder="Describe your goal..."
+                        />
+                      </div>
+
+                      {/* Summary */}
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <h4 className="font-medium text-primary mb-2">
+                          Goal Summary
+                        </h4>
+                        <p className="text-sm text-secondary">
+                          <strong>Name:</strong> {goalData.name || "Not set"}
+                          <br />
+                          <strong>Type:</strong>{" "}
+                          {getGoalTypeDisplayName(goalData.type || "time")}
+                          <br />
+                          {goalData.type === "time" && (
+                            <>
+                              <strong>Period:</strong>{" "}
+                              {goalData.period || "Not set"}
+                              <br />
+                              <strong>Target:</strong>{" "}
+                              {goalData.targetHours || 0} hours
+                              <br />
+                              {goalData.scope && (
+                                <>
+                                  <strong>Scope:</strong> {goalData.scope}
+                                  <br />
+                                </>
+                              )}
+                            </>
+                          )}
+                          {goalData.type === "revenue" && (
+                            <>
+                              <strong>Period:</strong>{" "}
+                              {goalData.period || "Not set"}
+                              <br />
+                              <strong>Target:</strong> $
+                              {goalData.targetAmount || 0}
+                              <br />
+                              {goalData.scope === "client" &&
+                                goalData.scopeId && (
+                                  <>
+                                    <strong>Client:</strong>{" "}
+                                    {clients.find(
+                                      (c) => c.id === goalData.scopeId
+                                    )?.name || "Not set"}
+                                    <br />
+                                  </>
+                                )}
+                              {goalData.scope === "project" &&
+                                goalData.scopeId && (
+                                  <>
+                                    <strong>Project:</strong>{" "}
+                                    {projects.find(
+                                      (p) => p.id === goalData.scopeId
+                                    )?.name || "Not set"}
+                                    <br />
+                                  </>
+                                )}
+                              {goalData.scope === "general" && (
+                                <>
+                                  <strong>Scope:</strong> All Revenue
+                                  <br />
+                                </>
+                              )}
+                            </>
+                          )}
+                          {goalData.type === "project" && (
+                            <>
+                              <strong>Project:</strong>{" "}
+                              {projects.find((p) => p.id === goalData.projectId)
+                                ?.name || "Not set"}
+                              <br />
+                              {goalData.targetHours && (
+                                <>
+                                  <strong>Target Hours:</strong>{" "}
+                                  {goalData.targetHours}
+                                  <br />
+                                </>
+                              )}
+                              {goalData.targetCompletionDate && (
+                                <>
+                                  <strong>Due Date:</strong>{" "}
+                                  {new Date(
+                                    goalData.targetCompletionDate
+                                  ).toLocaleDateString()}
+                                  <br />
+                                </>
+                              )}
+                            </>
+                          )}
+                          {goalData.isRecurring && (
+                            <>
+                              <strong>Recurring:</strong> Yes
+                              <br />
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -534,20 +1346,6 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                                   : projects.map((project) => ({
                                       value: project.id!,
                                       label: project.name,
-                                      element: (
-                                        <div className="flex items-center gap-2">
-                                          <div
-                                            className="w-3 h-3 rounded-full flex-shrink-0"
-                                            style={{
-                                              backgroundColor:
-                                                project.color || "#3B82F6",
-                                            }}
-                                          />
-                                          <span className="truncate">
-                                            {project.name}
-                                          </span>
-                                        </div>
-                                      ),
                                     }))),
                               ]}
                               placeholder={
@@ -595,91 +1393,290 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                 </div>
               )}{" "}
               {goalData.type === "revenue" && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-2">
-                      Period
-                    </label>
-                    <select
-                      value={goalData.period || "monthly"}
-                      onChange={(e) =>
-                        updateGoalData(
-                          "period",
-                          e.target.value as TimeGoalPeriod
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      {goalData.templateId === "revenue-target" ? (
-                        <>
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Quarterly</option>
-                          <option value="yearly">Annually</option>
-                          <option value="custom">Custom Range</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Quarterly</option>
-                          <option value="yearly">Yearly</option>
-                          <option value="custom">Custom Range</option>
-                        </>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Left Column */}
+                    <div className="space-y-4 border-r border-gray-200 dark:border-gray-700 pr-6">
+                      {/* Period */}
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-2">
+                          Period
+                        </label>
+                        <CustomDropdown
+                          value={goalData.period || "monthly"}
+                          onChange={(value) =>
+                            updateGoalData("period", value as TimeGoalPeriod)
+                          }
+                          options={
+                            goalData.templateId === "revenue-target"
+                              ? [
+                                  { value: "weekly", label: "Weekly" },
+                                  { value: "monthly", label: "Monthly" },
+                                  { value: "quarterly", label: "Quarterly" },
+                                  { value: "yearly", label: "Yearly" },
+                                  { value: "custom", label: "Custom Range" },
+                                ]
+                              : [
+                                  { value: "monthly", label: "Monthly" },
+                                  { value: "quarterly", label: "Quarterly" },
+                                  { value: "yearly", label: "Yearly" },
+                                  { value: "custom", label: "Custom Range" },
+                                ]
+                          }
+                          placeholder="Select period"
+                          variant="input"
+                        />
+                      </div>
+
+                      {/* Custom Range Dates */}
+                      {goalData.period === "custom" && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              Start Date *
+                            </label>
+                            <input
+                              type="date"
+                              value={goalData.startDate || ""}
+                              onChange={(e) =>
+                                updateGoalData("startDate", e.target.value)
+                              }
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-primary mb-2">
+                              End Date *
+                            </label>
+                            <input
+                              type="date"
+                              value={goalData.endDate || ""}
+                              onChange={(e) =>
+                                updateGoalData("endDate", e.target.value)
+                              }
+                              min={goalData.startDate}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                              required
+                            />
+                          </div>
+                        </div>
                       )}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-2">
-                      Target Amount ($)
-                    </label>
-                    <input
-                      type="number"
-                      value={goalData.targetAmount || ""}
-                      onChange={(e) =>
-                        updateGoalData(
-                          "targetAmount",
-                          parseFloat(e.target.value)
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="5000"
-                      min="1"
-                      required
-                    />
-                  </div>
-                  {goalData.period === "custom" && (
-                    <div className="col-span-2 grid grid-cols-2 gap-4 mt-4">
+
+                      {/* Target Amount */}
                       <div>
                         <label className="block text-sm font-medium text-primary mb-2">
-                          Start Date *
+                          Target Amount ($)
                         </label>
                         <input
-                          type="date"
-                          value={goalData.startDate || ""}
+                          type="number"
+                          value={goalData.targetAmount || ""}
                           onChange={(e) =>
-                            updateGoalData("startDate", e.target.value)
+                            updateGoalData(
+                              "targetAmount",
+                              parseFloat(e.target.value)
+                            )
                           }
                           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+                          placeholder="5000"
+                          min="1"
                           required
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-primary mb-2">
-                          End Date *
-                        </label>
-                        <input
-                          type="date"
-                          value={goalData.endDate || ""}
-                          onChange={(e) =>
-                            updateGoalData("endDate", e.target.value)
-                          }
-                          min={goalData.startDate}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
-                          required
-                        />
-                      </div>
+
+                      {/* Priority - Show when not custom */}
+                      {goalData.period !== "custom" && (
+                        <div>
+                          <label className="block text-sm font-medium text-primary mb-2">
+                            Priority
+                          </label>
+                          <div className="flex gap-3">
+                            {["low", "medium", "high"].map((priority) => (
+                              <button
+                                key={priority}
+                                type="button"
+                                onClick={() =>
+                                  updateGoalData(
+                                    "priority",
+                                    priority as "low" | "medium" | "high"
+                                  )
+                                }
+                                className={`px-4 py-2 rounded-lg border text-sm font-medium capitalize transition-colors ${
+                                  goalData.priority === priority
+                                    ? "border-primary bg-primary bg-opacity-10 text-primary"
+                                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
+                                }`}
+                              >
+                                {priority}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Right Column */}
+                    <div className="space-y-4">
+                      {/* Scope selection for revenue goals */}
+                      <div>
+                        <label className="block text-sm font-medium text-primary mb-3">
+                          What revenue would you like to track?
+                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="scope"
+                              value="client"
+                              checked={goalData.scope === "client"}
+                              onChange={(e) => {
+                                updateGoalData("scope", e.target.value);
+                                updateGoalData("scopeId", "");
+                              }}
+                              className="mr-3"
+                            />
+                            <div className="flex items-center">
+                              <Building className="h-4 w-4 mr-2 text-secondary" />
+                              <div>
+                                <div className="font-medium">
+                                  Client Specific
+                                </div>
+                                <div className="text-xs text-secondary">
+                                  Revenue from specific client only
+                                </div>
+                              </div>
+                            </div>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="scope"
+                              value="project"
+                              checked={goalData.scope === "project"}
+                              onChange={(e) => {
+                                updateGoalData("scope", e.target.value);
+                                updateGoalData("scopeId", "");
+                              }}
+                              className="mr-3"
+                            />
+                            <div className="flex items-center">
+                              <FolderOpen className="h-4 w-4 mr-2 text-secondary" />
+                              <div>
+                                <div className="font-medium">
+                                  Project Specific
+                                </div>
+                                <div className="text-xs text-secondary">
+                                  Revenue from specific project only
+                                </div>
+                              </div>
+                            </div>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="scope"
+                              value="general"
+                              checked={goalData.scope === "general"}
+                              onChange={(e) => {
+                                updateGoalData("scope", e.target.value);
+                                updateGoalData("scopeId", undefined);
+                              }}
+                              className="mr-3"
+                            />
+                            <div className="flex items-center">
+                              <Globe className="h-4 w-4 mr-2 text-secondary" />
+                              <div>
+                                <div className="font-medium">All Revenue</div>
+                                <div className="text-xs text-secondary">
+                                  All billable revenue across all projects
+                                </div>
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Conditional client/project selector */}
+                      {(goalData.scope === "client" ||
+                        goalData.scope === "project") && (
+                        <div>
+                          <label className="block text-sm font-medium text-primary mb-2">
+                            {goalData.scope === "client"
+                              ? "Client *"
+                              : "Project *"}
+                          </label>
+                          <CustomDropdown
+                            value={goalData.scopeId || ""}
+                            onChange={(value) =>
+                              updateGoalData("scopeId", value)
+                            }
+                            options={[
+                              {
+                                value: "",
+                                label:
+                                  goalData.scope === "client"
+                                    ? "Select a client..."
+                                    : "Select a project...",
+                              },
+                              ...(goalData.scope === "client"
+                                ? clients.map((client) => ({
+                                    value: client.id!,
+                                    label: client.name,
+                                  }))
+                                : projects.map((project) => ({
+                                    value: project.id!,
+                                    label: project.name,
+                                    element: (
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          className="w-3 h-3 rounded-full flex-shrink-0"
+                                          style={{
+                                            backgroundColor:
+                                              project.color || "#3B82F6",
+                                          }}
+                                        />
+                                        <span className="truncate">
+                                          {project.name}
+                                        </span>
+                                      </div>
+                                    ),
+                                  }))),
+                            ]}
+                          />
+                        </div>
+                      )}
+
+                      {/* Priority - Only show when custom range is selected */}
+                      {goalData.period === "custom" && (
+                        <div>
+                          <label className="block text-sm font-medium text-primary mb-2">
+                            Priority
+                          </label>
+                          <div className="flex gap-3">
+                            {["low", "medium", "high"].map((priority) => (
+                              <button
+                                key={priority}
+                                type="button"
+                                onClick={() =>
+                                  updateGoalData(
+                                    "priority",
+                                    priority as "low" | "medium" | "high"
+                                  )
+                                }
+                                className={`px-4 py-2 rounded-lg border text-sm font-medium capitalize transition-colors ${
+                                  goalData.priority === priority
+                                    ? "border-primary bg-primary bg-opacity-10 text-primary"
+                                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
+                                }`}
+                              >
+                                {priority}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
               {goalData.type === "project" && (
@@ -765,8 +1762,8 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
         </div>
 
         {/* Footer - Fixed */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-          {step === "customize" && (
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+          {step === "customize" && !isMobile && (
             <button
               onClick={() => setStep("template")}
               className="px-4 py-2 text-secondary hover:text-primary transition-colors"
@@ -774,31 +1771,86 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
               Back to Templates
             </button>
           )}
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-secondary hover:text-primary transition-colors"
-          >
-            Cancel
-          </button>
-          {step === "customize" && (
+          {isMobile && step === "customize" && wizardStep > 1 && (
             <button
-              onClick={handleSubmit}
-              disabled={isCreating || !goalData.name}
-              className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setWizardStep(wizardStep - 1)}
+              className="flex items-center px-4 py-2 text-secondary hover:text-primary transition-colors"
             >
-              {isCreating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Create Goal
-                </>
-              )}
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
             </button>
           )}
+          <div></div> {/* Spacer */}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-secondary hover:text-primary transition-colors"
+            >
+              Cancel
+            </button>
+            {step === "customize" &&
+              (isMobile ? (
+                wizardStep < 2 ? (
+                  <button
+                    onClick={() => setWizardStep(wizardStep + 1)}
+                    disabled={
+                      !goalData.name ||
+                      (goalData.type === "time" &&
+                        goalData.scope &&
+                        goalData.scope !== "general" &&
+                        !goalData.scopeId) ||
+                      (goalData.type === "revenue" &&
+                        (!goalData.period ||
+                          !goalData.targetAmount ||
+                          (goalData.scope &&
+                            goalData.scope !== "general" &&
+                            !goalData.scopeId))) ||
+                      (goalData.type === "project" && !goalData.projectId)
+                    }
+                    className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isCreating || !goalData.name}
+                    className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCreating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Create Goal
+                      </>
+                    )}
+                  </button>
+                )
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={isCreating || !goalData.name}
+                  className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCreating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Create Goal
+                    </>
+                  )}
+                </button>
+              ))}
+          </div>
         </div>
       </div>
     </div>

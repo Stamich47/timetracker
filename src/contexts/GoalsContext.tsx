@@ -14,7 +14,6 @@ import { useAuth } from "../hooks/useAuth";
 import { useTimer } from "../hooks/useTimer";
 import type { Goal } from "../lib/goals";
 import type { CreateGoalData, UpdateGoalData } from "../lib/goalsApi";
-import { calculateGoalProgress } from "../lib/goals";
 import type { GoalProgress } from "../lib/goals";
 import { goalsApi } from "../lib/goalsApi";
 
@@ -41,18 +40,11 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { timer } = useTimer();
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [goalsWithProgress, setGoalsWithProgress] = useState<
+    (Goal & { progress: GoalProgress })[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Compute goals with progress using current timer state
-  const goalsWithProgress = React.useMemo(
-    () =>
-      goals.map((goal) => ({
-        ...goal,
-        progress: calculateGoalProgress(goal, timer),
-      })),
-    [goals, timer]
-  );
 
   const refreshGoals = useCallback(async () => {
     if (!user) return;
@@ -61,11 +53,10 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      // Get goals with real progress from database (no timer for refresh)
-      const goalsWithRealProgress = await goalsApi.getGoalsWithProgress(
-        undefined
-      );
-      // Extract goals from the response
+      // Get goals with real progress from database
+      const goalsWithRealProgress = await goalsApi.getGoalsWithProgress(timer);
+      setGoalsWithProgress(goalsWithRealProgress);
+      // Extract goals from the response for backward compatibility
       const goalsOnly = goalsWithRealProgress.map((goalWithProgress) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { progress, ...goal } = goalWithProgress;
@@ -77,7 +68,7 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, timer]);
 
   const createGoal = async (goalData: CreateGoalData): Promise<Goal> => {
     try {
@@ -128,6 +119,7 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
     const loadGoals = async () => {
       if (!user) {
         setGoals([]);
+        setGoalsWithProgress([]);
         setError(null);
         return;
       }
@@ -136,11 +128,12 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
       setError(null);
 
       try {
-        // Get goals with real progress from database (no timer for initial load)
+        // Get goals with real progress from database
         const goalsWithRealProgress = await goalsApi.getGoalsWithProgress(
-          undefined
+          timer
         );
-        // Extract goals from the response (they have updated currentHours)
+        setGoalsWithProgress(goalsWithRealProgress);
+        // Extract goals from the response for backward compatibility
         const goalsOnly = goalsWithRealProgress.map((goalWithProgress) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { progress, ...goal } = goalWithProgress;
@@ -155,7 +148,7 @@ export const GoalsProvider: React.FC<GoalsProviderProps> = ({ children }) => {
     };
 
     loadGoals();
-  }, [user]); // Only load when user changes
+  }, [user, timer]); // Include timer in dependency to update when timer changes
 
   const value: GoalsContextType = {
     goals,

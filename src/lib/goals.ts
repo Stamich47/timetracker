@@ -55,6 +55,8 @@ export interface RevenueGoal extends BaseGoal {
   currency: string;
   startDate: string;
   endDate: string;
+  scope?: "client" | "project" | "general"; // New scope system
+  scopeId?: string; // clientId or projectId, null for general
 }
 
 export type Goal = TimeGoal | ProjectGoal | RevenueGoal;

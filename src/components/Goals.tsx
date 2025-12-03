@@ -23,9 +23,12 @@ import {
   Trash2,
   Building,
   Globe,
+  Bug,
 } from "lucide-react";
 import { useGoals } from "../hooks/useGoals";
+import { useTimeEntries } from "../hooks/useTimeEntries";
 import { projectsApi } from "../lib/projectsApi";
+import { timeEntriesApi } from "../lib/timeEntriesApi";
 import type {
   TimeGoal,
   RevenueGoal,
@@ -41,6 +44,7 @@ interface GoalsProps {
 
 const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
   const { goalsWithProgress, loading, error } = useGoals();
+  const { timeEntries } = useTimeEntries();
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [projects, setProjects] = useState<Project[]>([]);
@@ -101,6 +105,94 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
         // You might want to show a toast notification here
       }
     }
+  };
+
+  const handleDebugGoal = async (goal: BaseGoal) => {
+    console.log("=== GOAL DEBUG INFO ===");
+    console.log("Goal:", goal);
+
+    if (goal.type === "time") {
+      const timeGoal = goal as TimeGoal;
+      console.log("Goal Type: Time/Productivity Goal");
+      console.log("Date Range:", {
+        startDate: timeGoal.startDate,
+        endDate: timeGoal.endDate,
+        period: timeGoal.period,
+      });
+      console.log("Target Hours:", timeGoal.targetHours);
+      console.log("Scope:", timeGoal.scope);
+
+      // Fetch time entries for the goal's date range
+      try {
+        const entries = await timeEntriesApi.getTimeEntriesForRange(
+          timeGoal.startDate,
+          timeGoal.endDate
+        );
+
+        console.log(
+          "All time entries in date range:",
+          entries.length,
+          "entries"
+        );
+        console.log("Raw time entries:", entries);
+
+        // Filter entries based on goal scope
+        let filteredEntries = entries;
+        if (timeGoal.scope === "project" && timeGoal.scopeId) {
+          filteredEntries = entries.filter(
+            (entry) => entry.project_id === timeGoal.scopeId
+          );
+          console.log(
+            `Filtered for project "${getProjectName(timeGoal.scopeId!)}":`,
+            filteredEntries.length,
+            "entries"
+          );
+        } else if (timeGoal.scope === "client" && timeGoal.scopeId) {
+          // Find projects that belong to this client
+          const clientProjects = projects.filter(
+            (project) => project.client_id === timeGoal.scopeId
+          );
+          const clientProjectIds = clientProjects.map((project) => project.id);
+          filteredEntries = entries.filter(
+            (entry) =>
+              entry.project_id && clientProjectIds.includes(entry.project_id)
+          );
+          console.log(
+            `Filtered for client "${getClientName(timeGoal.scopeId!)}":`,
+            filteredEntries.length,
+            "entries"
+          );
+        } else {
+          // General scope - all entries
+          console.log(
+            "General scope - using all entries:",
+            filteredEntries.length,
+            "entries"
+          );
+        }
+
+        console.log("Filtered time entries for this goal:", filteredEntries);
+
+        // Calculate total hours from filtered entries
+        const totalHours = filteredEntries.reduce((sum, entry) => {
+          return sum + (entry.duration || 0) / 3600;
+        }, 0);
+        console.log(
+          "Total hours from filtered entries:",
+          totalHours.toFixed(2),
+          "hours"
+        );
+      } catch (error) {
+        console.error("Error fetching time entries:", error);
+      }
+    } else {
+      console.log("Goal Type: Non-time goal (revenue or project)");
+      console.log(
+        "This debug function is designed for time/productivity goals"
+      );
+    }
+
+    console.log("=== END GOAL DEBUG ===");
   };
 
   // Filter goals based on active filters
@@ -165,6 +257,153 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
   const completedGoals = filteredGoals.filter(
     (goal) => goal.progress.status === "completed"
   );
+
+  // Helper to calculate progress over time data (shows individual time entries as % of goal progress)
+  const getProgressOverTimeData = useMemo(() => {
+    const timeGoals = activeGoals.filter((goal) => goal.type === "time");
+    if (timeGoals.length === 0) return [];
+
+    // Get data for each time goal
+    return timeGoals.map((goal, goalIndex) => {
+      const timeGoal = goal as TimeGoal;
+      const targetHours = timeGoal.targetHours;
+
+      // Filter time entries based on goal scope
+      let relevantEntries = timeEntries;
+      if (timeGoal.scope === "project" && timeGoal.scopeId) {
+        relevantEntries = timeEntries.filter(
+          (entry) => entry.project_id === timeGoal.scopeId
+        );
+      } else if (timeGoal.scope === "client" && timeGoal.scopeId) {
+        // Find projects that belong to this client
+        const clientProjects = projects.filter(
+          (project) => project.client_id === timeGoal.scopeId
+        );
+        const clientProjectIds = clientProjects.map((project) => project.id);
+        relevantEntries = timeEntries.filter(
+          (entry) =>
+            entry.project_id && clientProjectIds.includes(entry.project_id)
+        );
+      }
+      // For 'general' scope, use all entries (already set above)
+
+      // Filter entries to only those within the goal's date range
+      const goalStartDate = new Date(timeGoal.startDate);
+      const goalEndDate = new Date(timeGoal.endDate);
+      const entriesInRange = relevantEntries.filter((entry) => {
+        const entryDate = new Date(entry.start_time);
+        return entryDate >= goalStartDate && entryDate <= goalEndDate;
+      });
+
+      // Create data points for each individual time entry
+      const dataPoints = entriesInRange.map((entry) => {
+        const entryDate = new Date(entry.start_time);
+        const entryHours = (entry.duration || 0) / 3600;
+        const progressPercent = (entryHours / targetHours) * 100;
+
+        return {
+          date: entryDate,
+          hours: entryHours,
+          percentage: progressPercent,
+          goalId: goal.id,
+          goalName: goal.name,
+          entryId: entry.id,
+          description: entry.description,
+          color:
+            goalIndex === 0
+              ? "emerald"
+              : goalIndex === 1
+              ? "blue"
+              : goalIndex === 2
+              ? "purple"
+              : "gray",
+        };
+      });
+
+      return {
+        goalId: goal.id,
+        goalName: goal.name,
+        startDate: timeGoal.startDate,
+        endDate: timeGoal.endDate,
+        targetHours,
+        color:
+          goalIndex === 0
+            ? "emerald"
+            : goalIndex === 1
+            ? "blue"
+            : goalIndex === 2
+            ? "purple"
+            : "gray",
+        data: dataPoints,
+      };
+    });
+  }, [activeGoals, timeEntries, projects]);
+
+  const getDotColorClass = (color: string) => {
+    switch (color) {
+      case "emerald":
+        return "bg-emerald-500";
+      case "blue":
+        return "bg-blue-500";
+      case "purple":
+        return "bg-purple-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+  const getTimeDistribution = useMemo(() => {
+    const timeGoals = activeGoals.filter((goal) => goal.type === "time");
+    if (timeGoals.length === 0) {
+      // Fallback to last 30 days if no time goals
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const recentEntries = timeEntries.filter(
+        (entry) => new Date(entry.start_time) >= thirtyDaysAgo
+      );
+
+      const billable =
+        recentEntries
+          .filter((entry) => entry.billable)
+          .reduce((sum, entry) => sum + (entry.duration || 0), 0) / 3600;
+
+      const nonBillable =
+        recentEntries
+          .filter((entry) => !entry.billable)
+          .reduce((sum, entry) => sum + (entry.duration || 0), 0) / 3600;
+
+      const total = billable + nonBillable;
+      return {
+        billable,
+        nonBillable,
+        total,
+        billablePercentage: total > 0 ? (billable / total) * 100 : 0,
+      };
+    }
+
+    // Use the first time goal's period
+    const timeGoal = timeGoals[0] as TimeGoal;
+    const startDate = new Date(timeGoal.startDate || timeGoal.createdAt);
+    const endDate = new Date(timeGoal.endDate);
+
+    const goalPeriodEntries = timeEntries.filter((entry) => {
+      const entryDate = new Date(entry.start_time);
+      return entryDate >= startDate && entryDate <= endDate;
+    });
+
+    const billable =
+      goalPeriodEntries
+        .filter((entry) => entry.billable)
+        .reduce((sum, entry) => sum + (entry.duration || 0), 0) / 3600;
+
+    const nonBillable =
+      goalPeriodEntries
+        .filter((entry) => !entry.billable)
+        .reduce((sum, entry) => sum + (entry.duration || 0), 0) / 3600;
+
+    const total = billable + nonBillable;
+    const billablePercentage = total > 0 ? (billable / total) * 100 : 0;
+
+    return { billable, nonBillable, total, billablePercentage };
+  }, [activeGoals, timeEntries]);
 
   // Ring Chart Component
   const RingChart: React.FC<{
@@ -403,31 +642,166 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
           <h3 className="text-lg font-semibold text-primary flex items-center">
             <LineChart className="h-5 w-5 mr-2" />
             Progress Over Time
+            {getProgressOverTimeData.length === 1 && (
+              <span className="text-sm font-normal ml-2">
+                (
+                {new Date(
+                  getProgressOverTimeData[0].startDate
+                ).toLocaleDateString()}{" "}
+                -{" "}
+                {new Date(
+                  getProgressOverTimeData[0].endDate
+                ).toLocaleDateString()}
+                )
+              </span>
+            )}
+            {getProgressOverTimeData.length > 1 && (
+              <span className="text-sm font-normal ml-2">(Multiple Goals)</span>
+            )}
           </h3>
-          <select className="text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-secondary">
-            <option>Last 30 days</option>
-            <option>Last 90 days</option>
-            <option>This year</option>
-          </select>
         </div>
-        <div className="h-64 flex items-end justify-between space-x-1">
-          {/* Mock progress data - replace with real data later */}
-          {[20, 35, 28, 45, 52, 48, 65, 72, 68, 78, 85, 82, 90, 95, 98].map(
-            (value, index) => (
-              <div key={index} className="flex flex-col items-center flex-1">
-                <div
-                  className="w-full bg-emerald-500 rounded-t transition-all duration-500 hover:bg-emerald-600"
-                  style={{ height: `${value}%` }}
-                ></div>
-                <span className="text-xs text-secondary mt-1">{index + 1}</span>
+        <div className="flex">
+          {/* Y-axis */}
+          <div
+            className="flex flex-col justify-between pr-2 text-xs text-secondary"
+            style={{ height: "256px" }}
+          >
+            <span>100%</span>
+            <span>75%</span>
+            <span>50%</span>
+            <span>25%</span>
+            <span>0%</span>
+          </div>
+
+          {/* Chart area */}
+          <div className="flex-1">
+            {/* Chart area with individual time entries as points */}
+            <div className="h-64 relative mb-2">
+              {/* Horizontal grid lines */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
+                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
+                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
+                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
+                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
               </div>
-            )
-          )}
+
+              {getProgressOverTimeData.length > 0 &&
+              getProgressOverTimeData.some(
+                (goalData) => goalData.data.length > 0
+              ) ? (
+                <div className="relative h-full">
+                  {getProgressOverTimeData.map((goalData) =>
+                    goalData.data.map((entryData, index) => {
+                      // Calculate position based on date within the range
+                      const startDate = new Date(2025, 10, 3); // November 3, 2025
+                      const endDate = new Date(2025, 11, 3); // December 3, 2025
+                      const totalRange =
+                        endDate.getTime() - startDate.getTime();
+                      const entryPosition =
+                        (entryData.date.getTime() - startDate.getTime()) /
+                        totalRange;
+                      const leftPosition = Math.max(
+                        0,
+                        Math.min(100, entryPosition * 100)
+                      );
+
+                      return (
+                        <div
+                          key={`${goalData.goalId}-${
+                            entryData.entryId || index
+                          }`}
+                          className="absolute w-3 h-3 rounded-full border-2 border-white shadow-sm"
+                          style={{
+                            left: `${leftPosition}%`,
+                            bottom: `${entryData.percentage}%`,
+                            backgroundColor:
+                              entryData.color === "emerald"
+                                ? "#10b981"
+                                : entryData.color === "blue"
+                                ? "#3b82f6"
+                                : entryData.color === "purple"
+                                ? "#8b5cf6"
+                                : "#6b7280",
+                            transform: "translateX(-50%) translateY(50%)", // Center the dot
+                          }}
+                          title={`${entryData.hours.toFixed(
+                            1
+                          )}h (${entryData.percentage.toFixed(1)}% of goal) - ${
+                            entryData.description || "No description"
+                          } on ${entryData.date.toLocaleDateString()} (${
+                            goalData.goalName
+                          })`}
+                        ></div>
+                      );
+                    })
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center w-full h-full text-secondary">
+                  No time entries found for this goal in the date range
+                </div>
+              )}
+            </div>
+
+            {/* X-axis labels - show key dates in the range */}
+            <div className="flex justify-between space-x-1 pl-1">
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-xs text-secondary">Nov 3</span>
+              </div>
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-xs text-secondary">Nov 10</span>
+              </div>
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-xs text-secondary">Nov 17</span>
+              </div>
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-xs text-secondary">Nov 24</span>
+              </div>
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-xs text-secondary">Dec 1</span>
+              </div>
+              <div className="flex flex-col items-center flex-1">
+                <span className="text-xs text-secondary">Dec 3</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex justify-between text-xs text-secondary mt-2">
-          <span>Goal Progress (%)</span>
-          <span>Days</span>
+        <div className="flex justify-between text-xs text-secondary mt-2 pl-6">
+          <span></span>
+          <span>
+            {getProgressOverTimeData.length === 1
+              ? `${new Date(
+                  getProgressOverTimeData[0].startDate
+                ).toLocaleDateString()} - ${new Date(
+                  getProgressOverTimeData[0].endDate
+                ).toLocaleDateString()}`
+              : getProgressOverTimeData.length > 1
+              ? "Multiple Goals"
+              : "Nov 3 - Dec 3, 2025"}
+          </span>
         </div>
+        {getProgressOverTimeData.length > 0 && (
+          <div className="mt-4 flex items-center justify-center">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              {getProgressOverTimeData.map((goalData) => (
+                <div
+                  key={goalData.goalId}
+                  className="flex items-center space-x-2"
+                >
+                  <div
+                    className={`w-3 h-3 ${getDotColorClass(
+                      goalData.color
+                    )} rounded`}
+                  ></div>
+                  <span className="text-sm text-secondary">
+                    {goalData.goalName}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pacing Visualization */}
@@ -510,25 +884,41 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                   stroke="#3B82F6"
                   strokeWidth="20"
                   fill="none"
-                  strokeDasharray={`${2 * Math.PI * 50 * 0.6} ${
-                    2 * Math.PI * 50 * 0.4
+                  strokeDasharray={`${
+                    2 *
+                    Math.PI *
+                    50 *
+                    (getTimeDistribution.billable /
+                      Math.max(getTimeDistribution.total, 1))
+                  } ${
+                    2 *
+                    Math.PI *
+                    50 *
+                    (getTimeDistribution.nonBillable /
+                      Math.max(getTimeDistribution.total, 1))
                   }`}
                   className="transition-all duration-1000"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-bold text-primary">60%</span>
+                <span className="text-lg font-bold text-primary">
+                  {Math.round(getTimeDistribution.billablePercentage)}%
+                </span>
               </div>
             </div>
           </div>
           <div className="space-y-2 mt-4">
             <div className="flex justify-between text-sm">
               <span className="text-secondary">Billable Hours</span>
-              <span className="text-primary">120h</span>
+              <span className="text-primary">
+                {getTimeDistribution.billable.toFixed(1)}h
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-secondary">Non-billable</span>
-              <span className="text-primary">80h</span>
+              <span className="text-primary">
+                {getTimeDistribution.nonBillable.toFixed(1)}h
+              </span>
             </div>
           </div>
         </div>
@@ -626,6 +1016,13 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           )}
                         </div>
                         <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleDebugGoal(goal)}
+                            className="p-1 text-secondary hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Debug goal data"
+                          >
+                            <Bug className="h-4 w-4" />
+                          </button>
                           <button
                             onClick={() => handleEditGoal(goal)}
                             className="p-1 text-secondary hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
@@ -852,6 +1249,13 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           )}
                         </div>
                         <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleDebugGoal(goal)}
+                            className="p-1 text-secondary hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Debug goal data"
+                          >
+                            <Bug className="h-4 w-4" />
+                          </button>
                           <button
                             onClick={() => handleEditGoal(goal)}
                             className="p-1 text-secondary hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"

@@ -198,7 +198,7 @@ class GoalsApi {
   ): Promise<(Goal & { progress: GoalProgress })[]> {
     const goals = await this.getGoals();
 
-    // Calculate real progress for each goal
+    // Calculate real progress for each goal (this will update the database with current values)
     const goalsWithProgress = await Promise.all(
       goals.map(async (goal) => {
         const realProgress = await this.calculateRealGoalProgress(
@@ -212,7 +212,20 @@ class GoalsApi {
       })
     );
 
-    return goalsWithProgress;
+    // Re-fetch goals from database to get updated currentAmount/currentHours
+    // (these were updated during progress calculation)
+    const updatedGoals = await this.getGoals();
+
+    // Merge the updated goal data with the progress calculations
+    return goalsWithProgress.map((goalWithProgress) => {
+      const updatedGoal = updatedGoals.find(
+        (g) => g.id === goalWithProgress.id
+      );
+      return {
+        ...(updatedGoal || goalWithProgress),
+        progress: goalWithProgress.progress,
+      };
+    });
   }
 
   /**
@@ -367,30 +380,105 @@ class GoalsApi {
     userId: string
   ): Promise<GoalProgress> {
     try {
-      // Query time entries within the goal period with hourly rates
-      const { data: timeEntries, error } = await supabase
+      // Build query for time entries within the goal period (without nested project data initially)
+      let query = supabase
         .from("time_entries")
-        .select("duration, hourly_rate, billable")
+        .select("id, duration, project_id")
         .eq("user_id", userId)
-        .eq("billable", true)
         .gte("start_time", goal.startDate)
         .lte("start_time", goal.endDate)
-        .not("duration", "is", null)
-        .not("hourly_rate", "is", null);
+        .not("duration", "is", null);
 
-      if (error) throw error;
+      // Apply scope filtering
+      if (goal.scope === "project" && goal.scopeId) {
+        // Filter by specific project
+        query = query.eq("project_id", goal.scopeId);
+      } else if (goal.scope === "client" && goal.scopeId) {
+        // Filter by projects belonging to specific client
+        // First get all projects for this client
+        const { data: clientProjects, error: projectsError } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("client_id", goal.scopeId);
 
-      // Calculate revenue: (duration in hours) * hourly_rate
-      const currentAmount = (timeEntries || []).reduce((sum, entry) => {
-        if (entry.duration && entry.hourly_rate) {
-          const hours = entry.duration / 3600; // Convert seconds to hours
-          return sum + hours * entry.hourly_rate;
+        if (projectsError) throw projectsError;
+
+        const projectIds = clientProjects?.map((p) => p.id) || [];
+        if (projectIds.length > 0) {
+          query = query.in("project_id", projectIds);
+        } else {
+          // No projects for this client, return zero progress
+          const realGoal = { ...goal, currentAmount: 0 };
+          return calculateGoalProgress(realGoal);
         }
-        return sum;
-      }, 0);
+      }
+      // For "general" scope or legacy goals, no additional filtering needed
+
+      const { data: timeEntries, error } = await query;
+
+      if (error) {
+        console.error("Error fetching time entries for revenue goal:", error);
+        throw error;
+      }
+
+      // Fetch ALL projects to look up hourly rates
+      const { data: allProjects, error: projectsError } = await supabase
+        .from("projects")
+        .select("id, hourly_rate, billable")
+        .eq("user_id", userId);
+
+      if (projectsError) throw projectsError;
+
+      // Get user settings for fallback hourly rate
+      const { data: settingsData } = await supabase
+        .from("user_settings")
+        .select("hourly_rate")
+        .eq("user_id", userId)
+        .single();
+
+      const defaultHourlyRate = settingsData?.hourly_rate ?? 0;
+
+      // Create a map of projects for quick lookup
+      const projectMap = new Map((allProjects || []).map((p) => [p.id, p]));
+
+      // Calculate revenue using project hourly_rate (or default if not set)
+      let currentAmount = 0;
+
+      if (timeEntries && timeEntries.length > 0) {
+        currentAmount = timeEntries.reduce((sum, entry) => {
+          if (!entry.duration) return sum;
+
+          // Look up the project data
+          const projectData = entry.project_id
+            ? projectMap.get(entry.project_id)
+            : null;
+
+          // Check if project is billable (default to billable if no project found)
+          const isBillable = !projectData || projectData.billable !== false;
+
+          if (!isBillable) return sum;
+
+          // Use project's hourly_rate or fall back to user's default rate
+          const hourlyRate = projectData?.hourly_rate ?? defaultHourlyRate;
+
+          if (hourlyRate <= 0) return sum;
+
+          const hours = entry.duration / 3600; // Convert seconds to hours
+          return sum + hours * hourlyRate;
+        }, 0);
+      }
+
+      // Log for debugging
+      console.log(
+        `Revenue goal ${goal.id}: calculated ${currentAmount}, previous ${goal.currentAmount}`
+      );
 
       // Update the goal's current amount in database if different
       if (Math.abs(currentAmount - (goal.currentAmount || 0)) > 0.01) {
+        console.log(
+          `Updating goal ${goal.id} with currentAmount: ${currentAmount}`
+        );
         await this.updateGoal(goal.id, { currentAmount });
       }
 
@@ -533,6 +621,11 @@ class GoalsApi {
       dbData.period = goal.period;
       dbData.target_amount = goal.targetAmount;
       dbData.currency = goal.currency || "USD";
+      dbData.scope = goal.scope || "general"; // Default to general if not set (for backward compatibility)
+      dbData.scope_id =
+        dbData.scope === "general" || !goal.scopeId || goal.scopeId === ""
+          ? null
+          : goal.scopeId;
 
       // Calculate start_date and end_date based on period, or use provided dates for custom
       if (goal.period === "custom") {
