@@ -425,6 +425,23 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
         });
       }
 
+      // Filter data points to only show those within the chart's visible date range
+      const { startDate: chartStartDate, endDate: chartEndDate } = getDateRange;
+      const visibleDataPoints = dataPoints.filter((point) => {
+        return point.date >= chartStartDate && point.date <= chartEndDate;
+      });
+
+      // Track if there are points before/after the visible range for line extension
+      const hasPointsBefore = dataPoints.some(
+        (point) => point.date < chartStartDate
+      );
+      const hasPointsAfter = dataPoints.some(
+        (point) => point.date > chartEndDate
+      );
+      const lastPointBeforeRange = hasPointsBefore
+        ? dataPoints.filter((point) => point.date < chartStartDate).slice(-1)[0]
+        : null;
+
       return {
         goalId: goal.id,
         goalName: goal.name,
@@ -439,23 +456,14 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
             : goalIndex === 2
             ? "purple"
             : "gray",
-        data: dataPoints,
+        data: visibleDataPoints,
+        hasPointsBefore,
+        hasPointsAfter,
+        progressAtRangeStart: lastPointBeforeRange?.percentage || 0,
       };
     });
-  }, [activeGoals, timeEntries, projects]);
+  }, [activeGoals, timeEntries, projects, getDateRange]);
 
-  const getDotColorClass = (color: string) => {
-    switch (color) {
-      case "emerald":
-        return "bg-emerald-500";
-      case "blue":
-        return "bg-blue-500";
-      case "purple":
-        return "bg-purple-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
   const getTimeDistribution = useMemo(() => {
     const timeGoals = activeGoals.filter((goal) => goal.type === "time");
     if (timeGoals.length === 0) {
@@ -747,12 +755,6 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
           <h3 className="text-lg font-semibold text-primary flex items-center">
             <LineChart className="h-5 w-5 mr-2" />
             Progress Over Time
-            {getProgressOverTimeData.length === 1 && (
-              <span className="text-sm font-normal ml-2">
-                ({getDateRange.startDate.toLocaleDateString()} -{" "}
-                {getDateRange.endDate.toLocaleDateString()})
-              </span>
-            )}
             {getProgressOverTimeData.length > 1 && (
               <span className="text-sm font-normal ml-2">(Multiple Goals)</span>
             )}
@@ -787,39 +789,144 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
             )}
           </div>
         </div>
-        <div className="flex">
-          {/* Y-axis */}
-          <div
-            className="flex flex-col justify-between pr-2 text-xs text-secondary"
-            style={{ height: "256px" }}
-          >
-            <span>100%</span>
-            <span>75%</span>
-            <span>50%</span>
-            <span>25%</span>
-            <span>0%</span>
+
+        <div className="flex gap-4">
+          {/* Y-axis with label */}
+          <div className="flex flex-col items-end">
+            <div
+              className="flex flex-col justify-between text-xs text-secondary font-medium"
+              style={{
+                height: "320px",
+                paddingTop: "10px",
+                paddingBottom: "10px",
+              }}
+            >
+              <span>100</span>
+              <span>75</span>
+              <span>50</span>
+              <span>25</span>
+              <span>0</span>
+            </div>
           </div>
 
           {/* Chart area */}
           <div className="flex-1">
-            {/* Chart area with individual time entries as points */}
-            <div className="h-64 relative mb-2">
+            {/* Chart container with padding and background */}
+            <div
+              className="relative bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+              style={{ height: "320px" }}
+            >
               {/* Horizontal grid lines */}
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
-                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
-                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
-                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
-                <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
+              <div className="absolute inset-4 flex flex-col justify-between pointer-events-none">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div
+                    key={`h-grid-${i}`}
+                    className="border-t border-dashed border-gray-300 dark:border-gray-600 w-full opacity-40"
+                  />
+                ))}
               </div>
 
-              {/* SVG for line graphs */}
+              {/* Vertical grid lines at labeled dates */}
+              <div className="absolute inset-4 flex justify-between pointer-events-none">
+                {(() => {
+                  const labelCount = 6;
+
+                  return Array.from({ length: labelCount }).map((_, i) => (
+                    <div
+                      key={`v-grid-${i}`}
+                      className="border-l border-dashed border-gray-300 dark:border-gray-600 h-full opacity-30"
+                      style={{ marginLeft: i === 0 ? 0 : "-1px" }}
+                    />
+                  ));
+                })()}
+              </div>
+
+              {/* SVG for line graphs with gradients and shadows */}
               <svg
-                className="absolute inset-0 w-full h-full pointer-events-none"
+                className="absolute inset-4 w-[calc(100%-2rem)] h-[calc(100%-2rem)] pointer-events-none"
                 style={{ zIndex: 1 }}
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
               >
+                {/* Define gradients and filters */}
+                <defs>
+                  <linearGradient
+                    id="gradient-emerald"
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                  >
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                    <stop
+                      offset="100%"
+                      stopColor="#10b981"
+                      stopOpacity="0.05"
+                    />
+                  </linearGradient>
+                  <linearGradient
+                    id="gradient-blue"
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                  >
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                    <stop
+                      offset="100%"
+                      stopColor="#3b82f6"
+                      stopOpacity="0.05"
+                    />
+                  </linearGradient>
+                  <linearGradient
+                    id="gradient-purple"
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                  >
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
+                    <stop
+                      offset="100%"
+                      stopColor="#8b5cf6"
+                      stopOpacity="0.05"
+                    />
+                  </linearGradient>
+                  <linearGradient
+                    id="gradient-gray"
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                  >
+                    <stop offset="0%" stopColor="#6b7280" stopOpacity="0.3" />
+                    <stop
+                      offset="100%"
+                      stopColor="#6b7280"
+                      stopOpacity="0.05"
+                    />
+                  </linearGradient>
+
+                  {/* Drop shadow filter */}
+                  <filter
+                    id="line-shadow"
+                    x="-50%"
+                    y="-50%"
+                    width="200%"
+                    height="200%"
+                  >
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="0.5" />
+                    <feOffset dx="0" dy="0.5" result="offsetblur" />
+                    <feComponentTransfer>
+                      <feFuncA type="linear" slope="0.3" />
+                    </feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
                 {getProgressOverTimeData.map((goalData) => {
                   if (goalData.data.length < 2) {
                     return null;
@@ -828,28 +935,140 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                   const { startDate, endDate } = getDateRange;
                   const totalRange = endDate.getTime() - startDate.getTime();
 
-                  // Create path for the line
-                  const pathData = goalData.data
-                    .map((entryData, index) => {
-                      // Normalize the entry date to noon for consistent positioning
-                      const entryDateNormalized = new Date(entryData.date);
-                      entryDateNormalized.setHours(12, 0, 0, 0);
+                  // Create smooth curve path using quadratic bezier curves
+                  let pathData = "";
 
-                      const entryPosition =
-                        (entryDateNormalized.getTime() - startDate.getTime()) /
-                        totalRange;
-                      const leftPosition = Math.max(
-                        0,
-                        Math.min(100, entryPosition * 100)
-                      );
-                      const bottomPosition = entryData.percentage;
+                  // If there are points before the range, start the line from the left edge
+                  if (goalData.hasPointsBefore && goalData.data.length > 0) {
+                    const firstVisiblePoint = goalData.data[0];
+                    const yStart = 100 - goalData.progressAtRangeStart;
+                    pathData = `M 0 ${yStart} `;
 
-                      const x = leftPosition;
-                      const y = 100 - bottomPosition; // SVG coordinates start from top
+                    // Draw to the first visible point
+                    const firstDateNormalized = new Date(
+                      firstVisiblePoint.date
+                    );
+                    firstDateNormalized.setHours(12, 0, 0, 0);
+                    const firstPosition =
+                      (firstDateNormalized.getTime() - startDate.getTime()) /
+                      totalRange;
+                    const firstX = Math.max(
+                      0,
+                      Math.min(100, firstPosition * 100)
+                    );
+                    const firstY = 100 - firstVisiblePoint.percentage;
 
-                      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
-                    })
-                    .join(" ");
+                    // Smooth curve from left edge to first point
+                    const cpX = firstX / 2;
+                    const cpY = yStart;
+                    pathData += `Q ${cpX} ${cpY}, ${firstX} ${firstY}`;
+
+                    // Continue with remaining points
+                    pathData +=
+                      " " +
+                      goalData.data
+                        .slice(1)
+                        .map((entryData, index) => {
+                          const entryDateNormalized = new Date(entryData.date);
+                          entryDateNormalized.setHours(12, 0, 0, 0);
+
+                          const entryPosition =
+                            (entryDateNormalized.getTime() -
+                              startDate.getTime()) /
+                            totalRange;
+                          const x = Math.max(
+                            0,
+                            Math.min(100, entryPosition * 100)
+                          );
+                          const y = 100 - entryData.percentage;
+
+                          // Calculate control point for smooth curve
+                          const prevEntry = goalData.data[index]; // index is offset by slice(1)
+                          const prevDateNormalized = new Date(prevEntry.date);
+                          prevDateNormalized.setHours(12, 0, 0, 0);
+                          const prevPosition =
+                            (prevDateNormalized.getTime() -
+                              startDate.getTime()) /
+                            totalRange;
+                          const prevX = Math.max(
+                            0,
+                            Math.min(100, prevPosition * 100)
+                          );
+                          const prevY = 100 - prevEntry.percentage;
+
+                          const cpX = (prevX + x) / 2;
+                          const cpY = prevY;
+
+                          return `Q ${cpX} ${cpY}, ${x} ${y}`;
+                        })
+                        .join(" ");
+                  } else {
+                    // Normal path without left edge extension
+                    pathData = goalData.data
+                      .map((entryData, index) => {
+                        const entryDateNormalized = new Date(entryData.date);
+                        entryDateNormalized.setHours(12, 0, 0, 0);
+
+                        const entryPosition =
+                          (entryDateNormalized.getTime() -
+                            startDate.getTime()) /
+                          totalRange;
+                        const x = Math.max(
+                          0,
+                          Math.min(100, entryPosition * 100)
+                        );
+                        const y = 100 - entryData.percentage;
+
+                        if (index === 0) {
+                          return `M ${x} ${y}`;
+                        }
+
+                        // Calculate control point for smooth curve
+                        const prevEntry = goalData.data[index - 1];
+                        const prevDateNormalized = new Date(prevEntry.date);
+                        prevDateNormalized.setHours(12, 0, 0, 0);
+                        const prevPosition =
+                          (prevDateNormalized.getTime() - startDate.getTime()) /
+                          totalRange;
+                        const prevX = Math.max(
+                          0,
+                          Math.min(100, prevPosition * 100)
+                        );
+                        const prevY = 100 - prevEntry.percentage;
+
+                        const cpX = (prevX + x) / 2;
+                        const cpY = prevY;
+
+                        return `Q ${cpX} ${cpY}, ${x} ${y}`;
+                      })
+                      .join(" ");
+                  }
+
+                  // Create area path (fill under the line) - close the path at bottom
+                  const firstPoint = goalData.data[0];
+                  const lastPoint = goalData.data[goalData.data.length - 1];
+
+                  const lastDateNormalized = new Date(lastPoint.date);
+                  lastDateNormalized.setHours(12, 0, 0, 0);
+                  const lastPosition =
+                    (lastDateNormalized.getTime() - startDate.getTime()) /
+                    totalRange;
+                  const lastX = Math.max(0, Math.min(100, lastPosition * 100));
+
+                  // Start x position: 0 if extending from left edge, otherwise first point x
+                  const startX = goalData.hasPointsBefore
+                    ? 0
+                    : (() => {
+                        const firstDateNormalized = new Date(firstPoint.date);
+                        firstDateNormalized.setHours(12, 0, 0, 0);
+                        const firstPosition =
+                          (firstDateNormalized.getTime() -
+                            startDate.getTime()) /
+                          totalRange;
+                        return Math.max(0, Math.min(100, firstPosition * 100));
+                      })();
+
+                  const areaPath = `${pathData} L ${lastX} 100 L ${startX} 100 Z`;
 
                   const strokeColor =
                     goalData.color === "emerald"
@@ -860,17 +1079,29 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                       ? "#8b5cf6"
                       : "#6b7280";
 
+                  const gradientId = `gradient-${goalData.color}`;
+
                   return (
-                    <path
-                      key={`line-${goalData.goalId}`}
-                      d={pathData}
-                      stroke={strokeColor}
-                      strokeWidth="0.5"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      vectorEffect="non-scaling-stroke"
-                    />
+                    <g key={`line-${goalData.goalId}`}>
+                      {/* Area fill with gradient */}
+                      <path
+                        d={areaPath}
+                        fill={`url(#${gradientId})`}
+                        opacity="0.6"
+                      />
+
+                      {/* Line with shadow */}
+                      <path
+                        d={pathData}
+                        stroke={strokeColor}
+                        strokeWidth="1"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        vectorEffect="non-scaling-stroke"
+                        filter="url(#line-shadow)"
+                      />
+                    </g>
                   );
                 })}
               </svg>
@@ -879,15 +1110,12 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
               getProgressOverTimeData.some(
                 (goalData) => goalData.data.length > 0
               ) ? (
-                <div className="relative h-full" style={{ zIndex: 2 }}>
+                <div className="absolute inset-4 pointer-events-auto">
                   {getProgressOverTimeData.map((goalData) =>
                     goalData.data.map((entryData, index) => {
-                      // Calculate position based on date within the range
                       const { startDate, endDate } = getDateRange;
-
-                      // Normalize the entry date to start of day for consistent positioning
                       const entryDateNormalized = new Date(entryData.date);
-                      entryDateNormalized.setHours(12, 0, 0, 0); // Set to noon to center on the day
+                      entryDateNormalized.setHours(12, 0, 0, 0);
 
                       const totalRange =
                         endDate.getTime() - startDate.getTime();
@@ -904,7 +1132,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           key={`${goalData.goalId}-${
                             entryData.entryId || index
                           }`}
-                          className="absolute w-3 h-3 rounded-full border-2 border-white shadow-sm"
+                          className="absolute w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 shadow-lg transform transition-transform hover:scale-150 hover:z-10 cursor-pointer"
                           style={{
                             left: `${leftPosition}%`,
                             bottom: `${entryData.percentage}%`,
@@ -916,7 +1144,16 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                                 : entryData.color === "purple"
                                 ? "#8b5cf6"
                                 : "#6b7280",
-                            transform: "translateX(-50%) translateY(50%)", // Center the dot
+                            transform: "translateX(-50%) translateY(50%)",
+                            boxShadow: `0 2px 8px ${
+                              entryData.color === "emerald"
+                                ? "rgba(16, 185, 129, 0.4)"
+                                : entryData.color === "blue"
+                                ? "rgba(59, 130, 246, 0.4)"
+                                : entryData.color === "purple"
+                                ? "rgba(139, 92, 246, 0.4)"
+                                : "rgba(107, 114, 128, 0.4)"
+                            }`,
                           }}
                           title={`${entryData.entryHours.toFixed(
                             1
@@ -924,60 +1161,27 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                             1
                           )}h total, ${entryData.percentage.toFixed(
                             1
-                          )}% of goal) - ${
+                          )}% of goal)\n${
                             entryData.description || "No description"
-                          } on ${entryData.date.toLocaleDateString()} (${
+                          }\n${entryData.date.toLocaleDateString()}\n${
                             goalData.goalName
-                          })`}
+                          }`}
                         ></div>
                       );
                     })
                   )}
                 </div>
               ) : (
-                <div className="flex items-center justify-center w-full h-full text-secondary">
+                <div className="absolute inset-4 flex items-center justify-center text-secondary text-sm">
                   No time entries found for this goal in the date range
                 </div>
               )}
             </div>
 
-            {/* X-axis with ticks and labels */}
-            <div className="relative">
-              {/* Tick marks for all days */}
-              <div className="absolute top-0 left-0 right-0 flex justify-between items-start h-3 border-t border-gray-300 dark:border-gray-600">
-                {(() => {
-                  const { startDate, endDate } = getDateRange;
-                  const totalRange = endDate.getTime() - startDate.getTime();
-                  const totalDays = Math.ceil(
-                    totalRange / (1000 * 60 * 60 * 24)
-                  );
-                  const ticks: React.ReactElement[] = [];
-
-                  for (let i = 0; i <= totalDays; i++) {
-                    // Position tick at noon of each day for alignment with data points
-                    const dayDate = new Date(
-                      startDate.getTime() + i * (1000 * 60 * 60 * 24)
-                    );
-                    dayDate.setHours(12, 0, 0, 0);
-                    const position =
-                      ((dayDate.getTime() - startDate.getTime()) / totalRange) *
-                      100;
-
-                    ticks.push(
-                      <div
-                        key={i}
-                        className="absolute h-2 w-px bg-gray-300 dark:bg-gray-600"
-                        style={{ left: `${position}%` }}
-                      />
-                    );
-                  }
-
-                  return ticks;
-                })()}
-              </div>
-
+            {/* X-axis labels and date range */}
+            <div className="relative mt-2">
               {/* Date labels */}
-              <div className="relative pt-3 h-6">
+              <div className="relative h-6 pl-4">
                 {(() => {
                   const { startDate, endDate } = getDateRange;
                   const labels: React.ReactElement[] = [];
@@ -989,7 +1193,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                     const date = new Date(
                       startDate.getTime() + totalRange * position
                     );
-                    date.setHours(12, 0, 0, 0); // Normalize to noon
+                    date.setHours(12, 0, 0, 0);
                     const labelPosition =
                       ((date.getTime() - startDate.getTime()) / totalRange) *
                       100;
@@ -1007,7 +1211,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           transform: "translateX(-50%)",
                         }}
                       >
-                        <span className="text-xs text-secondary whitespace-nowrap">
+                        <span className="text-xs text-secondary font-medium whitespace-nowrap">
                           {label}
                         </span>
                       </div>
@@ -1017,31 +1221,46 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                   return labels;
                 })()}
               </div>
+
+              {/* Date range display */}
+              <div className="text-center mt-2">
+                <span className="text-xs text-secondary font-medium">
+                  {getDateRange.startDate.toLocaleDateString()} -{" "}
+                  {getDateRange.endDate.toLocaleDateString()}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex justify-between text-xs text-secondary mt-2 pl-6">
-          <span></span>
-          <span>
-            {getDateRange.startDate.toLocaleDateString()} -{" "}
-            {getDateRange.endDate.toLocaleDateString()}
-          </span>
-        </div>
+
+        {/* Enhanced Legend */}
         {getProgressOverTimeData.length > 0 && (
-          <div className="mt-4 flex items-center justify-center">
-            <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex flex-wrap items-center justify-center gap-6">
               {getProgressOverTimeData.map((goalData) => (
                 <div
                   key={goalData.goalId}
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                 >
                   <div
-                    className={`w-3 h-3 ${getDotColorClass(
-                      goalData.color
-                    )} rounded`}
-                  ></div>
-                  <span className="text-sm text-secondary">
+                    className="w-3 h-3 rounded-full shadow-sm"
+                    style={{
+                      backgroundColor:
+                        goalData.color === "emerald"
+                          ? "#10b981"
+                          : goalData.color === "blue"
+                          ? "#3b82f6"
+                          : goalData.color === "purple"
+                          ? "#8b5cf6"
+                          : "#6b7280",
+                    }}
+                  />
+                  <span className="text-sm font-medium text-primary">
                     {goalData.goalName}
+                  </span>
+                  <span className="text-xs text-secondary">
+                    ({goalData.data.length}{" "}
+                    {goalData.data.length === 1 ? "day" : "days"})
                   </span>
                 </div>
               ))}
