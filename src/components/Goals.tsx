@@ -49,6 +49,9 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [timeRange, setTimeRange] = useState<string>("30days");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
 
   const { deleteGoal } = useGoals();
 
@@ -87,6 +90,50 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
     const client = clients.find((c) => c.id === clientId);
     return client?.name || "Unknown Client";
   };
+
+  // Calculate date range based on selected time range option
+  const getDateRange = useMemo(() => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
+
+    let startDate: Date;
+    let endDate: Date = today;
+
+    switch (timeRange) {
+      case "30days":
+        startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "90days":
+        startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - 90);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "thisyear":
+        startDate = new Date(today.getFullYear(), 0, 1); // Jan 1 of current year
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "custom":
+        if (customStartDate && customEndDate) {
+          startDate = new Date(customStartDate);
+          endDate = new Date(customEndDate);
+          endDate.setHours(23, 59, 59, 999);
+        } else {
+          // Default to last 30 days if custom dates not set
+          startDate = new Date(today);
+          startDate.setDate(startDate.getDate() - 30);
+          startDate.setHours(0, 0, 0, 0);
+        }
+        break;
+      default:
+        startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+    }
+
+    return { startDate, endDate };
+  }, [timeRange, customStartDate, customEndDate]);
 
   const handleEditGoal = (goal: BaseGoal) => {
     onShowCreateModal(true, goal);
@@ -295,20 +342,78 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
         return entryDate >= goalStartDate && entryDate <= goalEndDate;
       });
 
-      // Create data points for each individual time entry
-      const dataPoints = entriesInRange.map((entry) => {
-        const entryDate = new Date(entry.start_time);
-        const entryHours = (entry.duration || 0) / 3600;
-        const progressPercent = (entryHours / targetHours) * 100;
+      // Sort entries by date and create cumulative progress data points
+      const sortedEntries = entriesInRange.sort(
+        (a, b) =>
+          new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      );
 
-        return {
-          date: entryDate,
-          hours: entryHours,
+      // Group entries by day (YYYY-MM-DD) using local timezone
+      const entriesByDay = new Map<string, typeof sortedEntries>();
+      for (const entry of sortedEntries) {
+        const entryDate = new Date(entry.start_time);
+        // Use local date to avoid timezone shifts
+        const year = entryDate.getFullYear();
+        const month = String(entryDate.getMonth() + 1).padStart(2, "0");
+        const day = String(entryDate.getDate()).padStart(2, "0");
+        const dayKey = `${year}-${month}-${day}`; // YYYY-MM-DD in local timezone
+
+        if (!entriesByDay.has(dayKey)) {
+          entriesByDay.set(dayKey, []);
+        }
+        entriesByDay.get(dayKey)!.push(entry);
+      }
+
+      // Create cumulative data points (one per day)
+      const dataPoints: Array<{
+        date: Date;
+        cumulativeHours: number;
+        entryHours: number;
+        percentage: number;
+        goalId: string;
+        goalName: string;
+        entryId: string | undefined;
+        description: string | undefined;
+        color: string;
+      }> = [];
+      let cumulativeHours = 0;
+
+      // Process days in chronological order
+      const sortedDays = Array.from(entriesByDay.keys()).sort();
+
+      for (const dayKey of sortedDays) {
+        const dayEntries = entriesByDay.get(dayKey)!;
+
+        // Sum all hours for this day
+        const dayHours = dayEntries.reduce((sum, entry) => {
+          return sum + (entry.duration || 0) / 3600;
+        }, 0);
+
+        cumulativeHours += dayHours;
+        const progressPercent = Math.min(
+          (cumulativeHours / targetHours) * 100,
+          100
+        );
+
+        // Parse the dayKey (YYYY-MM-DD) and create date at noon in local timezone
+        const [year, month, day] = dayKey.split("-").map(Number);
+        const dayDate = new Date(year, month - 1, day, 12, 0, 0, 0); // Local timezone, noon
+
+        // Combine descriptions from all entries on this day
+        const descriptions = dayEntries
+          .map((e) => e.description)
+          .filter((d) => d)
+          .join(", ");
+
+        dataPoints.push({
+          date: dayDate,
+          cumulativeHours,
+          entryHours: dayHours,
           percentage: progressPercent,
           goalId: goal.id,
           goalName: goal.name,
-          entryId: entry.id,
-          description: entry.description,
+          entryId: dayEntries[0].id, // Use first entry ID for the day
+          description: descriptions || undefined,
           color:
             goalIndex === 0
               ? "emerald"
@@ -317,8 +422,8 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
               : goalIndex === 2
               ? "purple"
               : "gray",
-        };
-      });
+        });
+      }
 
       return {
         goalId: goal.id,
@@ -644,21 +749,43 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
             Progress Over Time
             {getProgressOverTimeData.length === 1 && (
               <span className="text-sm font-normal ml-2">
-                (
-                {new Date(
-                  getProgressOverTimeData[0].startDate
-                ).toLocaleDateString()}{" "}
-                -{" "}
-                {new Date(
-                  getProgressOverTimeData[0].endDate
-                ).toLocaleDateString()}
-                )
+                ({getDateRange.startDate.toLocaleDateString()} -{" "}
+                {getDateRange.endDate.toLocaleDateString()})
               </span>
             )}
             {getProgressOverTimeData.length > 1 && (
               <span className="text-sm font-normal ml-2">(Multiple Goals)</span>
             )}
           </h3>
+          <div className="flex items-center gap-2">
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            >
+              <option value="30days">Last 30 Days</option>
+              <option value="90days">Last 90 Days</option>
+              <option value="thisyear">This Year</option>
+              <option value="custom">Custom Range</option>
+            </select>
+            {timeRange === "custom" && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+                <span className="text-sm text-secondary">to</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex">
           {/* Y-axis */}
@@ -686,20 +813,86 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                 <div className="border-t border-gray-200 dark:border-gray-700 w-full"></div>
               </div>
 
+              {/* SVG for line graphs */}
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ zIndex: 1 }}
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                {getProgressOverTimeData.map((goalData) => {
+                  if (goalData.data.length < 2) {
+                    return null;
+                  }
+
+                  const { startDate, endDate } = getDateRange;
+                  const totalRange = endDate.getTime() - startDate.getTime();
+
+                  // Create path for the line
+                  const pathData = goalData.data
+                    .map((entryData, index) => {
+                      // Normalize the entry date to noon for consistent positioning
+                      const entryDateNormalized = new Date(entryData.date);
+                      entryDateNormalized.setHours(12, 0, 0, 0);
+
+                      const entryPosition =
+                        (entryDateNormalized.getTime() - startDate.getTime()) /
+                        totalRange;
+                      const leftPosition = Math.max(
+                        0,
+                        Math.min(100, entryPosition * 100)
+                      );
+                      const bottomPosition = entryData.percentage;
+
+                      const x = leftPosition;
+                      const y = 100 - bottomPosition; // SVG coordinates start from top
+
+                      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+                    })
+                    .join(" ");
+
+                  const strokeColor =
+                    goalData.color === "emerald"
+                      ? "#10b981"
+                      : goalData.color === "blue"
+                      ? "#3b82f6"
+                      : goalData.color === "purple"
+                      ? "#8b5cf6"
+                      : "#6b7280";
+
+                  return (
+                    <path
+                      key={`line-${goalData.goalId}`}
+                      d={pathData}
+                      stroke={strokeColor}
+                      strokeWidth="0.5"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+              </svg>
+
               {getProgressOverTimeData.length > 0 &&
               getProgressOverTimeData.some(
                 (goalData) => goalData.data.length > 0
               ) ? (
-                <div className="relative h-full">
+                <div className="relative h-full" style={{ zIndex: 2 }}>
                   {getProgressOverTimeData.map((goalData) =>
                     goalData.data.map((entryData, index) => {
                       // Calculate position based on date within the range
-                      const startDate = new Date(2025, 10, 3); // November 3, 2025
-                      const endDate = new Date(2025, 11, 3); // December 3, 2025
+                      const { startDate, endDate } = getDateRange;
+
+                      // Normalize the entry date to start of day for consistent positioning
+                      const entryDateNormalized = new Date(entryData.date);
+                      entryDateNormalized.setHours(12, 0, 0, 0); // Set to noon to center on the day
+
                       const totalRange =
                         endDate.getTime() - startDate.getTime();
                       const entryPosition =
-                        (entryData.date.getTime() - startDate.getTime()) /
+                        (entryDateNormalized.getTime() - startDate.getTime()) /
                         totalRange;
                       const leftPosition = Math.max(
                         0,
@@ -725,9 +918,13 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                                 : "#6b7280",
                             transform: "translateX(-50%) translateY(50%)", // Center the dot
                           }}
-                          title={`${entryData.hours.toFixed(
+                          title={`${entryData.entryHours.toFixed(
                             1
-                          )}h (${entryData.percentage.toFixed(1)}% of goal) - ${
+                          )}h worked (${entryData.cumulativeHours.toFixed(
+                            1
+                          )}h total, ${entryData.percentage.toFixed(
+                            1
+                          )}% of goal) - ${
                             entryData.description || "No description"
                           } on ${entryData.date.toLocaleDateString()} (${
                             goalData.goalName
@@ -744,25 +941,81 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
               )}
             </div>
 
-            {/* X-axis labels - show key dates in the range */}
-            <div className="flex justify-between space-x-1 pl-1">
-              <div className="flex flex-col items-center flex-1">
-                <span className="text-xs text-secondary">Nov 3</span>
+            {/* X-axis with ticks and labels */}
+            <div className="relative">
+              {/* Tick marks for all days */}
+              <div className="absolute top-0 left-0 right-0 flex justify-between items-start h-3 border-t border-gray-300 dark:border-gray-600">
+                {(() => {
+                  const { startDate, endDate } = getDateRange;
+                  const totalRange = endDate.getTime() - startDate.getTime();
+                  const totalDays = Math.ceil(
+                    totalRange / (1000 * 60 * 60 * 24)
+                  );
+                  const ticks: React.ReactElement[] = [];
+
+                  for (let i = 0; i <= totalDays; i++) {
+                    // Position tick at noon of each day for alignment with data points
+                    const dayDate = new Date(
+                      startDate.getTime() + i * (1000 * 60 * 60 * 24)
+                    );
+                    dayDate.setHours(12, 0, 0, 0);
+                    const position =
+                      ((dayDate.getTime() - startDate.getTime()) / totalRange) *
+                      100;
+
+                    ticks.push(
+                      <div
+                        key={i}
+                        className="absolute h-2 w-px bg-gray-300 dark:bg-gray-600"
+                        style={{ left: `${position}%` }}
+                      />
+                    );
+                  }
+
+                  return ticks;
+                })()}
               </div>
-              <div className="flex flex-col items-center flex-1">
-                <span className="text-xs text-secondary">Nov 10</span>
-              </div>
-              <div className="flex flex-col items-center flex-1">
-                <span className="text-xs text-secondary">Nov 17</span>
-              </div>
-              <div className="flex flex-col items-center flex-1">
-                <span className="text-xs text-secondary">Nov 24</span>
-              </div>
-              <div className="flex flex-col items-center flex-1">
-                <span className="text-xs text-secondary">Dec 1</span>
-              </div>
-              <div className="flex flex-col items-center flex-1">
-                <span className="text-xs text-secondary">Dec 3</span>
+
+              {/* Date labels */}
+              <div className="relative pt-3 h-6">
+                {(() => {
+                  const { startDate, endDate } = getDateRange;
+                  const labels: React.ReactElement[] = [];
+                  const labelCount = 6;
+                  const totalRange = endDate.getTime() - startDate.getTime();
+
+                  for (let i = 0; i < labelCount; i++) {
+                    const position = i / (labelCount - 1);
+                    const date = new Date(
+                      startDate.getTime() + totalRange * position
+                    );
+                    date.setHours(12, 0, 0, 0); // Normalize to noon
+                    const labelPosition =
+                      ((date.getTime() - startDate.getTime()) / totalRange) *
+                      100;
+                    const label = date.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    });
+
+                    labels.push(
+                      <div
+                        key={i}
+                        className="absolute"
+                        style={{
+                          left: `${labelPosition}%`,
+                          transform: "translateX(-50%)",
+                        }}
+                      >
+                        <span className="text-xs text-secondary whitespace-nowrap">
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return labels;
+                })()}
               </div>
             </div>
           </div>
@@ -770,15 +1023,8 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
         <div className="flex justify-between text-xs text-secondary mt-2 pl-6">
           <span></span>
           <span>
-            {getProgressOverTimeData.length === 1
-              ? `${new Date(
-                  getProgressOverTimeData[0].startDate
-                ).toLocaleDateString()} - ${new Date(
-                  getProgressOverTimeData[0].endDate
-                ).toLocaleDateString()}`
-              : getProgressOverTimeData.length > 1
-              ? "Multiple Goals"
-              : "Nov 3 - Dec 3, 2025"}
+            {getDateRange.startDate.toLocaleDateString()} -{" "}
+            {getDateRange.endDate.toLocaleDateString()}
           </span>
         </div>
         {getProgressOverTimeData.length > 0 && (
