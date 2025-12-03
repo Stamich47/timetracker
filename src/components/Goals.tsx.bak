@@ -50,9 +50,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
   const [timeRange, setTimeRange] = useState<string>("30days");
   const [customStartDate, setCustomStartDate] = useState<string>("");
   const [customEndDate, setCustomEndDate] = useState<string>("");
-  const [chartTracking, setChartTracking] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [chartTracking, setChartTracking] = useState<Record<string, boolean>>({});
 
   const { deleteGoal } = useGoals();
 
@@ -65,7 +63,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
         tracking[goal.id] = goal.progress.status !== "completed";
       }
     });
-
+    
     if (Object.keys(tracking).length > 0) {
       setChartTracking((prev) => ({ ...prev, ...tracking }));
     }
@@ -114,6 +112,31 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
     const client = clients.find((c) => c.id === clientId);
     return client?.name || "Unknown Client";
   };
+
+  // Define available colors for goals (constant array)
+  const GOAL_COLORS = useMemo(() => 
+    ["emerald", "blue", "purple", "orange", "pink", "cyan", "indigo", "rose"],
+    []
+  );
+
+  // Create stable color mapping based on goal IDs
+  const goalColorMap = useMemo(() => {
+    const colorMap = new Map<string, string>();
+    const timeGoals = goalsWithProgress
+      .filter((goal) => goal.type === "time")
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); // Sort by creation date
+
+    timeGoals.forEach((goal, index) => {
+      colorMap.set(goal.id, GOAL_COLORS[index % GOAL_COLORS.length]);
+    });
+
+    return colorMap;
+  }, [goalsWithProgress, GOAL_COLORS]);
+
+  // Helper function to get consistent color for a goal
+  const getGoalColor = useCallback((goalId: string): string => {
+    return goalColorMap.get(goalId) || "gray";
+  }, [goalColorMap]);
 
   // Calculate date range based on selected time range option
   const getDateRange = useMemo(() => {
@@ -249,7 +272,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
     if (timeGoals.length === 0) return [];
 
     // Get data for each time goal
-    return timeGoals.map((goal, goalIndex) => {
+    return timeGoals.map((goal) => {
       const timeGoal = goal as TimeGoal;
       const targetHours = timeGoal.targetHours;
 
@@ -352,14 +375,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
           goalName: goal.name,
           entryId: dayEntries[0].id, // Use first entry ID for the day
           description: descriptions || undefined,
-          color:
-            goalIndex === 0
-              ? "emerald"
-              : goalIndex === 1
-              ? "blue"
-              : goalIndex === 2
-              ? "purple"
-              : "gray",
+          color: getGoalColor(goal.id),
         });
       }
 
@@ -386,21 +402,14 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
         startDate: timeGoal.startDate,
         endDate: timeGoal.endDate,
         targetHours,
-        color:
-          goalIndex === 0
-            ? "emerald"
-            : goalIndex === 1
-            ? "blue"
-            : goalIndex === 2
-            ? "purple"
-            : "gray",
+        color: getGoalColor(goal.id),
         data: visibleDataPoints,
         hasPointsBefore,
         hasPointsAfter,
         progressAtRangeStart: lastPointBeforeRange?.percentage || 0,
       };
     });
-  }, [activeGoals, timeEntries, projects, getDateRange, chartTracking]);
+  }, [activeGoals, timeEntries, projects, getDateRange, getGoalColor, chartTracking]);
 
   const getTimeDistribution = useMemo(() => {
     const timeGoals = activeGoals.filter((goal) => goal.type === "time");
@@ -1361,25 +1370,22 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                   return (
                     <div
                       key={goal.id}
-                      className="card p-5 hover:shadow-lg transition-shadow duration-200"
+                      className="card p-6 hover:shadow-lg transition-shadow duration-200"
                     >
-                      {/* Header Section */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0 pr-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-primary text-lg leading-tight truncate">
-                              {goal.name}
-                            </h3>
-                            <TrendIndicator status={progress.status} />
-                          </div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-primary text-lg leading-tight">
+                            {goal.name}
+                          </h3>
                           {/* Show scope information for productivity goals */}
                           {goal.type === "time" ? (
-                            <div className="text-secondary text-xs mt-1 flex items-center gap-3 flex-wrap">
-                              <span className="flex items-center">
+                            <div className="text-secondary text-sm mt-1 space-y-1">
+                              <p className="flex items-center">
                                 {(goal as TimeGoal).scope === "client" &&
                                   (goal as TimeGoal).scopeId && (
                                     <>
                                       <Building className="h-3 w-3 mr-1" />
+                                      Client:{" "}
                                       {getClientName(
                                         (goal as TimeGoal).scopeId!
                                       )}
@@ -1401,8 +1407,8 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                                     All Hours
                                   </>
                                 )}
-                              </span>
-                              <span className="flex items-center">
+                              </p>
+                              <p className="flex items-center text-xs">
                                 <Calendar className="h-3 w-3 mr-1" />
                                 {new Date(
                                   (goal as TimeGoal).startDate
@@ -1411,39 +1417,23 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                                 {new Date(
                                   (goal as TimeGoal).endDate
                                 ).toLocaleDateString()}
-                              </span>
+                              </p>
                             </div>
                           ) : (
                             goal.description && (
-                              <p className="text-secondary text-xs mt-1 line-clamp-2">
+                              <p className="text-secondary text-sm mt-1 line-clamp-2">
                                 {goal.description}
                               </p>
                             )
                           )}
                         </div>
-
-                        {/* Action buttons and toggle */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 ml-4">
                           <button
-                            onClick={() => toggleChartTracking(goal.id)}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-                              chartTracking[goal.id] !== false
-                                ? "bg-blue-500"
-                                : "bg-gray-300 dark:bg-gray-600"
-                            }`}
-                            title={
-                              chartTracking[goal.id] !== false
-                                ? "Chart tracking enabled"
-                                : "Chart tracking disabled"
-                            }
+                            onClick={() => handleDebugGoal(goal)}
+                            className="p-1 text-secondary hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Debug goal data"
                           >
-                            <span
-                              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200 ${
-                                chartTracking[goal.id] !== false
-                                  ? "translate-x-5"
-                                  : "translate-x-1"
-                              }`}
-                            />
+                            <Bug className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleEditGoal(goal)}
@@ -1459,11 +1449,12 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
+                          <TrendIndicator status={progress.status} />
                         </div>
                       </div>
 
-                      {/* Metrics Section */}
-                      <div className="flex items-center justify-between mb-3">
+                      {/* Ring Chart and Key Metrics */}
+                      <div className="flex items-center justify-between mb-4">
                         <RingChart
                           percentage={progress.percentage}
                           status={progress.status}
@@ -1536,21 +1527,20 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                         </div>
                       </div>
 
-                      {/* Footer Section - Simplified */}
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                        {/* Left: Period/Deadline */}
-                        <div className="flex items-center gap-3 text-xs text-secondary">
-                          <span className="flex items-center">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {goal.type === "time" && (goal as TimeGoal).period}
-                            {goal.type === "revenue" &&
-                              (goal as RevenueGoal).period}
-                            {goal.type === "project" &&
-                              (goal as ProjectGoal).targetCompletionDate &&
-                              `Due: ${new Date(
-                                (goal as ProjectGoal).targetCompletionDate!
-                              ).toLocaleDateString()}`}
-                          </span>
+                      {/* Period/Deadline Info */}
+                      <div className="flex items-center justify-between text-xs text-secondary mb-3">
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {goal.type === "time" && (goal as TimeGoal).period}
+                          {goal.type === "revenue" &&
+                            (goal as RevenueGoal).period}
+                          {goal.type === "project" &&
+                            (goal as ProjectGoal).targetCompletionDate &&
+                            `Due: ${new Date(
+                              (goal as ProjectGoal).targetCompletionDate!
+                            ).toLocaleDateString()}`}
+                        </div>
+                        <div>
                           {progress.daysRemaining &&
                             progress.daysRemaining > 0 && (
                               <span
@@ -1560,7 +1550,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                                     : ""
                                 }
                               >
-                                {progress.daysRemaining}d left
+                                {progress.daysRemaining} days left
                               </span>
                             )}
                           {progress.daysRemaining &&
@@ -1570,17 +1560,20 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                               </span>
                             )}
                         </div>
+                      </div>
 
-                        {/* Right: Status and Priority */}
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
-                              goal.status
-                            )}`}
-                          >
-                            {goal.status.replace("-", " ")}
-                          </div>
-                          <span className="text-xs text-secondary capitalize">
+                      {/* Status Badge */}
+                      <div className="flex items-center justify-between">
+                        <div
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                            goal.status
+                          )}`}
+                        >
+                          {goal.status.replace("-", " ").toUpperCase()}
+                        </div>
+                        <div className="text-xs text-secondary">
+                          Priority:{" "}
+                          <span className="capitalize font-medium">
                             {goal.priority}
                           </span>
                         </div>
@@ -1610,25 +1603,22 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                   return (
                     <div
                       key={goal.id}
-                      className="card p-5 hover:shadow-lg transition-shadow duration-200 opacity-75"
+                      className="card p-6 hover:shadow-lg transition-shadow duration-200 opacity-75"
                     >
-                      {/* Header Section */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0 pr-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-primary text-lg leading-tight truncate">
-                              {goal.name}
-                            </h3>
-                            <TrendIndicator status={progress.status} />
-                          </div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-primary text-lg leading-tight">
+                            {goal.name}
+                          </h3>
                           {/* Show scope information for productivity goals */}
                           {goal.type === "time" ? (
-                            <div className="text-secondary text-xs mt-1 flex items-center gap-3 flex-wrap">
-                              <span className="flex items-center">
+                            <div className="text-secondary text-sm mt-1 space-y-1">
+                              <p className="flex items-center">
                                 {(goal as TimeGoal).scope === "client" &&
                                   (goal as TimeGoal).scopeId && (
                                     <>
                                       <Building className="h-3 w-3 mr-1" />
+                                      Client:{" "}
                                       {getClientName(
                                         (goal as TimeGoal).scopeId!
                                       )}
@@ -1650,8 +1640,8 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                                     All Hours
                                   </>
                                 )}
-                              </span>
-                              <span className="flex items-center">
+                              </p>
+                              <p className="flex items-center text-xs">
                                 <Calendar className="h-3 w-3 mr-1" />
                                 {new Date(
                                   (goal as TimeGoal).startDate
@@ -1660,39 +1650,23 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                                 {new Date(
                                   (goal as TimeGoal).endDate
                                 ).toLocaleDateString()}
-                              </span>
+                              </p>
                             </div>
                           ) : (
                             goal.description && (
-                              <p className="text-secondary text-xs mt-1 line-clamp-2">
+                              <p className="text-secondary text-sm mt-1 line-clamp-2">
                                 {goal.description}
                               </p>
                             )
                           )}
                         </div>
-
-                        {/* Action buttons and toggle */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 ml-4">
                           <button
-                            onClick={() => toggleChartTracking(goal.id)}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-                              chartTracking[goal.id] !== false
-                                ? "bg-blue-500"
-                                : "bg-gray-300 dark:bg-gray-600"
-                            }`}
-                            title={
-                              chartTracking[goal.id] !== false
-                                ? "Chart tracking enabled"
-                                : "Chart tracking disabled"
-                            }
+                            onClick={() => handleDebugGoal(goal)}
+                            className="p-1 text-secondary hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Debug goal data"
                           >
-                            <span
-                              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200 ${
-                                chartTracking[goal.id] !== false
-                                  ? "translate-x-5"
-                                  : "translate-x-1"
-                              }`}
-                            />
+                            <Bug className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleEditGoal(goal)}
@@ -1708,11 +1682,12 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
+                          <TrendIndicator status={progress.status} />
                         </div>
                       </div>
 
-                      {/* Metrics Section */}
-                      <div className="flex items-center justify-between mb-3">
+                      {/* Ring Chart and Key Metrics */}
+                      <div className="flex items-center justify-between mb-4">
                         <RingChart
                           percentage={progress.percentage}
                           status={progress.status}
@@ -1785,21 +1760,20 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                         </div>
                       </div>
 
-                      {/* Footer Section - Simplified */}
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                        {/* Left: Period/Deadline */}
-                        <div className="flex items-center gap-3 text-xs text-secondary">
-                          <span className="flex items-center">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {goal.type === "time" && (goal as TimeGoal).period}
-                            {goal.type === "revenue" &&
-                              (goal as RevenueGoal).period}
-                            {goal.type === "project" &&
-                              (goal as ProjectGoal).targetCompletionDate &&
-                              `Due: ${new Date(
-                                (goal as ProjectGoal).targetCompletionDate!
-                              ).toLocaleDateString()}`}
-                          </span>
+                      {/* Period/Deadline Info */}
+                      <div className="flex items-center justify-between text-xs text-secondary mb-3">
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {goal.type === "time" && (goal as TimeGoal).period}
+                          {goal.type === "revenue" &&
+                            (goal as RevenueGoal).period}
+                          {goal.type === "project" &&
+                            (goal as ProjectGoal).targetCompletionDate &&
+                            `Due: ${new Date(
+                              (goal as ProjectGoal).targetCompletionDate!
+                            ).toLocaleDateString()}`}
+                        </div>
+                        <div>
                           {progress.daysRemaining &&
                             progress.daysRemaining > 0 && (
                               <span
@@ -1809,7 +1783,7 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                                     : ""
                                 }
                               >
-                                {progress.daysRemaining}d left
+                                {progress.daysRemaining} days left
                               </span>
                             )}
                           {progress.daysRemaining &&
@@ -1819,17 +1793,20 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
                               </span>
                             )}
                         </div>
+                      </div>
 
-                        {/* Right: Status and Priority */}
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
-                              goal.status
-                            )}`}
-                          >
-                            {goal.status.replace("-", " ")}
-                          </div>
-                          <span className="text-xs text-secondary capitalize">
+                      {/* Status Badge */}
+                      <div className="flex items-center justify-between">
+                        <div
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                            goal.status
+                          )}`}
+                        >
+                          {goal.status.replace("-", " ").toUpperCase()}
+                        </div>
+                        <div className="text-xs text-secondary">
+                          Priority:{" "}
+                          <span className="capitalize font-medium">
                             {goal.priority}
                           </span>
                         </div>
