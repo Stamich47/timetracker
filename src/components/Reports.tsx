@@ -231,6 +231,19 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
     AppStorage.setSelectedClientId(selectedClientId);
   }, [selectedClientId]);
 
+  // Helper function to get duration for any entry (including active ones)
+  const getEntryDuration = (entry: TimeEntry): number => {
+    // Calculate duration: use saved duration or calculate from start_time to now for active entries
+    let durationSeconds = entry.duration;
+    if (!durationSeconds && entry.start_time && !entry.end_time) {
+      // Active entry - calculate current elapsed time
+      const startTime = new Date(entry.start_time).getTime();
+      const now = Date.now();
+      durationSeconds = Math.floor((now - startTime) / 1000);
+    }
+    return durationSeconds || 0;
+  };
+
   // Handle export functionality
   const handleExport = () => {
     // Helper function to escape CSV values
@@ -278,6 +291,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
         const startTimeStr = startDate ? startDate.toLocaleTimeString() : "";
         const endDateStr = endDate ? endDate.toLocaleDateString() : "";
         const endTimeStr = endDate ? endDate.toLocaleTimeString() : "";
+        const duration = getEntryDuration(entry);
         return [
           project?.name || "No Project",
           project?.client?.name || "No Client",
@@ -286,7 +300,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
           billable,
           entry.start_time || "",
           entry.end_time || "",
-          entry.duration?.toString() || "",
+          duration.toString(),
           startDateStr,
           startTimeStr,
           endDateStr,
@@ -468,7 +482,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
 
     // Calculate totals
     const totalTime = filteredEntries.reduce(
-      (sum, entry) => sum + (entry.duration || 0),
+      (sum, entry) => sum + getEntryDuration(entry),
       0
     );
     const billableEntries = filteredEntries.filter((entry) => {
@@ -476,7 +490,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
       return project?.billable !== false; // Default to billable if undefined
     });
     const billableTime = billableEntries.reduce(
-      (sum, entry) => sum + (entry.duration || 0),
+      (sum, entry) => sum + getEntryDuration(entry),
       0
     );
 
@@ -514,7 +528,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
         return entryDateStr === dateStr;
       });
       const dayTotal = dayEntries.reduce(
-        (sum, entry) => sum + (entry.duration || 0),
+        (sum, entry) => sum + getEntryDuration(entry),
         0
       );
 
@@ -540,7 +554,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
     filteredEntries.forEach((entry) => {
       if (entry.project_id) {
         const current = projectTotals.get(entry.project_id) || 0;
-        projectTotals.set(entry.project_id, current + (entry.duration || 0));
+        projectTotals.set(entry.project_id, current + getEntryDuration(entry));
       }
     });
 
@@ -1276,7 +1290,7 @@ const Reports: React.FC<ReportsProps> = ({ openInvoiceModal }) => {
                           </span>
                         </td>
                         <td className="py-2 sm:py-3 px-2 sm:px-4 text-right font-mono text-xs sm:text-sm">
-                          {secondsToHMS(entry.duration || 0)}
+                          {secondsToHMS(getEntryDuration(entry))}
                         </td>
                       </tr>
                     );

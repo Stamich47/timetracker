@@ -283,7 +283,17 @@ const TimeEntries: React.FC = () => {
   };
 
   const calculateDayTotal = (entries: TimeEntry[]): number => {
-    return entries.reduce((total, entry) => total + (entry.duration || 0), 0);
+    return entries.reduce((total, entry) => {
+      // Calculate duration: use saved duration or calculate from start_time to now for active entries
+      let durationSeconds = entry.duration;
+      if (!durationSeconds && entry.start_time && !entry.end_time) {
+        // Active entry - calculate current elapsed time
+        const startTime = new Date(entry.start_time).getTime();
+        const now = Date.now();
+        durationSeconds = Math.floor((now - startTime) / 1000);
+      }
+      return total + (durationSeconds || 0);
+    }, 0);
   };
 
   if (loading) {
@@ -325,10 +335,17 @@ const TimeEntries: React.FC = () => {
           <div className="text-sm text-secondary">
             Total:{" "}
             {secondsToHMS(
-              filteredTimeEntries.reduce(
-                (sum, entry) => sum + (entry.duration || 0),
-                0
-              )
+              filteredTimeEntries.reduce((sum, entry) => {
+                // Calculate duration: use saved duration or calculate from start_time to now for active entries
+                let durationSeconds = entry.duration;
+                if (!durationSeconds && entry.start_time && !entry.end_time) {
+                  // Active entry - calculate current elapsed time
+                  const startTime = new Date(entry.start_time).getTime();
+                  const now = Date.now();
+                  durationSeconds = Math.floor((now - startTime) / 1000);
+                }
+                return sum + (durationSeconds || 0);
+              }, 0)
             )}
           </div>
         </div>
@@ -710,9 +727,27 @@ const TimeEntries: React.FC = () => {
                                       Duration
                                     </div>
                                     <div className="text-base font-semibold text-primary">
-                                      {entry.duration
-                                        ? secondsToHMS(entry.duration)
-                                        : "0:00:00"}
+                                      {(() => {
+                                        // Calculate duration: use saved duration or calculate from start_time to now for active entries
+                                        let durationSeconds = entry.duration;
+                                        if (
+                                          !durationSeconds &&
+                                          entry.start_time &&
+                                          !entry.end_time
+                                        ) {
+                                          // Active entry - calculate current elapsed time
+                                          const startTime = new Date(
+                                            entry.start_time
+                                          ).getTime();
+                                          const now = Date.now();
+                                          durationSeconds = Math.floor(
+                                            (now - startTime) / 1000
+                                          );
+                                        }
+                                        return durationSeconds
+                                          ? secondsToHMS(durationSeconds)
+                                          : "0:00:00";
+                                      })()}
                                     </div>
                                   </div>
                                 </div>
@@ -782,9 +817,27 @@ const TimeEntries: React.FC = () => {
                                       Duration
                                     </div>
                                     <div className="text-lg font-semibold text-primary whitespace-nowrap h-6 flex items-center justify-end">
-                                      {entry.duration
-                                        ? secondsToHMS(entry.duration)
-                                        : "0:00:00"}
+                                      {(() => {
+                                        // Calculate duration: use saved duration or calculate from start_time to now for active entries
+                                        let durationSeconds = entry.duration;
+                                        if (
+                                          !durationSeconds &&
+                                          entry.start_time &&
+                                          !entry.end_time
+                                        ) {
+                                          // Active entry - calculate current elapsed time
+                                          const startTime = new Date(
+                                            entry.start_time
+                                          ).getTime();
+                                          const now = Date.now();
+                                          durationSeconds = Math.floor(
+                                            (now - startTime) / 1000
+                                          );
+                                        }
+                                        return durationSeconds
+                                          ? secondsToHMS(durationSeconds)
+                                          : "0:00:00";
+                                      })()}
                                     </div>
                                   </div>
                                 </div>
