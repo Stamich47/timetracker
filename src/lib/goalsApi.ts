@@ -274,11 +274,10 @@ class GoalsApi {
       // Build query for time entries within the goal period
       let query = supabase
         .from("time_entries")
-        .select("duration, project_id")
+        .select("duration, project_id, start_time, end_time")
         .eq("user_id", userId)
         .gte("start_time", goal.startDate)
-        .lte("start_time", goal.endDate)
-        .not("duration", "is", null);
+        .lte("start_time", goal.endDate);
 
       // Apply scope filtering
       if (goal.scope === "project" && goal.scopeId) {
@@ -311,10 +310,21 @@ class GoalsApi {
       if (error) throw error;
 
       // Sum up all durations (in seconds) and convert to hours
-      const totalSeconds = (timeEntries || []).reduce(
-        (sum, entry) => sum + (entry.duration || 0),
-        0
-      );
+      // For active entries (no end_time), calculate duration from start_time to now
+      const totalSeconds = (timeEntries || []).reduce((sum, entry) => {
+        if (entry.duration) {
+          // Entry has a saved duration, use it
+          return sum + entry.duration;
+        } else if (entry.start_time && !entry.end_time) {
+          // Active entry without end_time - calculate current elapsed time
+          const startTime = new Date(entry.start_time).getTime();
+          const now = Date.now();
+          const elapsedSeconds = Math.floor((now - startTime) / 1000);
+          return sum + elapsedSeconds;
+        }
+        return sum;
+      }, 0);
+
       const currentHours = totalSeconds / 3600; // Convert seconds to hours
 
       // Update the goal's current hours in database if different
@@ -343,18 +353,28 @@ class GoalsApi {
       // Query time entries for this project
       const { data: timeEntries, error } = await supabase
         .from("time_entries")
-        .select("duration")
+        .select("duration, start_time, end_time")
         .eq("user_id", userId)
-        .eq("project_id", goal.projectId)
-        .not("duration", "is", null);
+        .eq("project_id", goal.projectId);
 
       if (error) throw error;
 
       // Sum up all durations (in seconds) and convert to hours
-      const totalSeconds = (timeEntries || []).reduce(
-        (sum, entry) => sum + (entry.duration || 0),
-        0
-      );
+      // For active entries (no end_time), calculate duration from start_time to now
+      const totalSeconds = (timeEntries || []).reduce((sum, entry) => {
+        if (entry.duration) {
+          // Entry has a saved duration, use it
+          return sum + entry.duration;
+        } else if (entry.start_time && !entry.end_time) {
+          // Active entry without end_time - calculate current elapsed time
+          const startTime = new Date(entry.start_time).getTime();
+          const now = Date.now();
+          const elapsedSeconds = Math.floor((now - startTime) / 1000);
+          return sum + elapsedSeconds;
+        }
+        return sum;
+      }, 0);
+
       const currentHours = totalSeconds / 3600; // Convert seconds to hours
 
       // Update the goal's current hours in database if different
@@ -380,14 +400,13 @@ class GoalsApi {
     userId: string
   ): Promise<GoalProgress> {
     try {
-      // Build query for time entries within the goal period (without nested project data initially)
+      // Build query for time entries within the goal period
       let query = supabase
         .from("time_entries")
-        .select("id, duration, project_id")
+        .select("id, duration, project_id, start_time, end_time")
         .eq("user_id", userId)
         .gte("start_time", goal.startDate)
-        .lte("start_time", goal.endDate)
-        .not("duration", "is", null);
+        .lte("start_time", goal.endDate);
 
       // Apply scope filtering
       if (goal.scope === "project" && goal.scopeId) {
@@ -447,7 +466,16 @@ class GoalsApi {
 
       if (timeEntries && timeEntries.length > 0) {
         currentAmount = timeEntries.reduce((sum, entry) => {
-          if (!entry.duration) return sum;
+          // Calculate duration: use saved duration or calculate from start_time to now
+          let durationSeconds = entry.duration;
+          if (!durationSeconds && entry.start_time && !entry.end_time) {
+            // Active entry - calculate current elapsed time
+            const startTime = new Date(entry.start_time).getTime();
+            const now = Date.now();
+            durationSeconds = Math.floor((now - startTime) / 1000);
+          }
+
+          if (!durationSeconds) return sum;
 
           // Look up the project data
           const projectData = entry.project_id
@@ -464,7 +492,7 @@ class GoalsApi {
 
           if (hourlyRate <= 0) return sum;
 
-          const hours = entry.duration / 3600; // Convert seconds to hours
+          const hours = durationSeconds / 3600; // Convert seconds to hours
           return sum + hours * hourlyRate;
         }, 0);
       }

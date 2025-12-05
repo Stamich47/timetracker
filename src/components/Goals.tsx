@@ -26,7 +26,9 @@ import {
 } from "lucide-react";
 import { useGoals } from "../hooks/useGoals";
 import { useTimeEntries } from "../hooks/useTimeEntries";
+import { useTimer } from "../hooks/useTimer";
 import { projectsApi } from "../lib/projectsApi";
+import { timeEntriesApi } from "../lib/timeEntriesApi";
 import type {
   TimeGoal,
   RevenueGoal,
@@ -41,8 +43,9 @@ interface GoalsProps {
 }
 
 const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
-  const { goalsWithProgress, loading, error } = useGoals();
+  const { goalsWithProgress, loading, error, refreshGoals } = useGoals();
   const { timeEntries } = useTimeEntries();
+  const { timer } = useTimer();
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [projects, setProjects] = useState<Project[]>([]);
@@ -53,8 +56,102 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
   const [chartTracking, setChartTracking] = useState<Record<string, boolean>>(
     {}
   );
+  const [lastSavedTimerSnapshot, setLastSavedTimerSnapshot] = useState<{
+    entryId: string | null;
+    savedDuration: number;
+  }>({
+    entryId: null,
+    savedDuration: 0,
+  });
 
   const { deleteGoal } = useGoals();
+
+  // Auto-save running timer to database periodically and on mount
+  useEffect(() => {
+    const saveTimerSnapshot = async () => {
+      // Only save if timer is running and has a project selected
+      if (!timer?.isRunning || !timer.selectedProject || !timer.elapsedTime) {
+        return;
+      }
+
+      try {
+        console.log("Saving timer snapshot:", {
+          duration: timer.elapsedTime,
+          hasEntry: !!lastSavedTimerSnapshot.entryId,
+        });
+
+        // Check if we need to create a new entry or update existing one
+        if (!lastSavedTimerSnapshot.entryId) {
+          // Create a new time entry for the running timer
+          const newEntry = await timeEntriesApi.createTimeEntry({
+            description: timer.description || "Running timer",
+            project_id: timer.selectedProject.id,
+            start_time:
+              timer.startTime?.toISOString() || new Date().toISOString(),
+            end_time: new Date().toISOString(), // Current time as end_time
+            duration: Math.floor(timer.elapsedTime), // Save current elapsed time in seconds
+            billable: true,
+          });
+
+          console.log("Created new timer entry:", newEntry.id);
+
+          setLastSavedTimerSnapshot({
+            entryId: newEntry.id || null,
+            savedDuration: timer.elapsedTime,
+          });
+
+          // Refresh goals after creating entry
+          await refreshGoals();
+        } else {
+          // Update the existing entry with new duration
+          await timeEntriesApi.updateTimeEntry(lastSavedTimerSnapshot.entryId, {
+            duration: Math.floor(timer.elapsedTime),
+            description: timer.description || "Running timer",
+            end_time: new Date().toISOString(),
+          });
+
+          console.log(
+            "Updated timer entry:",
+            lastSavedTimerSnapshot.entryId,
+            "with duration:",
+            timer.elapsedTime
+          );
+
+          setLastSavedTimerSnapshot((prev) => ({
+            ...prev,
+            savedDuration: timer.elapsedTime,
+          }));
+
+          // Refresh goals after updating entry
+          await refreshGoals();
+        }
+      } catch (error) {
+        console.error("Failed to save timer snapshot:", error);
+      }
+    };
+
+    // Save immediately on mount if timer is running
+    saveTimerSnapshot();
+
+    // Set up interval to save every 30 seconds
+    const interval = setInterval(() => {
+      saveTimerSnapshot();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timer?.isRunning, timer?.selectedProject?.id]);
+  // Only re-run when timer status or project changes, not on every elapsed time tick
+
+  // Clear snapshot when timer stops
+  useEffect(() => {
+    if (!timer?.isRunning && lastSavedTimerSnapshot.entryId) {
+      setLastSavedTimerSnapshot({
+        entryId: null,
+        savedDuration: 0,
+      });
+    }
+  }, [timer?.isRunning, lastSavedTimerSnapshot.entryId]);
 
   // Initialize chart tracking: active goals = ON, completed goals = OFF
   useEffect(() => {
@@ -69,7 +166,8 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
     if (Object.keys(tracking).length > 0) {
       setChartTracking((prev) => ({ ...prev, ...tracking }));
     }
-  }, [goalsWithProgress, chartTracking]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalsWithProgress]); // Intentionally omit chartTracking to prevent infinite loop
 
   // Toggle chart tracking for a goal
   const toggleChartTracking = useCallback((goalId: string) => {
@@ -324,7 +422,15 @@ const Goals: React.FC<GoalsProps> = ({ onShowCreateModal }) => {
 
         // Sum all hours for this day
         const dayHours = dayEntries.reduce((sum, entry) => {
-          return sum + (entry.duration || 0) / 3600;
+          // Calculate duration: use saved duration or calculate from start_time to now for active entries
+          let durationSeconds = entry.duration;
+          if (!durationSeconds && entry.start_time && !entry.end_time) {
+            // Active entry - calculate current elapsed time
+            const startTime = new Date(entry.start_time).getTime();
+            const now = Date.now();
+            durationSeconds = Math.floor((now - startTime) / 1000);
+          }
+          return sum + (durationSeconds || 0) / 3600;
         }, 0);
 
         cumulativeHours += dayHours;
